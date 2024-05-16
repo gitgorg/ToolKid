@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "outDir": "./compiled",
+        "module": "commonJS",
+        "alwaysStrict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "strictNullChecks": true,
+        "target": "ES2021"
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "rootToolKidFiles": "./compiled/ToolKid",
+    "rootLibraryFiles":"./compiled/Library",
+    "include": [
+        "*.js"
+    ],
+    "exclude": [
+        "*.test.js"
+    ],
+    "runTests": true
+}
