@@ -1,6 +1,6 @@
 (function TK_ConnectionHTTPtest() {
     const {request } = ToolKid.connection.HTTP;
-    const { assertEquality, test } = ToolKid.debug.test;
+    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
 
 
 
@@ -11,36 +11,7 @@
 
     test({
         subject: request,
-        execute: function GETBasic_regular () {
-            request({
-                URL: requestAdresses.GETBasic,
-                callback: function(response) {
-                    assertEquality({
-                        name: "response",
-                        value: response,
-                        shouldBe: {number:100, boolean:true}
-                    });
-                }
-            });
-        }
-    },/*{
-        subject: request,
-        execute: function GETfailedCallback_regular () {
-            assertFailure({
-                name:"callback failed",
-                execute: request,
-                withInputs: {
-                    URL: requestAdresses.GETBasic,
-                    callback: function() {
-                        throw true;
-                    }
-                },
-                shouldThrow: true
-            });
-        }
-    },*/{
-        subject: request,
-        execute: async function GETBasic_asyncAwait() {
+        execute: async function getBasic () {
             const response = await request({
                 URL: requestAdresses.GETBasic
             });
@@ -52,7 +23,7 @@
         }
     },{
         subject: request,
-        execute: function GETInvalidJSON_regular() {
+        execute: function getMalformedResponse() {
             request({
                 URL: requestAdresses.GETInvalidResponse,
                 callback: function(response) {

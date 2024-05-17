@@ -13,7 +13,6 @@ interface TK_DebugTest_file {
         name: string,
         execute(...inputs: any[]): any | Promise<any>,
         withInputs?: any | any[],
-        shouldThrowAny: true,
         toleranceDepth?: number
     }[]): void | Promise<any>,
 
@@ -62,51 +61,55 @@ interface TK_DebugTest_file {
     };
 
     publicExports.assertFailure = function TK_DebugTestAssertions_assertFailure(...inputs) {
-        const promised = <any[]>inputs
+        const promisedResults = <any[]>inputs
             .map(assertFailureSingle)
             .filter(isPromised);
-        if (promised.length === 0) {
+        if (promisedResults.length === 0) {
             return;
         }
 
-        let rejecter: GenericFunction, resolver: GenericFunction;
+        let rejecter: any, resolver: any;
         const resultPromise = new Promise(function (resolve, reject) {
             rejecter = reject;
             resolver = resolve;
         });
 
-        let count = promised.length;
-        promised.forEach(function (inputs: {
-            inputs: Dictionary,
-            promise: Promise<any>
-        }) {
-            inputs.promise.then(function (reason) {
-                rejecter(report({
-                    name: inputs.inputs.name,
-                    message: ["promise did not reject as expected"]
-                }));
-            }, function (reason) {
-                const failureMessage = assertFailureCheck(
-                    <any>inputs.inputs, reason
-                );
-                if (failureMessage !== undefined) {
-                    rejecter(failureMessage);
-                }
-
-                count -= 1;
-                if (count === 0) {
-                    resolver();
-                }
-            });
-        });
+        promisedResults.forEach(assertFailureWatchPromise.bind(null,{
+            count: promisedResults.length,
+            rejecter,
+            resolver
+        }));
         return resultPromise;
+    };
+
+    const assertFailureWatchPromise = function (bound: Dictionary,inputs: {
+        inputs: Dictionary,
+        promise: Promise<any>
+    }) {
+        inputs.promise.then(function (reason) {
+            bound.rejecter(report({
+                name: inputs.inputs.name,
+                message: ["promise did not reject as expected"]
+            }));
+        }, function (reason) {
+            const failureMessage = assertFailureCheck(
+                <any>inputs.inputs, reason
+            );
+            if (failureMessage !== undefined) {
+                bound.rejecter(failureMessage);
+            }
+
+            bound.count -= 1;
+            if (bound.count === 0) {
+                bound.resolver();
+            }
+        });
     };
 
     const assertFailureSingle = function UnitTest_assertFailureSingle(inputs: {
         name: string,
         execute(...inputs: any[]): void,
         withInputs?: any | any[],
-        shouldThrowAny?: true,
         shouldThrow?: any | ErrorConstructor,
         toleranceDepth?: number
     }) {
@@ -160,11 +163,10 @@ interface TK_DebugTest_file {
     const assertFailureCheck = function (
         bound: {
             name: string,
-            shouldThrowAny?: true,
             shouldThrow?: any
         }, error: Error
     ) {
-        if (bound.shouldThrowAny === true) {
+        if (bound.shouldThrow === undefined) {
             return;
         }
 

@@ -558,10 +558,10 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
         return inputs !== undefined && inputs.promise instanceof Promise;
     };
     publicExports.assertFailure = function TK_DebugTestAssertions_assertFailure(...inputs) {
-        const promised = inputs
+        const promisedResults = inputs
             .map(assertFailureSingle)
             .filter(isPromised);
-        if (promised.length === 0) {
+        if (promisedResults.length === 0) {
             return;
         }
         let rejecter, resolver;
@@ -569,25 +569,29 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
             rejecter = reject;
             resolver = resolve;
         });
-        let count = promised.length;
-        promised.forEach(function (inputs) {
-            inputs.promise.then(function (reason) {
-                rejecter(report({
-                    name: inputs.inputs.name,
-                    message: ["promise did not reject as expected"]
-                }));
-            }, function (reason) {
-                const failureMessage = assertFailureCheck(inputs.inputs, reason);
-                if (failureMessage !== undefined) {
-                    rejecter(failureMessage);
-                }
-                count -= 1;
-                if (count === 0) {
-                    resolver();
-                }
-            });
-        });
+        promisedResults.forEach(assertFailureWatchPromise.bind(null, {
+            count: promisedResults.length,
+            rejecter,
+            resolver
+        }));
         return resultPromise;
+    };
+    const assertFailureWatchPromise = function (bound, inputs) {
+        inputs.promise.then(function (reason) {
+            bound.rejecter(report({
+                name: inputs.inputs.name,
+                message: ["promise did not reject as expected"]
+            }));
+        }, function (reason) {
+            const failureMessage = assertFailureCheck(inputs.inputs, reason);
+            if (failureMessage !== undefined) {
+                bound.rejecter(failureMessage);
+            }
+            bound.count -= 1;
+            if (bound.count === 0) {
+                bound.resolver();
+            }
+        });
     };
     const assertFailureSingle = function UnitTest_assertFailureSingle(inputs) {
         if (typeof inputs.execute !== "function") {
@@ -633,7 +637,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
         }
     };
     const assertFailureCheck = function (bound, error) {
-        if (bound.shouldThrowAny === true) {
+        if (bound.shouldThrow === undefined) {
             return;
         }
         return assertFailureError({

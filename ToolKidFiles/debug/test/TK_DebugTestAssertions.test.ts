@@ -98,8 +98,7 @@
             try {
                 assertFailure({
                     name: "empty function",
-                    execute: function () { },
-                    shouldThrowAny: true
+                    execute: function () {}
                 });
                 throw ["basicFailure din't throw"];
             } catch (error) {}
@@ -112,8 +111,7 @@
                 execute: function () {
                     assertFailure({
                         name: "missing inputs call",
-                        execute: <any>undefined,
-                        shouldThrowAny: true
+                        execute: <any>undefined
                     });
                 },
                 shouldThrow: ["~ missing inputs call ~ execute is not a function, instead is:", undefined]
@@ -125,7 +123,10 @@
                 shouldThrow: Error
             });
         }
-    },{
+    });
+
+    //---- promises
+    test({
         subject: assertFailure,
         execute: async function rejectedPromise() {
             await assertFailure({
@@ -162,13 +163,26 @@
         }
     },{
         subject: assertFailure,
+        execute: async function resolvedPromiseWhichThrowsLater () {
+            await assertFailure({
+                name:"promise successfull but then fails",
+                execute: function () {
+                    return Promise.resolve(100)
+                        .then(function(){
+                            throw 200;
+                        });
+                },
+                shouldThrow: 200
+            });
+        }
+    },{
+        subject: assertFailure,
         execute: async function resolvedPromise() {
             await (<Promise<any>>assertFailure({
                 name: "successfull promise",
                 execute: function () {
                     return Promise.resolve();
-                },
-                shouldThrowAny: true
+                }
             })).catch(function(reason) {
                 assertEquality({
                     name:"error from not failing",
