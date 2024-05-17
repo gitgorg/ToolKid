@@ -1,6 +1,6 @@
 {
-    "rootToolKidFiles": "./compiled/ToolKid",
-    "rootLibraryFiles":"./compiled/Library",
+    "rootToolKidFiles": "./compiled/ToolKidFiles",
+    "rootLibraryFiles": "./compiled/LibraryFiles",
     "include": [
         "*.js"
     ],

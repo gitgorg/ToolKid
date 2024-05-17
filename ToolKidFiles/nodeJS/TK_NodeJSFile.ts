@@ -37,7 +37,7 @@ interface TK_nodeJS_file {
         }
 
         if (typeof encoding !== "string") {
-            const type = ToolKid.web.readMediaType(<string>path);
+            const type = ToolKid.connection.HTTP.readMediaType(<string>path);
             if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
                 encoding = "utf8";
             }

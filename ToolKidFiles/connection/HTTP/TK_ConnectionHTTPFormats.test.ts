@@ -1,5 +1,5 @@
-(function TK_WebCommunication_test() {
-    const {request } = ToolKid.web.communication;
+(function TK_ConnectionHTTPtest() {
+    const { request } = ToolKid.connection.HTTP;
     const { assertEquality, test } = ToolKid.debug.test;
 
 
@@ -11,14 +11,14 @@
 
     test({
         subject: request,
-        execute: function GETBasic_regular () {
+        execute: function GETBasic_regular() {
             request({
                 URL: requestAdresses.GETBasic,
-                callback: function(response) {
+                callback: function (response) {
                     assertEquality({
                         name: "response",
                         value: response,
-                        shouldBe: {number:100, boolean:true}
+                        shouldBe: { number: 100, boolean: true }
                     });
                 }
             });
@@ -39,23 +39,23 @@
             });
         }
     },*/{
-        subject: request,
-        execute: async function GETBasic_asyncAwait() {
-            const response = await request({
-                URL: requestAdresses.GETBasic
-            });
-            assertEquality({
-                name: "response",
-                value: response,
-                shouldBe: {number:100, boolean:true}
-            });
-        }
-    },{
+            subject: request,
+            execute: async function GETBasic_asyncAwait() {
+                const response = await request({
+                    URL: requestAdresses.GETBasic
+                });
+                assertEquality({
+                    name: "response",
+                    value: response,
+                    shouldBe: { number: 100, boolean: true }
+                });
+            }
+        }, {
         subject: request,
         execute: function GETInvalidJSON_regular() {
             request({
                 URL: requestAdresses.GETInvalidResponse,
-                callback: function(response) {
+                callback: function (response) {
                     throw ["request should have failed but responded fine with:", response];
                 },
                 errorHandler: function (error) {

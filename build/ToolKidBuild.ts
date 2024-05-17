@@ -25,6 +25,7 @@ type ToolKidConfig = {
     let Library: Library_file;
 
 
+
     const getAlias = function ToolKidBuild_getAlias (path:string) {
         path = Path.basename(path);
         if (Path.extname(path) === "") {
@@ -64,7 +65,7 @@ type ToolKidConfig = {
             path: config.rootToolKidFiles,
             include: config.include,
             exclude: config.exclude,
-            execute: executeAndRegisterFile.bind(null,privateData)
+            execute: executeAndRegisterFile.bind(null,privateData.registeredFiles)
         });
         return privateData.registeredFiles;
     };
@@ -95,17 +96,14 @@ type ToolKidConfig = {
     }
 
     const executeAndRegisterFile = function (
-        privateData:{
-            registeredFiles: Dictionary
-        },
+        registeredFiles: Dictionary,
         path:string
     ) {
         const alias = getAlias(path);
-        const {registeredFiles} = privateData;
         if (registeredFiles[alias] !== undefined) {
             console.warn("duplicate file alias \""+ alias + "\" - second path is:",path, " and registered was:",registeredFiles[alias]);
         }
-        privateData.registeredFiles[alias] = path;
+        registeredFiles[alias] = path;
         return require(path);
     };
 
@@ -113,12 +111,12 @@ type ToolKidConfig = {
         privateData: Dictionary,
         aliasAndPath: [alias:string, path:string]
     ) {
-        const [aliasOfFile, path] = aliasAndPath;
+        const [aliasOfFile, filePath] = aliasAndPath;
         if (privateData.importedFiles.has(aliasOfFile)) {
             return;
         }
 
-        const analysed = analyseFile(path);
+        const analysed = analyseFile(filePath);
         analysed.imports.forEach(function(entry){
             const aliasOfDependency = getAlias(entry.file);
             if (!privateData.importedFiles.has(aliasOfDependency)) {
@@ -130,7 +128,7 @@ type ToolKidConfig = {
         privateData.combinedFile += analysed.contentReworked;
         privateData.combinedFile += "registeredFiles[\"" + aliasOfFile + "\"] = module.exports;\n\n";
         privateData.importedFiles.add(aliasOfFile);
-        return require(path);
+        return require(filePath);
     };
 
     const analyseFile = function (path:string): {
@@ -213,16 +211,16 @@ type ToolKidConfig = {
 
     const readConfig = function ToolKidBuild_readConfig () {
         let result = <ToolKidConfig>{
-            rootToolKidFiles: "./compiled/ToolKid",
-            rootLibraryFiles: "./compiled/Library",
-            include: [],
+            rootToolKidFiles: "./compiled/ToolKidFiles",
+            rootLibraryFiles: "./compiled/LibraryFiles",
+            include: ["*.js"],
             exclude: ["*.test.js"]
         };
         if (FS.existsSync("./ToolKidConfig.json")) {
-            let content = require("fs").readFileSync("./ToolKidConfig.json", "utf8");
+            let content = FS.readFileSync("./ToolKidConfig.json", "utf8");
             result = JSON.parse(content);
         }
-        Library = require("./Library/Library");
+        Library = require(Path.resolve(result.rootLibraryFiles,"Library"));
         return result;
     };
 

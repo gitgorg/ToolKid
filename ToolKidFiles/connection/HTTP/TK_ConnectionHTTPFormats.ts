@@ -1,6 +1,7 @@
 //MediaType managment (MIME-Types)
-interface ToolKid_file { web: TK_web_file }
-interface TK_web_file {
+interface ToolKid_file { connection: TK_Connection_file }
+interface TK_Connection_file { HTTP: TK_ConnectionHTTP_file }
+interface TK_ConnectionHTTP_file {
     readMediaType(
         path: string
     ): string | undefined
@@ -8,11 +9,11 @@ interface TK_web_file {
 
 
 
-(function h_webMediaTypes_init() {
+(function TK_ConnectionHTTPFormats_init() {
 
-    const publicExports = module.exports = <TK_web_file>{};
+    const publicExports = module.exports = <TK_ConnectionHTTP_file>{};
 
-    publicExports.readMediaType = function RS_h_HTTP_URLmimeType(path) {
+    publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType (path) {
         path = path.slice(path.lastIndexOf(".") + 1).toLocaleLowerCase();
         return mediaTypes[<"js">path];
     };
@@ -51,6 +52,6 @@ interface TK_web_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "web", functions: publicExports });
+        ToolKid.registerFunction({ section: "connection", subSection:"HTTP", functions: publicExports });
     }
 })();

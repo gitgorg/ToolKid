@@ -1,8 +1,6 @@
-interface ToolKid_file { web: TK_web_file }
-interface TK_web_file {
-    communication: TK_WebCommunication_file
-}
-interface TK_WebCommunication_file {
+interface ToolKid_file { web: TK_Connection_file }
+interface TK_Connection_file { communication: TK_ConnectionHTTP_file }
+interface TK_ConnectionHTTP_file {
     request(inputs: {
         URL: string,
         callback?: (
@@ -19,12 +17,12 @@ interface TK_WebCommunication_file {
     }): Promise<any>
 }
 
-(function TK_WebCommunication_init() {
-    const publicExports = module.exports = <TK_WebCommunication_file>{};
+(function TK_ConnectionHTTPinit() {
+    const publicExports = module.exports = <TK_ConnectionHTTP_file>{};
 
 
 
-    publicExports.request = function TK_WebCommunication_request(inputs) {
+    publicExports.request = function TK_ConnectionHTTPRequest(inputs) {
         const chosenFetch = (inputs.post === undefined)
             ? fetchGET : fetchPOST;
         return chosenFetch(inputs).then(
@@ -36,7 +34,7 @@ interface TK_WebCommunication_file {
         );
     };
 
-    const fetchGET = function TK_WebCommunication_fetchGET(
+    const fetchGET = function TK_ConnectionHTTPfetchGET(
         inputs: Dictionary
     ) {
         return fetch(inputs.URL, {
@@ -45,7 +43,7 @@ interface TK_WebCommunication_file {
         });
     };
 
-    const fetchPOST = function TK_WebCommunication_fetchPOST(
+    const fetchPOST = function TK_ConnectionHTTPfetchPOST(
         inputs: Dictionary
     ) {
         return fetch(inputs.URL, {
@@ -58,7 +56,7 @@ interface TK_WebCommunication_file {
         });
     };
 
-    const requestParse = function TK_WebCommunication_requestParse(
+    const requestParse = function TK_ConnectionHTTPRequestParse(
         inputs: Dictionary, response: any
     ) {
         if (!response.ok || response.status < 200 || response.status >= 300) {
@@ -74,7 +72,7 @@ interface TK_WebCommunication_file {
             : "text";
 
         return response[chosenParser]().then(
-            requestRespond.bind(null,inputs),
+            requestRespond.bind(null, inputs),
             requestFailed.bind(null, {
                 inputs,
                 type: "parsing"
@@ -82,16 +80,16 @@ interface TK_WebCommunication_file {
         );
     };
 
-    const requestRespond = function TK_WebCommunication_requestRespond (
-        inputs:Dictionary, response:any
+    const requestRespond = function TK_ConnectionHTTPRequestRespond(
+        inputs: Dictionary, response: any
     ) {
         if (typeof inputs.callback === "function") {
             try {
-            inputs.callback(response);
+                inputs.callback(response);
             } catch (error) {
                 return requestFailed({
                     inputs,
-                    type:"callback"
+                    type: "callback"
                 }, error);
             }
         }
@@ -105,7 +103,7 @@ interface TK_WebCommunication_file {
         parsing: "response is malformed"
     };
 
-    const requestFailed = function TK_WebCommunication_requestFailed(
+    const requestFailed = function TK_ConnectionHTTPRequestFailed(
         bound: {
             inputs: Dictionary,
             type: "callback" | "connection" | "status" | "parsing"
@@ -113,7 +111,7 @@ interface TK_WebCommunication_file {
         detail: Error
     ) {
         const error = Error(
-            "TK_WebCommunication_request - " + errorInfos[bound.type] + "."
+            "TK_ConnectionHTTPRequest - " + errorInfos[bound.type] + "."
         );
         (<Dictionary>error).cause = {
             detail,
@@ -129,6 +127,6 @@ interface TK_WebCommunication_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "web", subSection: "communication", functions: publicExports });
+        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();

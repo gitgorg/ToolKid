@@ -95,6 +95,131 @@ const registeredFiles = {};
 })();
 registeredFiles["Library.js"] = module.exports;
 
+(function TK_ConnectionHTTPinit() {
+    const publicExports = module.exports = {};
+    publicExports.request = function TK_ConnectionHTTPRequest(inputs) {
+        const chosenFetch = (inputs.post === undefined)
+            ? fetchGET : fetchPOST;
+        return chosenFetch(inputs).then(requestParse.bind(null, inputs), requestFailed.bind(null, {
+            inputs,
+            type: "connection"
+        }));
+    };
+    const fetchGET = function TK_ConnectionHTTPfetchGET(inputs) {
+        return fetch(inputs.URL, {
+            method: "GET",
+            headers: inputs.headers
+        });
+    };
+    const fetchPOST = function TK_ConnectionHTTPfetchPOST(inputs) {
+        return fetch(inputs.URL, {
+            method: "POST",
+            mode: "cors",
+            headers: Object.assign({
+                "Content-Type": "application/json",
+            }, inputs.headers),
+            body: inputs.post
+        });
+    };
+    const requestParse = function TK_ConnectionHTTPRequestParse(inputs, response) {
+        if (!response.ok || response.status < 200 || response.status >= 300) {
+            return requestFailed({
+                inputs,
+                type: "status"
+            }, response.status);
+        }
+        const contentType = response.headers.get("content-type");
+        const chosenParser = (contentType.indexOf("application/json") !== -1)
+            ? "json"
+            : "text";
+        return response[chosenParser]().then(requestRespond.bind(null, inputs), requestFailed.bind(null, {
+            inputs,
+            type: "parsing"
+        }));
+    };
+    const requestRespond = function TK_ConnectionHTTPRequestRespond(inputs, response) {
+        if (typeof inputs.callback === "function") {
+            try {
+                inputs.callback(response);
+            }
+            catch (error) {
+                return requestFailed({
+                    inputs,
+                    type: "callback"
+                }, error);
+            }
+        }
+        return response;
+    };
+    const errorInfos = {
+        callback: "callback did fail",
+        connection: "request could not be sent",
+        status: "response status is not ok",
+        parsing: "response is malformed"
+    };
+    const requestFailed = function TK_ConnectionHTTPRequestFailed(bound, detail) {
+        const error = Error("TK_ConnectionHTTPRequest - " + errorInfos[bound.type] + ".");
+        error.cause = {
+            detail,
+            inputs: bound.inputs
+        };
+        if (typeof bound.inputs.errorHandler === "function") {
+            bound.inputs.errorHandler(error);
+            return error;
+        }
+        else {
+            throw error;
+        }
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
+    }
+})();
+registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
+
+(function TK_ConnectionHTTPFormats_init() {
+    const publicExports = module.exports = {};
+    publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType(path) {
+        path = path.slice(path.lastIndexOf(".") + 1).toLocaleLowerCase();
+        return mediaTypes[path];
+    };
+    const mediaTypes = {
+        //audio
+        mp3: "audio/mpeg3",
+        wav: "audio/wave",
+        //font
+        eot: "application/vnd.ms-fontobject",
+        otf: "font/otf",
+        ttf: "font/ttf",
+        woff: "font/woff",
+        woff2: "font/woff2",
+        //image
+        gif: "image/gif",
+        ico: "image/x-icon",
+        jpeg: "image/jpeg",
+        jpg: "image/jpeg",
+        png: "image/png",
+        //text
+        cdw: "text/cowdarewelsh",
+        css: "text/css",
+        htm: "text/html",
+        html: "text/html",
+        js: "text/javascript",
+        json: "application/json",
+        mjs: "text/javascript",
+        //video
+        mp4: "video/mp4",
+        ogg: "video/ogg",
+        webm: "video/webm"
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
+    }
+})();
+registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
+
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
     const colorsServer = {
@@ -820,7 +945,7 @@ registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
             }
         }
         if (typeof encoding !== "string") {
-            const type = ToolKid.web.readMediaType(path);
+            const type = ToolKid.connection.HTTP.readMediaType(path);
             if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
                 encoding = "utf8";
             }
@@ -858,142 +983,18 @@ registeredFiles["TK_NodeJSFile.js"] = module.exports;
 registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
 (function T_pathList_init() {
+    const root = "ToolKidFiles/nodeJS/";
     module.exports = {
-        directoryMixedContents: "ToolKid/nodeJS/T_fileDirectory",
-        directoryEmpty: "ToolKid/nodeJS/T_fileDirectory/T_empty",
-        directoryNonExisting: "ToolKid/nodeJS/T_nonExistant",
-        file: "ToolKid/nodeJS/T_fileDirectory/T_file.json",
-        fileEmpty: "ToolKid/nodeJS/T_fileDirectory/T_empty.txt",
-        fileNonExisting: "ToolKid/nodeJS/T_fileDirectory/T_nonExistant.json",
-        fileTypeScript: "ToolKid/nodeJS/T_fileDirectory/T_pathList.ts"
+        directoryMixedContents: root + "T_fileDirectory",
+        directoryEmpty: root + "T_fileDirectory/T_empty",
+        directoryNonExisting: root + "T_nonExistant",
+        file: root + "T_fileDirectory/T_file.json",
+        fileEmpty: root + "T_fileDirectory/T_empty.txt",
+        fileNonExisting: root + "T_fileDirectory/T_nonExistant.json",
+        fileTypeScript: root + "T_fileDirectory/T_pathList.ts"
     };
 })();
 registeredFiles["T_pathList.js"] = module.exports;
-
-(function TK_WebCommunication_init() {
-    const publicExports = module.exports = {};
-    publicExports.request = function TK_WebCommunication_request(inputs) {
-        const chosenFetch = (inputs.post === undefined)
-            ? fetchGET : fetchPOST;
-        return chosenFetch(inputs).then(requestParse.bind(null, inputs), requestFailed.bind(null, {
-            inputs,
-            type: "connection"
-        }));
-    };
-    const fetchGET = function TK_WebCommunication_fetchGET(inputs) {
-        return fetch(inputs.URL, {
-            method: "GET",
-            headers: inputs.headers
-        });
-    };
-    const fetchPOST = function TK_WebCommunication_fetchPOST(inputs) {
-        return fetch(inputs.URL, {
-            method: "POST",
-            mode: "cors",
-            headers: Object.assign({
-                "Content-Type": "application/json",
-            }, inputs.headers),
-            body: inputs.post
-        });
-    };
-    const requestParse = function TK_WebCommunication_requestParse(inputs, response) {
-        if (!response.ok || response.status < 200 || response.status >= 300) {
-            return requestFailed({
-                inputs,
-                type: "status"
-            }, response.status);
-        }
-        const contentType = response.headers.get("content-type");
-        const chosenParser = (contentType.indexOf("application/json") !== -1)
-            ? "json"
-            : "text";
-        return response[chosenParser]().then(requestRespond.bind(null, inputs), requestFailed.bind(null, {
-            inputs,
-            type: "parsing"
-        }));
-    };
-    const requestRespond = function TK_WebCommunication_requestRespond(inputs, response) {
-        if (typeof inputs.callback === "function") {
-            try {
-                inputs.callback(response);
-            }
-            catch (error) {
-                return requestFailed({
-                    inputs,
-                    type: "callback"
-                }, error);
-            }
-        }
-        return response;
-    };
-    const errorInfos = {
-        callback: "callback did fail",
-        connection: "request could not be sent",
-        status: "response status is not ok",
-        parsing: "response is malformed"
-    };
-    const requestFailed = function TK_WebCommunication_requestFailed(bound, detail) {
-        const error = Error("TK_WebCommunication_request - " + errorInfos[bound.type] + ".");
-        error.cause = {
-            detail,
-            inputs: bound.inputs
-        };
-        if (typeof bound.inputs.errorHandler === "function") {
-            bound.inputs.errorHandler(error);
-            return error;
-        }
-        else {
-            throw error;
-        }
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "web", subSection: "communication", functions: publicExports });
-    }
-})();
-registeredFiles["TK_WebCommunication.js"] = module.exports;
-
-(function h_webMediaTypes_init() {
-    const publicExports = module.exports = {};
-    publicExports.readMediaType = function RS_h_HTTP_URLmimeType(path) {
-        path = path.slice(path.lastIndexOf(".") + 1).toLocaleLowerCase();
-        return mediaTypes[path];
-    };
-    const mediaTypes = {
-        //audio
-        mp3: "audio/mpeg3",
-        wav: "audio/wave",
-        //font
-        eot: "application/vnd.ms-fontobject",
-        otf: "font/otf",
-        ttf: "font/ttf",
-        woff: "font/woff",
-        woff2: "font/woff2",
-        //image
-        gif: "image/gif",
-        ico: "image/x-icon",
-        jpeg: "image/jpeg",
-        jpg: "image/jpeg",
-        png: "image/png",
-        //text
-        cdw: "text/cowdarewelsh",
-        css: "text/css",
-        htm: "text/html",
-        html: "text/html",
-        js: "text/javascript",
-        json: "application/json",
-        mjs: "text/javascript",
-        //video
-        mp4: "video/mp4",
-        ogg: "video/ogg",
-        webm: "video/webm"
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "web", functions: publicExports });
-    }
-})();
-registeredFiles["h_webMediaTypes.js"] = module.exports;
 
 global.log = ToolKid.debug.terminal.logImportant;
 })();
