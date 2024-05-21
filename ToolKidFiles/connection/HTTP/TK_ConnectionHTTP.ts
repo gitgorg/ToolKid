@@ -1,5 +1,5 @@
 interface ToolKid_file { web: TK_Connection_file }
-interface TK_Connection_file { communication: TK_ConnectionHTTP_file }
+interface TK_Connection_file { connection: TK_ConnectionHTTP_file }
 interface TK_ConnectionHTTP_file {
     request(inputs: {
         URL: string,
