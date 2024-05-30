@@ -1,6 +1,6 @@
 (function TK_ConnectionHTTPtest() {
     const {request } = ToolKid.connection.HTTP;
-    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const { assertEquality, test } = ToolKid.debug.test;
 
 
 
