@@ -1002,6 +1002,110 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 })();
 registeredFiles["T_pathList.js"] = module.exports;
 
+(function LibraryTools_init() {
+    const FS = require("fs");
+    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;
+    const Path = require("path");
+    const { normalize, resolve: resolvePath } = Path;
+    const publicExports = module.exports = {};
+    publicExports.easyExpression = function LibrarBuilder_easyExpression(expression) {
+        expression = expression.replaceAll("\\", "\\\\");
+        expression = expression.replaceAll(".", "\\.");
+        expression = expression.replaceAll("\*", ".+");
+        return new RegExp("^" + expression + "$");
+    };
+    const isDirectory = function TK_LibraryTools_file_isDirectory(path) {
+        return readPathStats(path).isDirectory();
+    };
+    const isIncluded = function LibraryTools_isIncluded(privateData, path) {
+        const test = testPath.bind(null, path);
+        return (privateData.include.length === 0
+            || privateData.include.find(test) !== undefined) && privateData.exclude.find(test) === undefined;
+    };
+    publicExports.loopFiles = function LibraryTools_loopFiles(inputs) {
+        const pathChecker = isIncluded.bind(null, {
+            include: toRegExp(inputs.include || []),
+            exclude: toRegExp(inputs.exclude || []),
+        });
+        const privateData = {
+            isIncluded: pathChecker,
+            execute: inputs.execute
+        };
+        const { path } = inputs;
+        if (path instanceof Array) {
+            path.forEach(loopFilesFrom.bind(null, privateData));
+        }
+        else {
+            loopFilesFrom(privateData, path);
+        }
+    };
+    const testPath = function LibraryTools_testPath(path, expression) {
+        return expression.test(path);
+    };
+    const loopFilesFrom = function LibraryTools_loopFilesFrom(privateData, path) {
+        path = resolvePath(path);
+        if (!isUsedPath(path)) {
+            return;
+        }
+        if (isDirectory(path)) {
+            loopFilesFromDirectory(privateData, path);
+        }
+        else {
+            loopFilesExecute(privateData, "", path);
+        }
+    };
+    const loopFilesFromDirectory = function LibraryTools_loopFilesFromDirectory(privateData, path) {
+        readDirectory(path)
+            .forEach(loopFilesExecute.bind(null, privateData, path));
+    };
+    const loopFilesExecute = function LibraryTools_loopFilesExecute(privateData, root, path) {
+        path = resolvePath(root, path);
+        if (isDirectory(path)) {
+            loopFilesFromDirectory(privateData, path);
+            return;
+        }
+        if (privateData.isIncluded(path)) {
+            privateData.execute(path);
+        }
+    };
+    const toRegExp = function (expressionList) {
+        if (typeof expressionList === "string") {
+            expressionList = [expressionList];
+        }
+        else if (!(expressionList instanceof Array)) {
+            return [];
+        }
+        return expressionList
+            .map(normalize)
+            .map(publicExports.easyExpression);
+    };
+    const writeDirectory = function LibraryTools_writeDirectory(path) {
+        if (isUsedPath(path)) {
+            return;
+        }
+        const rootPath = Path.dirname(path);
+        if (!isUsedPath(rootPath)) {
+            writeDirectory(rootPath);
+        }
+        try {
+            FS.mkdirSync(path);
+        }
+        catch (err) {
+            console.warn(err);
+        }
+    };
+    publicExports.writeFile = function LibraryTools_writeFile(inputs) {
+        const path = resolvePath(inputs.path);
+        writeDirectory(Path.dirname(path));
+        FS.writeFileSync(inputs.path, inputs.content, { encoding: inputs.encoding });
+    };
+})();
+registeredFiles["LibraryTools.js"] = module.exports;
+
+ToolKid.registerFunction({section:"nodeJS", functions: {
+            loopFiles:module.exports.loopFiles
+        }})
+
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
 })();
