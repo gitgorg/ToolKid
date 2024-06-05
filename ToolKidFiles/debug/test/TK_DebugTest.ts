@@ -44,7 +44,9 @@ type TestResult = {
     const isObjectWithExecute = function TK_DebutTest_isObjectWithExecute(
         value: any
     ) {
-        return typeof value?.execute === "function";
+        return typeof value === "object"
+        && value !== null
+        && typeof value.execute === "function";
     };
 
     const isValidSubject = function TK_DebugTest_isValidSubject(
