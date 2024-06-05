@@ -374,7 +374,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         }
         return result;
     };
-    const getSummaryFinal = function (summary) {
+    const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(summary) {
         summary.timeTotal = Date.now() - timeStart;
         const { callback } = summary;
         if (typeof callback === "function") {
@@ -823,7 +823,7 @@ registeredFiles["TK_DebugTestAssertions.js"] = module.exports;
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
-        const summary = ToolKid.debug.test.getSummary(function () {
+        const summary = ToolKid.debug.test.getSummary(function (summary) {
             logMissingSuspects(summary);
             summary.failures.forEach(logFailure);
             logFazit(summary);

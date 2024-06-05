@@ -125,7 +125,9 @@ type TestSummary = {
         return result;
     };
 
-    const getSummaryFinal = function (summary:TestSummary) {
+    const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal (
+        summary:TestSummary
+    ) {
         summary.timeTotal = Date.now() - timeStart;
         const {callback} = summary;
         if (typeof callback === "function") {
