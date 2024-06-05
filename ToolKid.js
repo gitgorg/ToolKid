@@ -470,7 +470,9 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
         };
     };
     const isObjectWithExecute = function TK_DebutTest_isObjectWithExecute(value) {
-        return typeof value?.execute === "function";
+        return typeof value === "object"
+            && value !== null
+            && typeof value.execute === "function";
     };
     const isValidSubject = function TK_DebugTest_isValidSubject(subject) {
         if (typeof subject === "function") {
