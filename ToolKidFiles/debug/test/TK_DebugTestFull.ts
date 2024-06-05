@@ -143,7 +143,6 @@ interface TK_DebugTest_file {
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
-        log(777,inputs);
         const summary = ToolKid.debug.test.getSummary(function(summary){
             logMissingSuspects(summary);
             summary.failures.forEach(logFailure);
