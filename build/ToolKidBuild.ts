@@ -87,7 +87,7 @@ type ToolKidConfig = {
         );
 
         privateData.combinedFile += "global.log = ToolKid.debug.terminal.logImportant;\n";
-
+        privateData.combinedFile += "module.exports = ToolKid;\n";
         privateData.combinedFile += "})();";
         Library.getTools().writeFile({
             path:"./ToolKid.js",

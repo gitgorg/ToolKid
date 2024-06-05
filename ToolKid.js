@@ -1003,4 +1003,5 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 registeredFiles["T_pathList.js"] = module.exports;
 
 global.log = ToolKid.debug.terminal.logImportant;
+module.exports = ToolKid;
 })();
