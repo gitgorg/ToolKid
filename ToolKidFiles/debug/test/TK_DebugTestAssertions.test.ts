@@ -1,6 +1,6 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, test } = Debug.test;
+    const { assertFailure, assertEquality, createPromise, test } = Debug.test;
 
 
 
@@ -139,6 +139,15 @@
         }
     },{
         subject: assertFailure,
+        execute: async function rejectedDirectPromise() {
+            await assertFailure({
+                name: "failing direct promise",
+                execute:Promise.reject("because2"),
+                shouldThrow: "because2"
+            });
+        }
+    },{
+        subject: assertFailure,
         execute: async function rejectedPromiseWrongReason() {
             await (<Promise<any>>assertFailure({
                 name: "failing promise",
@@ -189,6 +198,65 @@
                     value: reason,
                     shouldBe: [ "~ successfull promise ~ promise did not reject as expected" ]
                 });
+            });
+        }
+    });
+
+    const referencePromise = createPromise();
+    test({
+        subject: createPromise,
+        execute: async function createAndResolve () {
+            const promise = createPromise();
+            assertEquality({
+                "promise is instanceof Promise":{
+                    value: promise instanceof Promise,
+                    shouldBe: true
+                },
+                "promise.done":{
+                    value: promise.done,
+                    shouldBe: undefined
+                },
+                "typeof promise.resolve": {
+                    value: typeof promise.resolve,
+                    shouldBe: "function"
+                },
+                "typeof promise.reject": {
+                    value: typeof promise.reject,
+                    shouldBe: "function"
+                }
+            });
+        }
+    },{
+        subject: referencePromise.resolve,
+        execute: async function createAndResolve () {
+            const promise = createPromise();
+            promise.resolve(200);
+            assertEquality({
+                "promise.done": {
+                    value: promise.done,
+                    shouldBe: true
+                },
+                "resolved to": {
+                    value: await promise,
+                    shouldBe: 200
+                }
+            });
+        }
+    },{
+        subject: referencePromise.reject,
+        execute: async function createAndReject () {
+            const promise = createPromise();
+            promise.reject(400);
+            await assertFailure({
+                name:"promise",
+                execute: promise,
+                shouldThrow: 400
+            });
+            assertEquality({
+                "promise.done": {
+                    value: promise.done,
+                    shouldBe: true
+                }
             });
         }
     });

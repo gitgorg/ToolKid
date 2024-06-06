@@ -4,15 +4,11 @@ interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     assertFailure(...inputs: {
         name: string,
-        execute(...inputs: any[]): any | Promise<any>,
+        execute: Promise<any> | {(
+            ...inputs: any[]
+        ): any | Promise<any>},
         withInputs?: any | any[],
-        shouldThrow: any | ErrorConstructor,
-        toleranceDepth?: number
-    }[]): void | Promise<any>
-    assertFailure(...inputs: {
-        name: string,
-        execute(...inputs: any[]): any | Promise<any>,
-        withInputs?: any | any[],
+        shouldThrow?: any | ErrorConstructor,
         toleranceDepth?: number
     }[]): void | Promise<any>,
 
@@ -31,13 +27,17 @@ interface TK_DebugTest_file {
     }): void,
 
     createPromise(
-        maxDuration?: number | [maxDuration:number, reason:any]
+        maxDuration?: number | [maxDuration: number, reason: any]
     ): PromiseControllable
 }
 
 type PromiseControllable = Promise<any> & {
-    resolve(value:any):void,
-    reject(reason:any): void,
+    resolve(
+        value?: any
+    ): void,
+    reject(
+        reason?: any
+    ): void,
     done?: true
 }
 
@@ -126,7 +126,7 @@ type PromiseControllable = Promise<any> & {
             resolver = resolve;
         });
 
-        promisedResults.forEach(assertFailureWatchPromise.bind(null,{
+        promisedResults.forEach(assertFailureWatchPromise.bind(null, {
             count: promisedResults.length,
             rejecter,
             resolver
@@ -134,7 +134,7 @@ type PromiseControllable = Promise<any> & {
         return resultPromise;
     };
 
-    const assertFailureWatchPromise = function (bound: Dictionary,inputs: {
+    const assertFailureWatchPromise = function (bound: Dictionary, inputs: {
         inputs: Dictionary,
         promise: Promise<any>
     }) {
@@ -165,7 +165,12 @@ type PromiseControllable = Promise<any> & {
         shouldThrow?: any | ErrorConstructor,
         toleranceDepth?: number
     }) {
-        if (typeof inputs.execute !== "function") {
+        if (inputs.execute instanceof Promise) {
+            return {
+                inputs,
+                promise: inputs.execute
+            };
+        } else if (typeof inputs.execute !== "function") {
             throw report({
                 name: inputs.name,
                 message: ["execute is not a function, instead is:", inputs.execute]
@@ -271,14 +276,14 @@ type PromiseControllable = Promise<any> & {
         return undefined;
     };
 
-    publicExports.createPromise = function createPromise (inputs) {
+    publicExports.createPromise = function TK_DebugTestAssertions_createPromise(inputs) {
         const result = createPromiseControllable();
         if (inputs === undefined) {
             return result;
         }
 
         if (typeof inputs === "number") {
-            inputs = [inputs,"timeout"];
+            inputs = [inputs, "timeout"];
         } else if (!(inputs instanceof Array)) {
             return result;
         }
@@ -292,14 +297,14 @@ type PromiseControllable = Promise<any> & {
     };
 
     const createPromiseControllable = function TK_DebugTestAssertions_createPromiseControllable() {
-        let resolve:any, reject:any;
+        let resolve: any, reject: any;
         const result = <PromiseControllable>new Promise(
-            function createPromise_setup (resolveFunction, rejectFunction){
-                resolve = function (value:any) {
+            function createPromise_setup(resolveFunction, rejectFunction) {
+                resolve = function TK_DebugTestAssertions_PromiseResolve(value: any) {
                     result.done = true;
                     resolveFunction(value);
                 };
-                reject = function(reason:any){
+                reject = function TK_DebugTestAssertions_PromiseReject (reason: any) {
                     result.done = true;
                     rejectFunction(reason);
                 }
@@ -343,16 +348,16 @@ type PromiseControllable = Promise<any> & {
         ];
     };
 
-    const watchPromiseDuration = function TK_DEBUG_TestAssertions_watchPromiseDuration (inputs:{
+    const watchPromiseDuration = function TK_DEBUG_TestAssertions_watchPromiseDuration(inputs: {
         duration: number,
         reason: string,
         promise: PromiseControllable
     }) {
-        setTimeout(function TK_DEBUG_TestAssertions_watchPromiseDurationCheck () {
+        setTimeout(function TK_DEBUG_TestAssertions_watchPromiseDurationCheck() {
             if (inputs.promise.done !== true) {
                 inputs.promise.reject(inputs.reason);
             }
-        },inputs.duration);
+        }, inputs.duration);
     };
 
     Object.freeze(publicExports);
