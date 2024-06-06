@@ -28,7 +28,17 @@ interface TK_DebugTest_file {
             shouldBe: any,
             toleranceDepth?: number
         }
-    }): void
+    }): void,
+
+    createPromise(
+        maxDuration?: number | [maxDuration:number, reason:any]
+    ): PromiseControllable
+}
+
+type PromiseControllable = Promise<any> & {
+    resolve(value:any):void,
+    reject(reason:any): void,
+    done?: true
 }
 
 
@@ -36,7 +46,53 @@ interface TK_DebugTest_file {
 (function TK_DebugTestAssertions_init() {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-    const assureDeep = function TK_DebugTestAssertions_assureDeep(inputs: {
+    publicExports.assertEquality = function TK_DebugTestAssertions_assertEqualityLoop(...inputs) {
+        if (inputs.length === 1) {
+            const firstInputs = inputs[0];
+            if (firstInputs.name === undefined) {
+                assertEqualityMode2(firstInputs);
+                return;
+            }
+        }
+        inputs.forEach(assertEquality);
+    };
+
+    const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs: Dictionary) {
+        Object.entries(inputs).forEach(function (keyValue) {
+            const reworked = Object.assign({}, keyValue[1], { name: keyValue[0] });
+            assertEquality(reworked);
+        });
+    };
+
+    const assertEquality = function TK_DebugTestAssertions_assertEquality(inputs: {
+        name: string,
+        value: any,
+        shouldBe: any,
+        toleranceDepth?: number
+    }) {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return;
+        } else if (isDifferentAndSimple(value, shouldBe)) {
+            throw report({
+                name: inputs.name,
+                message: ["value is:", inputs.value, "but should be equal to:", inputs.shouldBe]
+            });
+        } else if (inputs.toleranceDepth === 0) {
+            throw report({
+                name: inputs.name,
+                message: ["value is:", inputs.value, "but should be identical with:", inputs.shouldBe]
+            });
+        }
+
+        assertEqualityDeep({
+            inputs,
+            toleranceDepth: inputs.toleranceDepth || 1
+        });
+    };
+
+
+    const assertEqualityDeep = function TK_DebugTestAssertions_assertEqualityDeep(inputs: {
         inputs: {
             name: string,
             value: any,
@@ -54,10 +110,6 @@ interface TK_DebugTest_file {
                 message: ["value is:", inputs.inputs.value, "but should be equal to:", inputs.inputs.shouldBe, "difference:", difference]
             });
         }
-    };
-
-    const isPromised = function (inputs: any) {
-        return inputs !== undefined && inputs.promise instanceof Promise;
     };
 
     publicExports.assertFailure = function TK_DebugTestAssertions_assertFailure(...inputs) {
@@ -219,49 +271,43 @@ interface TK_DebugTest_file {
         return undefined;
     };
 
-    publicExports.assertEquality = function TK_DebugTestAssertions_assertEqualityLoop(...inputs) {
-        if (inputs.length === 1) {
-            const firstInputs = inputs[0];
-            if (firstInputs.name === undefined) {
-                assertEqualityMode2(firstInputs);
-                return;
+    publicExports.createPromise = function createPromise (inputs) {
+        const result = createPromiseControllable();
+        if (inputs === undefined) {
+            return result;
+        }
+
+        if (typeof inputs === "number") {
+            inputs = [inputs,"timeout"];
+        } else if (!(inputs instanceof Array)) {
+            return result;
+        }
+
+        watchPromiseDuration({
+            duration: inputs[0],
+            reason: inputs[1],
+            promise: result
+        });
+        return result;
+    };
+
+    const createPromiseControllable = function TK_DebugTestAssertions_createPromiseControllable() {
+        let resolve:any, reject:any;
+        const result = <PromiseControllable>new Promise(
+            function createPromise_setup (resolveFunction, rejectFunction){
+                resolve = function (value:any) {
+                    result.done = true;
+                    resolveFunction(value);
+                };
+                reject = function(reason:any){
+                    result.done = true;
+                    rejectFunction(reason);
+                }
             }
-        }
-        inputs.forEach(assertEquality);
-    };
-
-    const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs: Dictionary) {
-        Object.entries(inputs).forEach(function (keyValue) {
-            const reworked = Object.assign({}, keyValue[1], { name: keyValue[0] });
-            assertEquality(reworked);
-        });
-    };
-
-    const assertEquality = function TK_DebugTestAssertions_assertEquality(inputs: {
-        name: string,
-        value: any,
-        shouldBe: any,
-        toleranceDepth?: number
-    }) {
-        const { value, shouldBe } = inputs;
-        if (isIdentical(value, shouldBe)) {
-            return;
-        } else if (isDifferentAndSimple(value, shouldBe)) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", inputs.value, "but should be equal to:", inputs.shouldBe]
-            });
-        } else if (inputs.toleranceDepth === 0) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", inputs.value, "but should be identical with:", inputs.shouldBe]
-            });
-        }
-
-        assureDeep({
-            inputs,
-            toleranceDepth: inputs.toleranceDepth || 1
-        });
+        );
+        result.resolve = resolve;
+        result.reject = reject;
+        return result;
     };
 
     const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(
@@ -282,6 +328,10 @@ interface TK_DebugTest_file {
         return typeof value === "object" && value !== null || typeof value === "function";
     };
 
+    const isPromised = function (inputs: any) {
+        return inputs !== undefined && inputs.promise instanceof Promise;
+    };
+
     const report = function TK_DebugTestAssertions_report(inputs: {
         name: string,
         message: [string, ...any[]]
@@ -291,6 +341,18 @@ interface TK_DebugTest_file {
             "~ " + inputs.name + " ~ " + message[0],
             ...message.slice(1)
         ];
+    };
+
+    const watchPromiseDuration = function TK_DEBUG_TestAssertions_watchPromiseDuration (inputs:{
+        duration: number,
+        reason: string,
+        promise: PromiseControllable
+    }) {
+        setTimeout(function TK_DEBUG_TestAssertions_watchPromiseDurationCheck () {
+            if (inputs.promise.done !== true) {
+                inputs.promise.reject(inputs.reason);
+            }
+        },inputs.duration);
     };
 
     Object.freeze(publicExports);
