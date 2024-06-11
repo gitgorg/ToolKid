@@ -67,16 +67,20 @@
         execute: function basic() {
             Terminal.logError("string first", 1);
             assertEquality({
-                name: "errors", value: errors, shouldBe:
-                    [colors.red + ">> string first" + colors.white, 1]
+                "errors":{
+                    value: errors,
+                    shouldBe: [colors.red + ">> string first" + colors.white, 1]
+                }
             });
             Terminal.logError(2, "number first");
             assertEquality({
-                name: "errors", value: errors, shouldBe: [
-                    colors.red + ">>" + colors.white,
-                    2,
-                    colors.red + "number first" + colors.white
-                ]
+                "errors":{
+                    value: errors,
+                    shouldBe: [
+                        colors.red + ">>" + colors.white,
+                        2, colors.red + "number first" + colors.white
+                    ]
+                }
             });
         }
     });
@@ -86,9 +90,12 @@
         execute: function basic() {
             Terminal.logBasic("basic", 1, [true]);
             assertEquality({
-                name: "warnings", value: warnings, shouldBe:[
-                    colors.grey + ">> basic" + colors.white, 1, [true]
-                ]
+                "warnings":{
+                    value: warnings,
+                    shouldBe:[
+                        colors.grey + ">> basic" + colors.white, 1, [true]
+                    ]
+                }
             });
         }
     });
@@ -98,9 +105,12 @@
         execute: function basic() {
             Terminal.logImportant("important", 2, [true]);
             assertEquality({
-                name: "warnings", value: warnings, shouldBe:[
-                    colors.cyan + ">> important" + colors.white, 2, [true]
-                ]
+                "warnings":{
+                    value: warnings,
+                    shouldBe:[
+                        colors.cyan + ">> important" + colors.white, 2, [true]
+                    ]
+                }
             });
         }
     });
