@@ -13,15 +13,13 @@ interface TK_DebugTest_file {
     }[]): void | Promise<any>,
 
     assertEquality(inputs: {
-        name: string,
-        value: any,
-        shouldBe: any,
-        toleranceDepth?: number
-    }): void,
-    assertEquality(inputs: {
         [name: string]: {
             value: any,
             shouldBe: any,
+            toleranceDepth?: number
+        } | {
+            value: any,
+            shouldPartiallyBe: any,
             toleranceDepth?: number
         }
     }): void,
@@ -47,14 +45,7 @@ type PromiseControllable = Promise<any> & {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     publicExports.assertEquality = function TK_DebugTestAssertions_assertEqualityLoop(...inputs) {
-        if (inputs.length === 1) {
-            const firstInputs = inputs[0];
-            if (firstInputs.name === undefined) {
-                assertEqualityMode2(firstInputs);
-                return;
-            }
-        }
-        inputs.forEach(assertEquality);
+        inputs.forEach(assertEqualityMode2);
     };
 
     const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs: Dictionary) {

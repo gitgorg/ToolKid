@@ -34,9 +34,10 @@
         execute: function basic() {
             saveStateID = Debug.saveSummaryState();
             assertEquality({
-                name: "returns number",
-                value: typeof saveStateID === "number",
-                shouldBe: true
+                "returns number":{
+                    value: typeof saveStateID === "number",
+                    shouldBe: true
+                }
             });
         }
     }));
@@ -53,16 +54,18 @@
             Debug.registerTestResult(dummyResult, dummyResult);
             const newSummary = getSummary();
             assertEquality({
-                name: "new testCount (+2)",
-                value: newSummary.testCount,
-                shouldBe: oldSummary.testCount + 2
+                "new testCount (+2)":{
+                    value: newSummary.testCount,
+                    shouldBe: oldSummary.testCount + 2
+                }
             });
             const successes = <any[]>newSummary.successes.get(Debug.registerTestResult);
             //log(successes)
             assertEquality({
-                name: "last stored result",
-                value: successes[successes.length - 1],
-                shouldBe: { name: Debug.registerTestResult.name, time: 0 }
+                "last stored result":{
+                    value: successes[successes.length - 1],
+                    shouldBe: { name: Debug.registerTestResult.name, time: 0 }
+                }
             });
         }
     }));
@@ -75,9 +78,10 @@
             Debug.registerTestSuspect(a);
             let newSummary = getSummary();
             assertEquality({
-                name: "missingSuspect",
-                value: newSummary.missingSuspects.size,
-                shouldBe: oldSummary.missingSuspects.size + 1
+                "missingSuspect":{
+                    value: newSummary.missingSuspects.size,
+                    shouldBe: oldSummary.missingSuspects.size + 1
+                }
             });
             Debug.registerTestSuspect({
                 suspect: a,
@@ -85,9 +89,10 @@
             });
             newSummary = getSummary();
             assertEquality({
-                name: "missingSuspect",
-                value: newSummary.missingSuspects.size,
-                shouldBe: oldSummary.missingSuspects.size + 3
+                "missingSuspect":{
+                    value: newSummary.missingSuspects.size,
+                    shouldBe: oldSummary.missingSuspects.size + 3
+                }
             });
         }
     }));
@@ -97,8 +102,10 @@
         execute: function basic() {
             Debug.clearSummaryState();
             assertEquality({
-                name: "testCount",
-                value: getSummary().testCount, shouldBe: 0
+                "testCount":{
+                    value: getSummary().testCount,
+                    shouldBe: 0
+                }
             });
         }
     }));
@@ -111,8 +118,9 @@
             summary.timeTotal = initalSummary.timeTotal;
             summary.testCount -= 1;
             assertEquality({
-                name: "loaded summary",
-                value: summary, shouldBe: initalSummary
+                "loaded summary":{
+                    value: summary, shouldBe: initalSummary
+                }
             });
             Debug.registerTestResult(...testResults);
         }

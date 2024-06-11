@@ -110,9 +110,12 @@
         execute: function basic() {
             Terminal.logWarning("warning", 3, [true]);
             assertEquality({
-                name: "warnings", value: warnings, shouldBe:[
-                    colors.orange + ">> warning" + colors.white, 3, [true]
-                ]
+                "warnings":{
+                    value: warnings,
+                    shouldBe:[
+                        colors.orange + ">> warning" + colors.white, 3, [true]
+                    ]
+                }
             });
         }
     });

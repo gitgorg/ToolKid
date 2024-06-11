@@ -9,9 +9,10 @@
         execute: function basicFailure() {
             try {
                 assertEquality({
-                    name: "basicFailure",
-                    value: true,
-                    shouldBe: false
+                    "basicFailure":{
+                        value: true,
+                        shouldBe: false
+                    }
                 });
             } catch (error) {
                 return;
@@ -159,14 +160,15 @@
                 throw "din't fail";
             }).catch(function(reason) {
                 assertEquality({
-                    name:"error from wrong reason",
-                    value: reason,
-                    shouldBe: [
-                        "~ failing promise ~ did not throw expected message. threw:",
-                        "because",
-                        "  instead of:",
-                        "why not"
-                      ]
+                    "error from wrong reason":{
+                        value: reason,
+                        shouldBe: [
+                            "~ failing promise ~ did not throw expected message. threw:",
+                            "because",
+                            "  instead of:",
+                            "why not"
+                        ]
+                    }
                 });
             });
         }
@@ -194,9 +196,10 @@
                 }
             })).catch(function(reason) {
                 assertEquality({
-                    name:"error from not failing",
-                    value: reason,
-                    shouldBe: [ "~ successfull promise ~ promise did not reject as expected" ]
+                    "error from not failing":{
+                        value: reason,
+                        shouldBe: [ "~ successfull promise ~ promise did not reject as expected" ]
+                    }
                 });
             });
         }

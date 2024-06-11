@@ -548,14 +548,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
 (function TK_DebugTestAssertions_init() {
     const publicExports = module.exports = {};
     publicExports.assertEquality = function TK_DebugTestAssertions_assertEqualityLoop(...inputs) {
-        if (inputs.length === 1) {
-            const firstInputs = inputs[0];
-            if (firstInputs.name === undefined) {
-                assertEqualityMode2(firstInputs);
-                return;
-            }
-        }
-        inputs.forEach(assertEquality);
+        inputs.forEach(assertEqualityMode2);
     };
     const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs) {
         Object.entries(inputs).forEach(function (keyValue) {

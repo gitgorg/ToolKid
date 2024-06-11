@@ -16,9 +16,10 @@
                 URL: requestAdresses.GETBasic
             });
             assertEquality({
-                name: "response",
-                value: response,
-                shouldBe: {number:100, boolean:true}
+                "response":{
+                    value: response,
+                    shouldBe: {number:100, boolean:true}
+                }
             });
         }
     },{
@@ -31,9 +32,10 @@
                 },
                 errorHandler: function (error) {
                     assertEquality({
-                        name: "response is error",
-                        value: error instanceof Error,
-                        shouldBe: true
+                        "response is error":{
+                            value: error instanceof Error,
+                            shouldBe: true
+                        }
                     });
                 }
             });
