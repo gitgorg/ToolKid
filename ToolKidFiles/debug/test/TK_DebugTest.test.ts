@@ -55,7 +55,7 @@
     promiseSuccess.resolve();
     testPromise.then(function (result) {
         assertEquality({
-            "promise success result.name":{
+            "promise success result.name": {
                 value: result.name,
                 shouldBe: "returnGoodPromise"
             }
@@ -73,7 +73,7 @@
     promiseFailure.reject();
     testPromise.then(function (result) {
         assertEquality({
-            "promise failure result.errorMessage":{
+            "promise failure result.errorMessage": {
                 value: result.errorMessage,
                 shouldBe: "Unspecified Error"
             }

@@ -34,7 +34,7 @@
         execute: function basic() {
             saveStateID = Debug.saveSummaryState();
             assertEquality({
-                "returns number":{
+                "returns number": {
                     value: typeof saveStateID === "number",
                     shouldBe: true
                 }
@@ -54,7 +54,7 @@
             Debug.registerTestResult(dummyResult, dummyResult);
             const newSummary = getSummary();
             assertEquality({
-                "new testCount (+2)":{
+                "new testCount (+2)": {
                     value: newSummary.testCount,
                     shouldBe: oldSummary.testCount + 2
                 }
@@ -62,7 +62,7 @@
             const successes = <any[]>newSummary.successes.get(Debug.registerTestResult);
             //log(successes)
             assertEquality({
-                "last stored result":{
+                "last stored result": {
                     value: successes[successes.length - 1],
                     shouldBe: { name: Debug.registerTestResult.name, time: 0 }
                 }
@@ -78,7 +78,7 @@
             Debug.registerTestSuspect(a);
             let newSummary = getSummary();
             assertEquality({
-                "missingSuspect":{
+                "missingSuspect": {
                     value: newSummary.missingSuspects.size,
                     shouldBe: oldSummary.missingSuspects.size + 1
                 }
@@ -89,7 +89,7 @@
             });
             newSummary = getSummary();
             assertEquality({
-                "missingSuspect":{
+                "missingSuspect": {
                     value: newSummary.missingSuspects.size,
                     shouldBe: oldSummary.missingSuspects.size + 3
                 }
@@ -102,7 +102,7 @@
         execute: function basic() {
             Debug.clearSummaryState();
             assertEquality({
-                "testCount":{
+                "testCount": {
                     value: getSummary().testCount,
                     shouldBe: 0
                 }
@@ -118,7 +118,7 @@
             summary.timeTotal = initalSummary.timeTotal;
             summary.testCount -= 1;
             assertEquality({
-                "loaded summary":{
+                "loaded summary": {
                     value: summary, shouldBe: initalSummary
                 }
             });

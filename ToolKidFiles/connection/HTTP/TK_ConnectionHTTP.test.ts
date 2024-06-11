@@ -1,5 +1,5 @@
 (function TK_ConnectionHTTPtest() {
-    const {request } = ToolKid.connection.HTTP;
+    const { request } = ToolKid.connection.HTTP;
     const { assertEquality, test } = ToolKid.debug.test;
 
 
@@ -11,28 +11,28 @@
 
     test({
         subject: request,
-        execute: async function getBasic () {
+        execute: async function getBasic() {
             const response = await request({
                 URL: requestAdresses.GETBasic
             });
             assertEquality({
-                "response":{
+                "response": {
                     value: response,
-                    shouldBe: {number:100, boolean:true}
+                    shouldBe: { number: 100, boolean: true }
                 }
             });
         }
-    },{
+    }, {
         subject: request,
         execute: function getMalformedResponse() {
             request({
                 URL: requestAdresses.GETInvalidResponse,
-                callback: function(response) {
+                callback: function (response) {
                     throw ["request should have failed but responded fine with:", response];
                 },
                 errorHandler: function (error) {
                     assertEquality({
-                        "response is error":{
+                        "response is error": {
                             value: error instanceof Error,
                             shouldBe: true
                         }

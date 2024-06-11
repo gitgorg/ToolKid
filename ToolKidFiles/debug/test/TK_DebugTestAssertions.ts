@@ -19,7 +19,7 @@ interface TK_DebugTest_file {
             toleranceDepth?: number
         } | {
             value: any,
-            shouldPartiallyBe: any,
+            shouldBeAtLeast: any,
             toleranceDepth?: number
         }
     }): void,
@@ -51,7 +51,11 @@ type PromiseControllable = Promise<any> & {
     const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs: Dictionary) {
         Object.entries(inputs).forEach(function (keyValue) {
             const reworked = Object.assign({}, keyValue[1], { name: keyValue[0] });
-            assertEquality(reworked);
+            if (reworked.shouldBeAtLeast === undefined) {
+                assertEquality(reworked);
+            } else {
+                assertEqualityAtLeast(reworked);
+            }
         });
     };
 
@@ -79,6 +83,37 @@ type PromiseControllable = Promise<any> & {
         assertEqualityDeep({
             inputs,
             toleranceDepth: inputs.toleranceDepth || 1
+        });
+    };
+
+    const assertEqualityAtLeast = function TK_DebugTestAssertions_assertEqualityAtLeast (inputs:{
+        name: string,
+        value: any,
+        shouldBeAtLeast: any,
+        toleranceDepth?: number
+    }) {
+        const { value, shouldBeAtLeast } = inputs;
+        if (isIdentical(value, shouldBeAtLeast)) {
+            return;
+        } else if (isDifferentAndSimple(value, shouldBeAtLeast)) {
+            throw report({
+                name: inputs.name,
+                message: ["value is:", value, "but should be at least equal to:", inputs.shouldBeAtLeast]
+            });
+        }
+
+        Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
+            const toleranceDepth = (inputs.toleranceDepth === undefined)
+                ? 0
+                : inputs.toleranceDepth - 1;
+            assertEqualityDeep({
+                inputs:{
+                    name: keyValue[0],
+                    value: value[keyValue[0]],
+                    shouldBe: keyValue[1]
+                },
+                toleranceDepth
+            });
         });
     };
 

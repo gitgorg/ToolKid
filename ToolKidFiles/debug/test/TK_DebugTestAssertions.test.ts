@@ -9,7 +9,7 @@
         execute: function basicFailure() {
             try {
                 assertEquality({
-                    "basicFailure":{
+                    "basicFailure": {
                         value: true,
                         shouldBe: false
                     }
@@ -23,20 +23,20 @@
         subject: assertEquality,
         execute: function simpleEquality() {
             assertEquality({
-                "number":{
-                    value: 10, 
+                "number": {
+                    value: 10,
                     shouldBe: 10
                 },
-                "boolean":{
-                    value: true, 
+                "boolean": {
+                    value: true,
                     shouldBe: true
                 },
-                "text":{
-                    value: "text", 
+                "text": {
+                    value: "text",
                     shouldBe: "text"
                 },
-                "null":{
-                    value: null, 
+                "null": {
+                    value: null,
                     shouldBe: null
                 }
             });
@@ -45,15 +45,15 @@
         subject: assertEquality,
         execute: function trickyEquality() {
             assertEquality({
-                "NaN":{
+                "NaN": {
                     value: NaN,
                     shouldBe: NaN
                 },
-                "object":{
+                "object": {
                     value: {},
                     shouldBe: {}
                 },
-                "array":{
+                "array": {
                     value: [1],
                     shouldBe: [1]
                 }
@@ -64,12 +64,12 @@
         execute: function strictIdentity() {
             const testObject = {}; const testArray = [1];
             assertEquality({
-                "identical objects":{
+                "identical objects": {
                     value: testObject,
                     shouldBe: testObject,
                     toleranceDepth: 0
                 },
-                "identical arrays":{
+                "identical arrays": {
                     value: testArray,
                     shouldBe: testArray,
                     toleranceDepth: 0
@@ -79,30 +79,62 @@
                 name: "equal but not identical objects",
                 execute: assertEquality,
                 withInputs: {
-                    name: "object", value: {}, shouldBe: testObject, toleranceDepth: 0
+                    "object": {
+                        value: {},
+                        shouldBe: testObject,
+                        toleranceDepth: 0
+                    }
                 },
                 shouldThrow: ["~ object ~ value is:", {}, "but should be identical with:", {}]
             }, {
                 name: "equal but not identical arrays",
                 execute: assertEquality,
                 withInputs: {
-                    name: "object", value: [1], shouldBe: testArray, toleranceDepth: 0
+                    "object": {
+                        value: [1],
+                        shouldBe: testArray,
+                        toleranceDepth: 0
+                    }
                 },
                 shouldThrow: ["~ object ~ value is:", [1], "but should be identical with:", [1]]
+            });
+        }
+    }, {
+        subject: assertEquality,
+        execute: function shouldBeAtLeast() {
+            const testObject = {text:"bla"};
+            assertEquality({
+                "identical object": {
+                    value: {text:"bla"},
+                    shouldBeAtLeast: testObject
+                }, "extemded object": {
+                    value: {text:"bla", number:100},
+                    shouldBeAtLeast: testObject
+                }
+            });
+            assertFailure({
+                name: "not extended",
+                execute: assertEquality,
+                withInputs: {
+                    "object": {
+                        value: {number:100},
+                        shouldBe: testObject
+                    }
+                }
             });
         }
     });
 
     test({
         subject: assertFailure,
-        execute: function notFailing () {
+        execute: function notFailing() {
             try {
                 assertFailure({
                     name: "empty function",
-                    execute: function () {}
+                    execute: function () { }
                 });
                 throw ["basicFailure din't throw"];
-            } catch (error) {}
+            } catch (error) { }
         }
     }, {
         subject: assertFailure,
@@ -132,35 +164,35 @@
         execute: async function rejectedPromise() {
             await assertFailure({
                 name: "failing promise",
-                execute:function () {
+                execute: function () {
                     return Promise.reject("because");
                 },
                 shouldThrow: "because"
             });
         }
-    },{
+    }, {
         subject: assertFailure,
         execute: async function rejectedDirectPromise() {
             await assertFailure({
                 name: "failing direct promise",
-                execute:Promise.reject("because2"),
+                execute: Promise.reject("because2"),
                 shouldThrow: "because2"
             });
         }
-    },{
+    }, {
         subject: assertFailure,
         execute: async function rejectedPromiseWrongReason() {
             await (<Promise<any>>assertFailure({
                 name: "failing promise",
-                execute:function () {
+                execute: function () {
                     return Promise.reject("because");
                 },
                 shouldThrow: "why not"
-            })).then(function(){
+            })).then(function () {
                 throw "din't fail";
-            }).catch(function(reason) {
+            }).catch(function (reason) {
                 assertEquality({
-                    "error from wrong reason":{
+                    "error from wrong reason": {
                         value: reason,
                         shouldBe: [
                             "~ failing promise ~ did not throw expected message. threw:",
@@ -172,21 +204,21 @@
                 });
             });
         }
-    },{
+    }, {
         subject: assertFailure,
-        execute: async function resolvedPromiseWhichThrowsLater () {
+        execute: async function resolvedPromiseWhichThrowsLater() {
             await assertFailure({
-                name:"promise successfull but then fails",
+                name: "promise successfull but then fails",
                 execute: function () {
                     return Promise.resolve(100)
-                        .then(function(){
+                        .then(function () {
                             throw 200;
                         });
                 },
                 shouldThrow: 200
             });
         }
-    },{
+    }, {
         subject: assertFailure,
         execute: async function resolvedPromise() {
             await (<Promise<any>>assertFailure({
@@ -194,11 +226,11 @@
                 execute: function () {
                     return Promise.resolve();
                 }
-            })).catch(function(reason) {
+            })).catch(function (reason) {
                 assertEquality({
-                    "error from not failing":{
+                    "error from not failing": {
                         value: reason,
-                        shouldBe: [ "~ successfull promise ~ promise did not reject as expected" ]
+                        shouldBe: ["~ successfull promise ~ promise did not reject as expected"]
                     }
                 });
             });
@@ -208,14 +240,14 @@
     const referencePromise = createPromise();
     test({
         subject: createPromise,
-        execute: async function createAndResolve () {
+        execute: async function createAndResolve() {
             const promise = createPromise();
             assertEquality({
-                "promise is instanceof Promise":{
+                "promise is instanceof Promise": {
                     value: promise instanceof Promise,
                     shouldBe: true
                 },
-                "promise.done":{
+                "promise.done": {
                     value: promise.done,
                     shouldBe: undefined
                 },
@@ -229,9 +261,9 @@
                 }
             });
         }
-    },{
+    }, {
         subject: referencePromise.resolve,
-        execute: async function createAndResolve () {
+        execute: async function createAndResolve() {
             const promise = createPromise();
             promise.resolve(200);
             assertEquality({
@@ -245,13 +277,13 @@
                 }
             });
         }
-    },{
+    }, {
         subject: referencePromise.reject,
-        execute: async function createAndReject () {
+        execute: async function createAndReject() {
             const promise = createPromise();
             promise.reject(400);
             await assertFailure({
-                name:"promise",
+                name: "promise",
                 execute: promise,
                 shouldThrow: 400
             });

@@ -553,7 +553,12 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
     const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs) {
         Object.entries(inputs).forEach(function (keyValue) {
             const reworked = Object.assign({}, keyValue[1], { name: keyValue[0] });
-            assertEquality(reworked);
+            if (reworked.shouldBeAtLeast === undefined) {
+                assertEquality(reworked);
+            }
+            else {
+                assertEqualityAtLeast(reworked);
+            }
         });
     };
     const assertEquality = function TK_DebugTestAssertions_assertEquality(inputs) {
@@ -576,6 +581,31 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
         assertEqualityDeep({
             inputs,
             toleranceDepth: inputs.toleranceDepth || 1
+        });
+    };
+    const assertEqualityAtLeast = function TK_DebugTestAssertions_assertEqualityAtLeast(inputs) {
+        const { value, shouldBeAtLeast } = inputs;
+        if (isIdentical(value, shouldBeAtLeast)) {
+            return;
+        }
+        else if (isDifferentAndSimple(value, shouldBeAtLeast)) {
+            throw report({
+                name: inputs.name,
+                message: ["value is:", value, "but should be at least equal to:", inputs.shouldBeAtLeast]
+            });
+        }
+        Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
+            const toleranceDepth = (inputs.toleranceDepth === undefined)
+                ? 0
+                : inputs.toleranceDepth - 1;
+            assertEqualityDeep({
+                inputs: {
+                    name: keyValue[0],
+                    value: value[keyValue[0]],
+                    shouldBe: keyValue[1]
+                },
+                toleranceDepth
+            });
         });
     };
     const assertEqualityDeep = function TK_DebugTestAssertions_assertEqualityDeep(inputs) {

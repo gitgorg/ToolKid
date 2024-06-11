@@ -11,11 +11,12 @@
         execute: function collectImportantColors() {
             ["grey", "white", "cyan", "orange", "red"].forEach(function (name) {
                 colors[name] = Terminal.getColorCode(<any>name);
-                assertEquality({
-                    name: "type of " + name,
+                const testInputs = <Dictionary>{};
+                testInputs["type of " + name] = {
                     value: typeof colors[name],
                     shouldBe: "string"
-                });
+                };
+                assertEquality(testInputs);
             });
         }
     });
@@ -24,7 +25,7 @@
         subject: Terminal.colorStrings,
         execute: function basic() {
             assertEquality({
-                "mixed values":{
+                "mixed values": {
                     value: Terminal.colorStrings({
                         colorName: "orange", values: ["text", 10, null, "text2"]
                     }),
@@ -35,9 +36,9 @@
                         colors.orange + "text2" + colors.white
                     ]
                 },
-                "combined strings":{
+                "combined strings": {
                     value: Terminal.colorStrings({
-                        colorName: "red", values: ["A","B","C", {}, "D","E"]
+                        colorName: "red", values: ["A", "B", "C", {}, "D", "E"]
                     }),
                     shouldBe: [
                         colors.red + "ABC" + colors.white,
@@ -67,14 +68,14 @@
         execute: function basic() {
             Terminal.logError("string first", 1);
             assertEquality({
-                "errors":{
+                "errors": {
                     value: errors,
                     shouldBe: [colors.red + ">> string first" + colors.white, 1]
                 }
             });
             Terminal.logError(2, "number first");
             assertEquality({
-                "errors":{
+                "errors": {
                     value: errors,
                     shouldBe: [
                         colors.red + ">>" + colors.white,
@@ -90,9 +91,9 @@
         execute: function basic() {
             Terminal.logBasic("basic", 1, [true]);
             assertEquality({
-                "warnings":{
+                "warnings": {
                     value: warnings,
-                    shouldBe:[
+                    shouldBe: [
                         colors.grey + ">> basic" + colors.white, 1, [true]
                     ]
                 }
@@ -105,9 +106,9 @@
         execute: function basic() {
             Terminal.logImportant("important", 2, [true]);
             assertEquality({
-                "warnings":{
+                "warnings": {
                     value: warnings,
-                    shouldBe:[
+                    shouldBe: [
                         colors.cyan + ">> important" + colors.white, 2, [true]
                     ]
                 }
@@ -120,9 +121,9 @@
         execute: function basic() {
             Terminal.logWarning("warning", 3, [true]);
             assertEquality({
-                "warnings":{
+                "warnings": {
                     value: warnings,
-                    shouldBe:[
+                    shouldBe: [
                         colors.orange + ">> warning" + colors.white, 3, [true]
                     ]
                 }
