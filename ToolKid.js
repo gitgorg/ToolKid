@@ -742,25 +742,28 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
         }
         return undefined;
     };
-    publicExports.createPromise = function TK_DebugTestAssertions_createPromise(inputs) {
-        const result = createPromiseControllable();
+    publicExports.createCondition = function TK_DebugTestAssertions_createCondition(inputs) {
+        const result = createCondition();
         if (inputs === undefined) {
             return result;
         }
         if (typeof inputs === "number") {
-            inputs = [inputs, "timeout"];
+            inputs = {
+                timeLimit: inputs,
+                overTimeMessage: "timeout"
+            };
         }
         else if (!(inputs instanceof Array)) {
             return result;
         }
         watchPromiseDuration({
-            duration: inputs[0],
-            reason: inputs[1],
+            timeLimit: inputs.timeLimit,
+            overTimeMessage: inputs.overTimeMessage,
             promise: result
         });
         return result;
     };
-    const createPromiseControllable = function TK_DebugTestAssertions_createPromiseControllable() {
+    const createCondition = function TK_DebugTestAssertions_createCondition() {
         let resolve, reject;
         const result = new Promise(function createPromise_setup(resolveFunction, rejectFunction) {
             resolve = function TK_DebugTestAssertions_PromiseResolve(value) {
@@ -772,8 +775,8 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
                 rejectFunction(reason);
             };
         });
-        result.resolve = resolve;
-        result.reject = reject;
+        result.succeed = resolve;
+        result.fail = reject;
         return result;
     };
     const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(valueA, valueB) {
@@ -800,9 +803,9 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
     const watchPromiseDuration = function TK_DEBUG_TestAssertions_watchPromiseDuration(inputs) {
         setTimeout(function TK_DEBUG_TestAssertions_watchPromiseDurationCheck() {
             if (inputs.promise.done !== true) {
-                inputs.promise.reject(inputs.reason);
+                inputs.promise.fail(inputs.overTimeMessage);
             }
-        }, inputs.duration);
+        }, inputs.timeLimit);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

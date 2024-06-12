@@ -1,6 +1,6 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, createPromise, test } = Debug.test;
+    const { assertFailure, assertEquality, createCondition, test } = Debug.test;
 
 
 
@@ -237,11 +237,11 @@
         }
     });
 
-    const referencePromise = createPromise();
+    const referenceCondition = createCondition();
     test({
-        subject: createPromise,
+        subject: createCondition,
         execute: async function createAndResolve() {
-            const promise = createPromise();
+            const promise = createCondition();
             assertEquality({
                 "promise is instanceof Promise": {
                     value: promise instanceof Promise,
@@ -252,20 +252,20 @@
                     shouldBe: undefined
                 },
                 "typeof promise.resolve": {
-                    value: typeof promise.resolve,
+                    value: typeof promise.succeed,
                     shouldBe: "function"
                 },
                 "typeof promise.reject": {
-                    value: typeof promise.reject,
+                    value: typeof promise.fail,
                     shouldBe: "function"
                 }
             });
         }
     }, {
-        subject: referencePromise.resolve,
+        subject: referenceCondition.succeed,
         execute: async function createAndResolve() {
-            const promise = createPromise();
-            promise.resolve(200);
+            const promise = createCondition();
+            promise.succeed(200);
             assertEquality({
                 "promise.done": {
                     value: promise.done,
@@ -278,10 +278,10 @@
             });
         }
     }, {
-        subject: referencePromise.reject,
+        subject: referenceCondition.fail,
         execute: async function createAndReject() {
-            const promise = createPromise();
-            promise.reject(400);
+            const promise = createCondition();
+            promise.fail(400);
             await assertFailure({
                 name: "promise",
                 execute: promise,
