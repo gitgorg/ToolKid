@@ -594,16 +594,13 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
                 message: ["value is:", value, "but should be at least equal to:", inputs.shouldBeAtLeast]
             });
         }
+        const toleranceDepth = (inputs.toleranceDepth === undefined)
+            ? 0 : inputs.toleranceDepth - 1;
         Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            const toleranceDepth = (inputs.toleranceDepth === undefined)
-                ? 0
-                : inputs.toleranceDepth - 1;
-            assertEqualityDeep({
-                inputs: {
-                    name: keyValue[0],
-                    value: value[keyValue[0]],
-                    shouldBe: keyValue[1]
-                },
+            assertEquality({
+                name: keyValue[0],
+                value: value[keyValue[0]],
+                shouldBe: keyValue[1],
                 toleranceDepth
             });
         });
@@ -781,7 +778,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
     };
     const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(valueA, valueB) {
         return typeof valueA !== typeof valueB
-            || !isList(valueA);
+            || !isList(valueA) || !isList(valueB);
     };
     const isIdentical = function TK_DebugTestAssertions_isIdentical(valueA, valueB) {
         return valueA === valueB

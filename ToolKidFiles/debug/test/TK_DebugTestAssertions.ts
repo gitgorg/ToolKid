@@ -102,16 +102,13 @@ type PromiseControllable = Promise<any> & {
             });
         }
 
+        const toleranceDepth = (inputs.toleranceDepth === undefined)
+            ? 0 : inputs.toleranceDepth - 1;
         Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            const toleranceDepth = (inputs.toleranceDepth === undefined)
-                ? 0
-                : inputs.toleranceDepth - 1;
-            assertEqualityDeep({
-                inputs:{
-                    name: keyValue[0],
-                    value: value[keyValue[0]],
-                    shouldBe: keyValue[1]
-                },
+            assertEquality({
+                name: keyValue[0],
+                value: value[keyValue[0]],
+                shouldBe: keyValue[1],
                 toleranceDepth
             });
         });
@@ -345,7 +342,7 @@ type PromiseControllable = Promise<any> & {
         valueA: any, valueB: any
     ) {
         return typeof valueA !== typeof valueB
-            || !isList(valueA);
+            || !isList(valueA) || !isList(valueB);
     };
 
     const isIdentical = function TK_DebugTestAssertions_isIdentical(
