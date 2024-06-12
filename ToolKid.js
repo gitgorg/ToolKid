@@ -547,73 +547,6 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
 
 (function TK_DebugTestAssertions_init() {
     const publicExports = module.exports = {};
-    publicExports.assertEquality = function TK_DebugTestAssertions_assertEqualityLoop(...inputs) {
-        inputs.forEach(assertEqualityMode2);
-    };
-    const assertEqualityMode2 = function TK_DebugTestAssertions_testForEquealityMode2(inputs) {
-        Object.entries(inputs).forEach(function (keyValue) {
-            const reworked = Object.assign({}, keyValue[1], { name: keyValue[0] });
-            if (reworked.shouldBeAtLeast === undefined) {
-                assertEquality(reworked);
-            }
-            else {
-                assertEqualityAtLeast(reworked);
-            }
-        });
-    };
-    const assertEquality = function TK_DebugTestAssertions_assertEquality(inputs) {
-        const { value, shouldBe } = inputs;
-        if (isIdentical(value, shouldBe)) {
-            return;
-        }
-        else if (isDifferentAndSimple(value, shouldBe)) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", inputs.value, "but should be equal to:", inputs.shouldBe]
-            });
-        }
-        else if (inputs.toleranceDepth === 0) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", inputs.value, "but should be identical with:", inputs.shouldBe]
-            });
-        }
-        assertEqualityDeep({
-            inputs,
-            toleranceDepth: inputs.toleranceDepth || 1
-        });
-    };
-    const assertEqualityAtLeast = function TK_DebugTestAssertions_assertEqualityAtLeast(inputs) {
-        const { value, shouldBeAtLeast } = inputs;
-        if (isIdentical(value, shouldBeAtLeast)) {
-            return;
-        }
-        else if (isDifferentAndSimple(value, shouldBeAtLeast)) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", value, "but should be at least equal to:", inputs.shouldBeAtLeast]
-            });
-        }
-        const toleranceDepth = (inputs.toleranceDepth === undefined)
-            ? 0 : inputs.toleranceDepth - 1;
-        Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            assertEquality({
-                name: keyValue[0],
-                value: value[keyValue[0]],
-                shouldBe: keyValue[1],
-                toleranceDepth
-            });
-        });
-    };
-    const assertEqualityDeep = function TK_DebugTestAssertions_assertEqualityDeep(inputs) {
-        const difference = ToolKid.object.compareDeep(inputs.inputs.value, inputs.inputs.shouldBe);
-        if (difference.count !== 0) {
-            throw report({
-                name: inputs.inputs.name,
-                message: ["value is:", inputs.inputs.value, "but should be equal to:", inputs.inputs.shouldBe, "difference:", difference]
-            });
-        }
-    };
     publicExports.assertFailure = function TK_DebugTestAssertions_assertFailure(...inputs) {
         const promisedResults = inputs
             .map(assertFailureSingle)
@@ -742,6 +675,98 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
         }
         return undefined;
     };
+    const isPromised = function (inputs) {
+        return inputs !== undefined && inputs.promise instanceof Promise;
+    };
+    const report = function TK_DebugTestAssertions_report(inputs) {
+        const { message } = inputs;
+        return [
+            "~ " + inputs.name + " ~ " + message[0],
+            ...message.slice(1)
+        ];
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
+
+(function TK_DebugTestAssertions_init() {
+    const publicExports = module.exports = {};
+    publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
+        inputs.forEach(function TK_DebugTestAssertions_testForEquealityPerInput(inputs) {
+            Object.entries(inputs).forEach(assertEqualityPerName);
+        });
+    };
+    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(nameAndValue) {
+        if (nameAndValue[1].shouldBeAtLeast === undefined) {
+            assertEqualityRegular(...nameAndValue);
+        }
+        else {
+            assertEqualityLoose(...nameAndValue);
+        }
+    };
+    const fastResponse = function TK_DebugTestAssertions_fastResponse(inputs) {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return true;
+        }
+        else if (isDifferentAndSimple(value, shouldBe)) {
+            return ["value is:", value, "but should be equal to:", shouldBe];
+        }
+        else if (inputs.toleranceDepth === 0) {
+            return ["value is:", inputs.value, "but should be identical with:", inputs.shouldBe];
+        }
+        return false;
+    };
+    const assertEqualityRegular = function TK_DebugTestAssertions_assertEqualityRegular(name, details) {
+        const response = fastResponse(details);
+        if (response !== false) {
+            if (response instanceof Array) {
+                throw report({
+                    name, message: response
+                });
+            }
+            return;
+        }
+        assertEqualityDeep({
+            name,
+            value: details.value,
+            shouldBe: details.shouldBe,
+            toleranceDepth: details.toleranceDepth || 1
+        });
+    };
+    const assertEqualityDeep = function TK_DebugTestAssertions_assertEqualityDeep(inputs) {
+        const difference = ToolKid.object.compareDeep(inputs.value, inputs.shouldBe);
+        if (difference.count !== 0) {
+            throw report({
+                name: inputs.name,
+                message: ["value is:", inputs.value, "but should be equal to:", inputs.shouldBe, "difference:", difference]
+            });
+        }
+    };
+    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(name, details) {
+        const { value, shouldBeAtLeast } = details;
+        if (isIdentical(value, shouldBeAtLeast)) {
+            return;
+        }
+        if (isDifferentAndSimple(value, shouldBeAtLeast)) {
+            throw report({
+                name,
+                message: ["value is:", value, "but should be at least equal to:", details.shouldBeAtLeast]
+            });
+        }
+        const toleranceDepth = (details.toleranceDepth === undefined)
+            ? 0 : details.toleranceDepth - 1;
+        Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
+            assertEqualityRegular(keyValue[0], {
+                value: value[keyValue[0]],
+                shouldBe: keyValue[1],
+                toleranceDepth
+            });
+        });
+    };
     publicExports.createCondition = function TK_DebugTestAssertions_createCondition(inputs) {
         const result = createCondition();
         if (inputs === undefined) {
@@ -789,9 +814,6 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
     };
     const isList = function TK_DebugTestAssertions_isList(value) {
         return typeof value === "object" && value !== null || typeof value === "function";
-    };
-    const isPromised = function (inputs) {
-        return inputs !== undefined && inputs.promise instanceof Promise;
     };
     const report = function TK_DebugTestAssertions_report(inputs) {
         const { message } = inputs;
