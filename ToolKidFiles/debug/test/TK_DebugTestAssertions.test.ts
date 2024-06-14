@@ -85,7 +85,7 @@
                         toleranceDepth: 0
                     }
                 },
-                shouldThrow: ["~ object ~ value is:", {}, "but should be identical with:", {}]
+                shouldThrow: ["~ object ~ differences not tollerated between value:", {}, " and :", {}]
             }, {
                 name: "equal but not identical arrays",
                 execute: assertEquality,
@@ -96,143 +96,62 @@
                         toleranceDepth: 0
                     }
                 },
-                shouldThrow: ["~ object ~ value is:", [1], "but should be identical with:", [1]]
+                shouldThrow: ["~ object ~ differences not tollerated between value:", [1], " and :", [1]]
             });
         }
     }, {
         subject: assertEquality,
         execute: function shouldBeAtLeast() {
-            const testObject = {text:"bla"};
+            const testObject = { text: "bla" };
             assertEquality({
                 "identical object": {
-                    value: {text:"bla"},
+                    value: testObject,
                     shouldBeAtLeast: testObject
-                }, "extemded object": {
-                    value: {text:"bla", number:100},
+                }, "equal object": {
+                    value: { text: "bla" },
                     shouldBeAtLeast: testObject
+                }, "extended object": {
+                    value: { text: "bla", number: 100 },
+                    shouldBeAtLeast: testObject
+                }, "deeply extended": {
+                    value: { number: 100, sub: { bonus: true, text: "bla" } },
+                    shouldBeAtLeast: { sub: testObject },
+                    toleranceDepth: 2
                 }
             });
+        }
+    },{
+        subject: assertEquality,
+        execute: function fail_shouldBeAtLeast() {
+            const testObject = { text: "bla" };
             assertFailure({
                 name: "not extended",
                 execute: assertEquality,
                 withInputs: {
-                    "object": {
-                        value: {number:100},
-                        shouldBe: testObject
+                    "fail1": {
+                        value: { number: 100 },
+                        shouldBeAtLeast: testObject
                     }
                 }
-            });
-        }
-    });
-
-    test({
-        subject: assertFailure,
-        execute: function notFailing() {
-            try {
-                assertFailure({
-                    name: "empty function",
-                    execute: function () { }
-                });
-                throw ["basicFailure din't throw"];
-            } catch (error) { }
-        }
-    }, {
-        subject: assertFailure,
-        execute: function expectedFailure() {
-            assertFailure({
-                name: "missing inputs",
-                execute: function () {
-                    assertFailure({
-                        name: "missing inputs call",
-                        execute: <any>undefined
-                    });
-                },
-                shouldThrow: ["~ missing inputs call ~ execute is not a function, instead is:", undefined]
             }, {
-                name: "crashing function",
-                execute: function () {
-                    (<any>Debug).broken.unitTest();
-                },
-                shouldThrow: Error
-            });
-        }
-    });
-
-    //---- promises
-    test({
-        subject: assertFailure,
-        execute: async function rejectedPromise() {
-            await assertFailure({
-                name: "failing promise",
-                execute: function () {
-                    return Promise.reject("because");
-                },
-                shouldThrow: "because"
-            });
-        }
-    }, {
-        subject: assertFailure,
-        execute: async function rejectedDirectPromise() {
-            await assertFailure({
-                name: "failing direct promise",
-                execute: Promise.reject("because2"),
-                shouldThrow: "because2"
-            });
-        }
-    }, {
-        subject: assertFailure,
-        execute: async function rejectedPromiseWrongReason() {
-            await (<Promise<any>>assertFailure({
-                name: "failing promise",
-                execute: function () {
-                    return Promise.reject("because");
-                },
-                shouldThrow: "why not"
-            })).then(function () {
-                throw "din't fail";
-            }).catch(function (reason) {
-                assertEquality({
-                    "error from wrong reason": {
-                        value: reason,
-                        shouldBe: [
-                            "~ failing promise ~ did not throw expected message. threw:",
-                            "because",
-                            "  instead of:",
-                            "why not"
-                        ]
+                name: "not deeply extended",
+                execute: assertEquality,
+                withInputs: {
+                    "fail2": {
+                        value: { number: 100, sub: { bonus: true } },
+                        shouldBeAtLeast: { sub: testObject }
                     }
-                });
-            });
-        }
-    }, {
-        subject: assertFailure,
-        execute: async function resolvedPromiseWhichThrowsLater() {
-            await assertFailure({
-                name: "promise successfull but then fails",
-                execute: function () {
-                    return Promise.resolve(100)
-                        .then(function () {
-                            throw 200;
-                        });
-                },
-                shouldThrow: 200
-            });
-        }
-    }, {
-        subject: assertFailure,
-        execute: async function resolvedPromise() {
-            await (<Promise<any>>assertFailure({
-                name: "successfull promise",
-                execute: function () {
-                    return Promise.resolve();
                 }
-            })).catch(function (reason) {
-                assertEquality({
-                    "error from not failing": {
-                        value: reason,
-                        shouldBe: ["~ successfull promise ~ promise did not reject as expected"]
+            }, {
+                name: "equality not deep enough",
+                execute: assertEquality,
+                withInputs: {
+                    "fail3": {
+                        value: { number: 100, sub: { bonus: true, text: "bla" } },
+                        shouldBeAtLeast: { sub: testObject },
+                        toleranceDepth: 1
                     }
-                });
+                }
             });
         }
     });

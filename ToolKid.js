@@ -716,19 +716,19 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             return ["value is:", value, "but should be equal to:", shouldBe];
         }
         else if (inputs.toleranceDepth === 0) {
-            return ["value is:", inputs.value, "but should be identical with:", inputs.shouldBe];
+            return ["differences not tollerated between value:", inputs.value, " and :", inputs.shouldBe];
         }
         return false;
     };
     const assertEqualityRegular = function TK_DebugTestAssertions_assertEqualityRegular(name, details) {
         const response = fastResponse(details);
-        if (response !== false) {
-            if (response instanceof Array) {
-                throw report({
-                    name, message: response
-                });
-            }
+        if (response === true) {
             return;
+        }
+        else if (response !== false) {
+            throw report({
+                name, message: response
+            });
         }
         assertEqualityDeep({
             name,
@@ -748,21 +748,26 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
     };
     const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(name, details) {
         const { value, shouldBeAtLeast } = details;
-        if (isIdentical(value, shouldBeAtLeast)) {
+        let toleranceDepth = (details.toleranceDepth === undefined)
+            ? 1 : details.toleranceDepth;
+        const response = fastResponse({
+            value,
+            shouldBe: shouldBeAtLeast,
+            toleranceDepth
+        });
+        if (response === true) {
             return;
         }
-        if (isDifferentAndSimple(value, shouldBeAtLeast)) {
+        else if (response !== false) {
             throw report({
-                name,
-                message: ["value is:", value, "but should be at least equal to:", details.shouldBeAtLeast]
+                name, message: response
             });
         }
-        const toleranceDepth = (details.toleranceDepth === undefined)
-            ? 0 : details.toleranceDepth - 1;
+        toleranceDepth -= 1;
         Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            assertEqualityRegular(keyValue[0], {
+            assertEqualityLoose(name, {
                 value: value[keyValue[0]],
-                shouldBe: keyValue[1],
+                shouldBeAtLeast: keyValue[1],
                 toleranceDepth
             });
         });

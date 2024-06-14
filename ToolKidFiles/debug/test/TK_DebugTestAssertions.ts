@@ -65,7 +65,7 @@ type Condition = Promise<any> & {
         } else if (isDifferentAndSimple(value, shouldBe)) {
             return ["value is:", value, "but should be equal to:", shouldBe];
         } else if (inputs.toleranceDepth === 0) {
-            return ["value is:", inputs.value, "but should be identical with:", inputs.shouldBe];
+            return ["differences not tollerated between value:", inputs.value, " and :", inputs.shouldBe]
         }
 
         return false;
@@ -80,13 +80,12 @@ type Condition = Promise<any> & {
         }
     ) {
         const response = fastResponse(details);
-        if (response !== false) {
-            if (response instanceof Array) {
-                throw report({
-                    name, message: response
-                });
-            }
+        if (response === true) {
             return;
+        } else if (response !== false) {
+            throw report({
+                name, message: response
+            });
         }
 
         assertEqualityDeep({
@@ -124,28 +123,28 @@ type Condition = Promise<any> & {
         }
     ) {
         const { value, shouldBeAtLeast } = details;
-        if (isIdentical(value, shouldBeAtLeast)) {
+        let toleranceDepth = (details.toleranceDepth === undefined)
+            ? 1 : details.toleranceDepth;
+        const response = fastResponse({
+            value,
+            shouldBe:shouldBeAtLeast,
+            toleranceDepth
+        });
+        if (response === true) {
             return;
-        }
-
-        if (isDifferentAndSimple(value, shouldBeAtLeast)) {
+        } else if (response !== false) {
             throw report({
-                name,
-                message: ["value is:", value, "but should be at least equal to:", details.shouldBeAtLeast]
+                name, message: response
             });
         }
 
-        const toleranceDepth = (details.toleranceDepth === undefined)
-            ? 0 : details.toleranceDepth - 1;
+        toleranceDepth -= 1;
         Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            assertEqualityRegular(
-                keyValue[0],
-                {
-                    value: value[keyValue[0]],
-                    shouldBe: keyValue[1],
-                    toleranceDepth
-                }
-            );
+            assertEqualityLoose(name, {
+                value: value[keyValue[0]],
+                shouldBeAtLeast: keyValue[1],
+                toleranceDepth
+            });
         });
     };
 
