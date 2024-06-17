@@ -14,12 +14,16 @@ interface TK_DebugTest_file {
         }
     }): void,
 
-    createCondition(
-        timeLimit?: number
+    condition(
+        name?: string
     ): Condition,
-    createCondition(inputs: number | {
+    condition(
+        timeLimit: number
+    ): Condition,
+    condition(inputs: {
         timeLimit: number,
-        overTimeMessage?: any
+        overTimeMessage?: any,
+        registerWithName?: string
     }): Condition
 }
 
@@ -127,7 +131,7 @@ type Condition = Promise<any> & {
             ? 1 : details.toleranceDepth;
         const response = fastResponse({
             value,
-            shouldBe:shouldBeAtLeast,
+            shouldBe: shouldBeAtLeast,
             toleranceDepth
         });
         if (response === true) {
@@ -150,31 +154,37 @@ type Condition = Promise<any> & {
 
 
 
+    const registeredConditions = new Map();
+    publicExports.condition = function TK_DebugTestAssertions_condition(inputs) {
+        if (typeof inputs === "string") {
+            const found = registeredConditions.get(inputs);
+            if (found !== undefined) {
+                return found;
+            }
 
-    publicExports.createCondition = function TK_DebugTestAssertions_createCondition(inputs) {
-        const result = createCondition();
+            const result = conditionCreate();
+            result.fail("unregistered condition: \"" + inputs + "\"");
+            return result;
+        }
+
         if (inputs === undefined) {
-            return result;
+            return conditionCreate();
         }
 
-        if (typeof inputs === "number") {
-            inputs = {
-                timeLimit: inputs,
-                overTimeMessage: "timeout"
-            };
-        } else if (!(inputs instanceof Array)) {
-            return result;
-        }
-
+        inputs = conditionInputs(inputs);
+        const result = conditionCreate();
         watchPromiseDuration({
             timeLimit: inputs.timeLimit,
             overTimeMessage: inputs.overTimeMessage,
             promise: result
         });
+        if (typeof inputs.registerWithName === "string") {
+            registeredConditions.set(inputs.registerWithName, result);
+        }
         return result;
     };
 
-    const createCondition = function TK_DebugTestAssertions_createCondition() {
+    const conditionCreate = function TK_DebugTestAssertions_conditionCreate() {
         let resolve: any, reject: any;
         const result = <Condition>new Promise(
             function createPromise_setup(resolveFunction, rejectFunction) {
@@ -191,6 +201,20 @@ type Condition = Promise<any> & {
         result.succeed = resolve;
         result.fail = reject;
         return result;
+    };
+
+    const conditionInputs = function TK_DebugTestAssertions_conditionInputs (inputs:any) {
+        if (typeof inputs === "number") {
+            return {
+                timeLimit: inputs,
+                overTimeMessage: "timeout"
+            };
+        }
+
+        if (inputs.overTimeMessage === undefined) {
+            inputs.overTimeMessage = "timeout";
+        }
+        return <{timeLimit:number, overtimeMessage: string}>inputs;
     };
 
     const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(

@@ -1,6 +1,6 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, createCondition, test } = Debug.test;
+    const { assertFailure, assertEquality, condition, test } = Debug.test;
 
 
 
@@ -156,11 +156,11 @@
         }
     });
 
-    const referenceCondition = createCondition();
+    const referenceCondition = condition();
     test({
-        subject: createCondition,
+        subject: condition,
         execute: async function createAndResolve() {
-            const promise = createCondition();
+            const promise = condition();
             assertEquality({
                 "promise is instanceof Promise": {
                     value: promise instanceof Promise,
@@ -183,7 +183,7 @@
     }, {
         subject: referenceCondition.succeed,
         execute: async function createAndResolve() {
-            const promise = createCondition();
+            const promise = condition();
             promise.succeed(200);
             assertEquality({
                 "promise.done": {
@@ -199,7 +199,7 @@
     }, {
         subject: referenceCondition.fail,
         execute: async function createAndReject() {
-            const promise = createCondition();
+            const promise = condition();
             promise.fail(400);
             await assertFailure({
                 name: "promise",
@@ -210,6 +210,55 @@
                 "promise.done": {
                     value: promise.done,
                     shouldBe: true
+                }
+            });
+        }
+    },{
+        subject: condition,
+        execute: async function registeredConditions() {
+            await assertFailure({
+                name: "not yet registered condition",
+                execute: condition("debug.test.condition1"),
+                shouldThrow: "unregistered condition: \"debug.test.condition1\""
+            });
+
+            let promise = condition({
+                timeLimit: 1000,
+                registerWithName: "debug.test.condition1"
+            });
+            setTimeout(promise.succeed,100);
+            assertEquality({
+                "successfull registered condition": {
+                    value: await condition("debug.test.condition1"),
+                    shouldBe: undefined
+                }
+            });
+
+            promise = condition({
+                timeLimit: 0,
+                registerWithName: "debug.test.condition2"
+            });
+            await assertFailure({
+                name: "outtimed registered condition",
+                execute: condition("debug.test.condition2"),
+                shouldThrow: "timeout"
+            });
+
+            promise = condition({
+                timeLimit: 1000,
+                registerWithName: "debug.test.condition3"
+            });
+            promise.fail("testCondition3 failure");
+            await assertFailure({
+                name: "outtimed registered condition",
+                execute: condition("debug.test.condition3"),
+                shouldThrow: "testCondition3 failure"
+            });
+
+            assertEquality({
+                "remember previous valid condition": {
+                    value: await condition("debug.test.condition1"),
+                    shouldBe: undefined
                 }
             });
         }

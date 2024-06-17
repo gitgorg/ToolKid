@@ -772,28 +772,33 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             });
         });
     };
-    publicExports.createCondition = function TK_DebugTestAssertions_createCondition(inputs) {
-        const result = createCondition();
+    const registeredConditions = new Map();
+    publicExports.condition = function TK_DebugTestAssertions_condition(inputs) {
+        if (typeof inputs === "string") {
+            const found = registeredConditions.get(inputs);
+            if (found !== undefined) {
+                return found;
+            }
+            const result = conditionCreate();
+            result.fail("unregistered condition: \"" + inputs + "\"");
+            return result;
+        }
         if (inputs === undefined) {
-            return result;
+            return conditionCreate();
         }
-        if (typeof inputs === "number") {
-            inputs = {
-                timeLimit: inputs,
-                overTimeMessage: "timeout"
-            };
-        }
-        else if (!(inputs instanceof Array)) {
-            return result;
-        }
+        inputs = conditionInputs(inputs);
+        const result = conditionCreate();
         watchPromiseDuration({
             timeLimit: inputs.timeLimit,
             overTimeMessage: inputs.overTimeMessage,
             promise: result
         });
+        if (typeof inputs.registerWithName === "string") {
+            registeredConditions.set(inputs.registerWithName, result);
+        }
         return result;
     };
-    const createCondition = function TK_DebugTestAssertions_createCondition() {
+    const conditionCreate = function TK_DebugTestAssertions_conditionCreate() {
         let resolve, reject;
         const result = new Promise(function createPromise_setup(resolveFunction, rejectFunction) {
             resolve = function TK_DebugTestAssertions_PromiseResolve(value) {
@@ -808,6 +813,18 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         result.succeed = resolve;
         result.fail = reject;
         return result;
+    };
+    const conditionInputs = function TK_DebugTestAssertions_conditionInputs(inputs) {
+        if (typeof inputs === "number") {
+            return {
+                timeLimit: inputs,
+                overTimeMessage: "timeout"
+            };
+        }
+        if (inputs.overTimeMessage === undefined) {
+            inputs.overTimeMessage = "timeout";
+        }
+        return inputs;
     };
     const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(valueA, valueB) {
         return typeof valueA !== typeof valueB
