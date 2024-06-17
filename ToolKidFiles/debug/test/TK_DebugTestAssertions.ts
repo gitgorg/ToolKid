@@ -34,7 +34,7 @@ type Condition = Promise<any> & {
     fail(
         reason?: any
     ): void,
-    done?: true
+    done: boolean
 }
 
 
@@ -200,6 +200,7 @@ type Condition = Promise<any> & {
         );
         result.succeed = resolve;
         result.fail = reject;
+        result.done = false;
         return result;
     };
 

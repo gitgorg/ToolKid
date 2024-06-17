@@ -13,6 +13,7 @@ type Library = {
 }
 
 interface Dictionary {
+    //@ts-ignore
     [key: string]: any
 }
 
