@@ -5,7 +5,7 @@
 
 
     const requestAdresses = {
-        GETBasic: "https://run.mocky.io/v3/45e5bff8-5dd8-4bfd-8f6c-3c8633282284",
+        GETBasic: "https://run.mocky.io/v3/d6f8c5da-6841-408d-8cd1-09eebca87040",
         GETInvalidResponse: "https://run.mocky.io/v3/08cc2f37-e453-4df0-8628-71ee3ea606e5"
     };
 

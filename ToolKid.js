@@ -812,6 +812,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         });
         result.succeed = resolve;
         result.fail = reject;
+        result.done = false;
         return result;
     };
     const conditionInputs = function TK_DebugTestAssertions_conditionInputs(inputs) {

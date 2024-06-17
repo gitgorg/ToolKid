@@ -168,7 +168,7 @@
                 },
                 "promise.done": {
                     value: promise.done,
-                    shouldBe: undefined
+                    shouldBe: false
                 },
                 "typeof promise.resolve": {
                     value: typeof promise.succeed,
