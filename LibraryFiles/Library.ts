@@ -12,13 +12,13 @@ type Library = {
     }): void
 }
 
-type Dictionary = {
+interface Dictionary {
     [key: string]: any
 }
 
-type GenericFunction = (
+interface GenericFunction {(
     ...parameters: any[]
-) => any
+): any}
 
 
 
