@@ -648,7 +648,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
             if (!(error instanceof Error)) {
                 return report({
                     name: inputs.name,
-                    message: ["did not throw an error-object but threw:", error]
+                    message: ["did not throw a real error object but threw:", error]
                 });
             }
         }
@@ -704,24 +704,27 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             assertEqualityRegular(...nameAndValue);
         }
         else {
-            assertEqualityLoose(...nameAndValue);
+            assertEqualityLoose(Object.assign({ name: nameAndValue[0], path: [] }, nameAndValue[1]));
         }
     };
-    const fastResponse = function TK_DebugTestAssertions_fastResponse(inputs) {
-        const { value, shouldBe } = inputs;
+    const fastResponse = function TK_DebugTestAssertions_fastResponse(path, details) {
+        const { value, shouldBe } = details;
         if (isIdentical(value, shouldBe)) {
             return true;
         }
         else if (isDifferentAndSimple(value, shouldBe)) {
-            return ["value is:", value, "but should be equal to:", shouldBe];
+            const location = path.length === 0
+                ? "value"
+                : ["value", ...path].join(".");
+            return [location + " is:", value, "but should be equal to:", shouldBe];
         }
-        else if (inputs.toleranceDepth === 0) {
-            return ["differences not tollerated between value:", inputs.value, " and :", inputs.shouldBe];
+        else if (details.toleranceDepth === 0) {
+            return ["differences not tollerated between value:", value, " and :", shouldBe];
         }
         return false;
     };
     const assertEqualityRegular = function TK_DebugTestAssertions_assertEqualityRegular(name, details) {
-        const response = fastResponse(details);
+        const response = fastResponse([], details);
         if (response === true) {
             return;
         }
@@ -746,11 +749,11 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             });
         }
     };
-    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(name, details) {
-        const { value, shouldBeAtLeast } = details;
-        let toleranceDepth = (details.toleranceDepth === undefined)
-            ? 1 : details.toleranceDepth;
-        const response = fastResponse({
+    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(inputs) {
+        const { value, shouldBeAtLeast } = inputs;
+        let toleranceDepth = (inputs.toleranceDepth === undefined)
+            ? 1 : inputs.toleranceDepth;
+        const response = fastResponse(inputs.path, {
             value,
             shouldBe: shouldBeAtLeast,
             toleranceDepth
@@ -760,16 +763,18 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         }
         else if (response !== false) {
             throw report({
-                name, message: response
+                name: inputs.name, message: response
             });
         }
         toleranceDepth -= 1;
         Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            assertEqualityLoose(name, {
-                value: value[keyValue[0]],
+            const key = keyValue[0];
+            assertEqualityLoose(Object.assign({}, inputs, {
+                path: inputs.path.concat(key),
+                value: value[key],
                 shouldBeAtLeast: keyValue[1],
                 toleranceDepth
-            });
+            }));
         });
     };
     const registeredConditions = new Map();

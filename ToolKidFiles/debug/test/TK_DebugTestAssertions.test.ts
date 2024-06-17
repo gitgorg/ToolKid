@@ -132,7 +132,8 @@
                         value: { number: 100 },
                         shouldBeAtLeast: testObject
                     }
-                }
+                },
+                shouldThrow: ["~ fail1 ~ value.text is:",undefined,"but should be equal to:","bla"]
             }, {
                 name: "not deeply extended",
                 execute: assertEquality,

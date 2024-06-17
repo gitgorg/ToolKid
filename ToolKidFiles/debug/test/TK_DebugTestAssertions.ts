@@ -54,22 +54,28 @@ type Condition = Promise<any> & {
         if (nameAndValue[1].shouldBeAtLeast === undefined) {
             assertEqualityRegular(...nameAndValue);
         } else {
-            assertEqualityLoose(...nameAndValue);
+            assertEqualityLoose(Object.assign(
+                {name:nameAndValue[0], path:[]},
+                nameAndValue[1]
+            ));
         }
     };
 
-    const fastResponse = function TK_DebugTestAssertions_fastResponse(inputs: {
+    const fastResponse = function TK_DebugTestAssertions_fastResponse(path:any[], details: {
         value: any,
         shouldBe: any,
         toleranceDepth?: number
     }): boolean | [string, ...any[]] {
-        const { value, shouldBe } = inputs;
+        const { value, shouldBe } = details;
         if (isIdentical(value, shouldBe)) {
             return true;
         } else if (isDifferentAndSimple(value, shouldBe)) {
-            return ["value is:", value, "but should be equal to:", shouldBe];
-        } else if (inputs.toleranceDepth === 0) {
-            return ["differences not tollerated between value:", inputs.value, " and :", inputs.shouldBe]
+            const location = path.length === 0
+                ?"value"
+                :["value",...path].join(".");
+            return [location + " is:", value, "but should be equal to:", shouldBe];
+        } else if (details.toleranceDepth === 0) {
+            return ["differences not tollerated between value:", value, " and :", shouldBe]
         }
 
         return false;
@@ -83,7 +89,7 @@ type Condition = Promise<any> & {
             toleranceDepth?: number
         }
     ) {
-        const response = fastResponse(details);
+        const response = fastResponse([],details);
         if (response === true) {
             return;
         } else if (response !== false) {
@@ -118,37 +124,44 @@ type Condition = Promise<any> & {
         }
     };
 
-    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(
+    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(inputs:{
         name: string,
-        details: {
-            value: any,
-            shouldBeAtLeast: any,
-            toleranceDepth?: number
-        }
-    ) {
-        const { value, shouldBeAtLeast } = details;
-        let toleranceDepth = (details.toleranceDepth === undefined)
-            ? 1 : details.toleranceDepth;
-        const response = fastResponse({
-            value,
-            shouldBe: shouldBeAtLeast,
-            toleranceDepth
-        });
+        value: any,
+        shouldBeAtLeast: any,
+        toleranceDepth?: number
+        path: any[]
+    }) {
+        const { value, shouldBeAtLeast } = inputs;
+        let toleranceDepth = (inputs.toleranceDepth === undefined)
+            ? 1 : inputs.toleranceDepth;
+        const response = fastResponse(
+            inputs.path,
+            {
+                value,
+                shouldBe: shouldBeAtLeast,
+                toleranceDepth
+            }
+        );
         if (response === true) {
             return;
         } else if (response !== false) {
             throw report({
-                name, message: response
+                name: inputs.name, message: response
             });
         }
 
         toleranceDepth -= 1;
         Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            assertEqualityLoose(name, {
-                value: value[keyValue[0]],
-                shouldBeAtLeast: keyValue[1],
-                toleranceDepth
-            });
+            const key = keyValue[0];
+            assertEqualityLoose(Object.assign(
+                {},
+                inputs, {
+                    path: inputs.path.concat(key),
+                    value: value[key],
+                    shouldBeAtLeast: keyValue[1],
+                    toleranceDepth
+                }
+            ));
         });
     };
 

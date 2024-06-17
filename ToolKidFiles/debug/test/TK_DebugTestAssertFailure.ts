@@ -152,7 +152,7 @@ interface TK_DebugTest_file {
             if (!(error instanceof Error)) {
                 return report({
                     name: inputs.name,
-                    message: ["did not throw an error-object but threw:", error]
+                    message: ["did not throw a real error object but threw:", error]
                 });
             }
         } else {
