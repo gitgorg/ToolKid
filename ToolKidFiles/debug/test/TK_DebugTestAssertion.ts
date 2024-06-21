@@ -12,38 +12,16 @@ interface TK_DebugTest_file {
             shouldBeAtLeast: any,
             toleranceDepth?: number
         }
-    }): void,
-
-    condition(
-        name?: string
-    ): Condition,
-    condition(
-        timeLimit: number
-    ): Condition,
-    condition(inputs: {
-        timeLimit: number,
-        overTimeMessage?: any,
-        registerWithName?: string
-    }): Condition
-}
-
-type Condition = Promise<any> & {
-    succeed(
-        value?: any
-    ): void,
-    fail(
-        reason?: any
-    ): void,
-    done: boolean
+    }): void
 }
 
 
 
-(function TK_DebugTestAssertions_init() {
+(function TK_DebugTestAssertion_init() {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
-        inputs.forEach(function TK_DebugTestAssertions_testForEquealityPerInput(inputs: Dictionary) {
+        inputs.forEach(function TK_DebugTestAssertion_testForEquealityPerInput(inputs: Dictionary) {
             Object.entries(inputs).forEach(assertEqualityPerName);
         });
     };
@@ -61,7 +39,7 @@ type Condition = Promise<any> & {
         }
     };
 
-    const fastResponse = function TK_DebugTestAssertions_fastResponse(path:any[], details: {
+    const fastResponse = function TK_DebugTestAssertion_fastResponse(path:any[], details: {
         value: any,
         shouldBe: any,
         toleranceDepth?: number
@@ -81,7 +59,7 @@ type Condition = Promise<any> & {
         return false;
     };
 
-    const assertEqualityRegular = function TK_DebugTestAssertions_assertEqualityRegular(
+    const assertEqualityRegular = function TK_DebugTestAssertion_assertEqualityRegular(
         name: string,
         details: {
             value: any,
@@ -106,7 +84,7 @@ type Condition = Promise<any> & {
         });
     };
 
-    const assertEqualityDeep = function TK_DebugTestAssertions_assertEqualityDeep(inputs: {
+    const assertEqualityDeep = function TK_DebugTestAssertion_assertEqualityDeep(inputs: {
         name: string,
         value: any,
         shouldBe: any,
@@ -124,7 +102,7 @@ type Condition = Promise<any> & {
         }
     };
 
-    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(inputs:{
+    const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs:{
         name: string,
         value: any,
         shouldBeAtLeast: any,
@@ -165,91 +143,25 @@ type Condition = Promise<any> & {
         });
     };
 
-
-
-    const registeredConditions = new Map();
-    publicExports.condition = function TK_DebugTestAssertions_condition(inputs) {
-        if (typeof inputs === "string") {
-            const found = registeredConditions.get(inputs);
-            if (found !== undefined) {
-                return found;
-            }
-
-            const result = conditionCreate();
-            result.fail("unregistered condition: \"" + inputs + "\"");
-            return result;
-        }
-
-        if (inputs === undefined) {
-            return conditionCreate();
-        }
-
-        inputs = conditionInputs(inputs);
-        const result = conditionCreate();
-        watchPromiseDuration({
-            timeLimit: inputs.timeLimit,
-            overTimeMessage: inputs.overTimeMessage,
-            promise: result
-        });
-        if (typeof inputs.registerWithName === "string") {
-            registeredConditions.set(inputs.registerWithName, result);
-        }
-        return result;
-    };
-
-    const conditionCreate = function TK_DebugTestAssertions_conditionCreate() {
-        let resolve: any, reject: any;
-        const result = <Condition>new Promise(
-            function createPromise_setup(resolveFunction, rejectFunction) {
-                resolve = function TK_DebugTestAssertions_PromiseResolve(value: any) {
-                    result.done = true;
-                    resolveFunction(value);
-                };
-                reject = function TK_DebugTestAssertions_PromiseReject(reason: any) {
-                    result.done = true;
-                    rejectFunction(reason);
-                }
-            }
-        );
-        result.succeed = resolve;
-        result.fail = reject;
-        result.done = false;
-        return result;
-    };
-
-    const conditionInputs = function TK_DebugTestAssertions_conditionInputs (inputs:any) {
-        if (typeof inputs === "number") {
-            return {
-                timeLimit: inputs,
-                overTimeMessage: "timeout"
-            };
-        }
-
-        if (inputs.overTimeMessage === undefined) {
-            inputs.overTimeMessage = "timeout";
-        }
-        return <{timeLimit:number, overtimeMessage: string}>inputs;
-    };
-
-    const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(
+    const isDifferentAndSimple = function TK_DebugTestAssertion_isDifferentAndSimple(
         valueA: any, valueB: any
     ) {
         return typeof valueA !== typeof valueB
             || !isList(valueA) || !isList(valueB);
     };
 
-    const isIdentical = function TK_DebugTestAssertions_isIdentical(
+    const isIdentical = function TK_DebugTestAssertion_isIdentical(
         valueA: any, valueB: any
     ) {
         return valueA === valueB
             || (Number.isNaN(valueB) && Number.isNaN(valueA));
     };
 
-    const isList = function TK_DebugTestAssertions_isList(value: any) {
+    const isList = function TK_DebugTestAssertion_isList(value: any) {
         return typeof value === "object" && value !== null || typeof value === "function";
     };
 
-    const report = function TK_DebugTestAssertions_report(inputs: {
+    const report = function TK_DebugTestAssertion_report(inputs: {
         name: string,
         message: [string, ...any[]]
     }) {
@@ -258,18 +170,6 @@ type Condition = Promise<any> & {
             "~ " + inputs.name + " ~ " + message[0],
             ...message.slice(1)
         ];
-    };
-
-    const watchPromiseDuration = function TK_DEBUG_TestAssertions_watchPromiseDuration(inputs: {
-        timeLimit: number,
-        overTimeMessage: string,
-        promise: Condition
-    }) {
-        setTimeout(function TK_DEBUG_TestAssertions_watchPromiseDurationCheck() {
-            if (inputs.promise.done !== true) {
-                inputs.promise.fail(inputs.overTimeMessage);
-            }
-        }, inputs.timeLimit);
     };
 
     Object.freeze(publicExports);

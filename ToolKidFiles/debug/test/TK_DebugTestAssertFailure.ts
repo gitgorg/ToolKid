@@ -15,12 +15,12 @@ interface TK_DebugTest_file {
 
 
 
-(function TK_DebugTestAssertions_init() {
+(function TK_DebugTestAssertFailure_init() {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
 
 
-    publicExports.assertFailure = function TK_DebugTestAssertions_assertFailure(...inputs) {
+    publicExports.assertFailure = function TK_DebugTestAssertFailure_assertFailure(...inputs) {
         const promisedResults = <any[]>inputs
             .map(assertFailureSingle)
             .filter(isPromised);
@@ -142,7 +142,7 @@ interface TK_DebugTest_file {
         });
     };
 
-    const assertFailureError = function TK_DebugTestAssertions_assertFailureError(inputs: {
+    const assertFailureError = function TK_DebugTestAssertFailure_assertFailureError(inputs: {
         name: string,
         error: Error,
         shouldThrow?: any
@@ -188,7 +188,7 @@ interface TK_DebugTest_file {
         return inputs !== undefined && inputs.promise instanceof Promise;
     };
 
-    const report = function TK_DebugTestAssertions_report(inputs: {
+    const report = function TK_DebugTestAssertFailure_report(inputs: {
         name: string,
         message: [string, ...any[]]
     }) {

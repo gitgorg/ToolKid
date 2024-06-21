@@ -545,9 +545,9 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTest.js"] = module.exports;
 
-(function TK_DebugTestAssertions_init() {
+(function TK_DebugTestAssertFailure_init() {
     const publicExports = module.exports = {};
-    publicExports.assertFailure = function TK_DebugTestAssertions_assertFailure(...inputs) {
+    publicExports.assertFailure = function TK_DebugTestAssertFailure_assertFailure(...inputs) {
         const promisedResults = inputs
             .map(assertFailureSingle)
             .filter(isPromised);
@@ -642,7 +642,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
             shouldThrow: bound.shouldThrow
         });
     };
-    const assertFailureError = function TK_DebugTestAssertions_assertFailureError(inputs) {
+    const assertFailureError = function TK_DebugTestAssertFailure_assertFailureError(inputs) {
         const { error, shouldThrow } = inputs;
         if (shouldThrow === Error) {
             if (!(error instanceof Error)) {
@@ -678,7 +678,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
     const isPromised = function (inputs) {
         return inputs !== undefined && inputs.promise instanceof Promise;
     };
-    const report = function TK_DebugTestAssertions_report(inputs) {
+    const report = function TK_DebugTestAssertFailure_report(inputs) {
         const { message } = inputs;
         return [
             "~ " + inputs.name + " ~ " + message[0],
@@ -692,10 +692,10 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
 
-(function TK_DebugTestAssertions_init() {
+(function TK_DebugTestAssertion_init() {
     const publicExports = module.exports = {};
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
-        inputs.forEach(function TK_DebugTestAssertions_testForEquealityPerInput(inputs) {
+        inputs.forEach(function TK_DebugTestAssertion_testForEquealityPerInput(inputs) {
             Object.entries(inputs).forEach(assertEqualityPerName);
         });
     };
@@ -707,7 +707,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             assertEqualityLoose(Object.assign({ name: nameAndValue[0], path: [] }, nameAndValue[1]));
         }
     };
-    const fastResponse = function TK_DebugTestAssertions_fastResponse(path, details) {
+    const fastResponse = function TK_DebugTestAssertion_fastResponse(path, details) {
         const { value, shouldBe } = details;
         if (isIdentical(value, shouldBe)) {
             return true;
@@ -723,7 +723,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         }
         return false;
     };
-    const assertEqualityRegular = function TK_DebugTestAssertions_assertEqualityRegular(name, details) {
+    const assertEqualityRegular = function TK_DebugTestAssertion_assertEqualityRegular(name, details) {
         const response = fastResponse([], details);
         if (response === true) {
             return;
@@ -740,7 +740,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             toleranceDepth: details.toleranceDepth || 1
         });
     };
-    const assertEqualityDeep = function TK_DebugTestAssertions_assertEqualityDeep(inputs) {
+    const assertEqualityDeep = function TK_DebugTestAssertion_assertEqualityDeep(inputs) {
         const difference = ToolKid.object.compareDeep(inputs.value, inputs.shouldBe);
         if (difference.count !== 0) {
             throw report({
@@ -749,7 +749,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             });
         }
     };
-    const assertEqualityLoose = function TK_DebugTestAssertions_assertEqualityLoose(inputs) {
+    const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs) {
         const { value, shouldBeAtLeast } = inputs;
         let toleranceDepth = (inputs.toleranceDepth === undefined)
             ? 1 : inputs.toleranceDepth;
@@ -777,8 +777,35 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             }));
         });
     };
+    const isDifferentAndSimple = function TK_DebugTestAssertion_isDifferentAndSimple(valueA, valueB) {
+        return typeof valueA !== typeof valueB
+            || !isList(valueA) || !isList(valueB);
+    };
+    const isIdentical = function TK_DebugTestAssertion_isIdentical(valueA, valueB) {
+        return valueA === valueB
+            || (Number.isNaN(valueB) && Number.isNaN(valueA));
+    };
+    const isList = function TK_DebugTestAssertion_isList(value) {
+        return typeof value === "object" && value !== null || typeof value === "function";
+    };
+    const report = function TK_DebugTestAssertion_report(inputs) {
+        const { message } = inputs;
+        return [
+            "~ " + inputs.name + " ~ " + message[0],
+            ...message.slice(1)
+        ];
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
+
+(function TK_DebugTestCondition_init() {
+    const publicExports = module.exports = {};
     const registeredConditions = new Map();
-    publicExports.condition = function TK_DebugTestAssertions_condition(inputs) {
+    publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
         if (typeof inputs === "string") {
             const found = registeredConditions.get(inputs);
             if (found !== undefined) {
@@ -803,14 +830,14 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         }
         return result;
     };
-    const conditionCreate = function TK_DebugTestAssertions_conditionCreate() {
+    const conditionCreate = function TK_DebugTestCondition_conditionCreate() {
         let resolve, reject;
         const result = new Promise(function createPromise_setup(resolveFunction, rejectFunction) {
-            resolve = function TK_DebugTestAssertions_PromiseResolve(value) {
+            resolve = function TK_DebugTestCondition_PromiseResolve(value) {
                 result.done = true;
                 resolveFunction(value);
             };
-            reject = function TK_DebugTestAssertions_PromiseReject(reason) {
+            reject = function TK_DebugTestCondition_PromiseReject(reason) {
                 result.done = true;
                 rejectFunction(reason);
             };
@@ -820,7 +847,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         result.done = false;
         return result;
     };
-    const conditionInputs = function TK_DebugTestAssertions_conditionInputs(inputs) {
+    const conditionInputs = function TK_DebugTestCondition_conditionInputs(inputs) {
         if (typeof inputs === "number") {
             return {
                 timeLimit: inputs,
@@ -832,26 +859,8 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         }
         return inputs;
     };
-    const isDifferentAndSimple = function TK_DebugTestAssertions_isDifferentAndSimple(valueA, valueB) {
-        return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB);
-    };
-    const isIdentical = function TK_DebugTestAssertions_isIdentical(valueA, valueB) {
-        return valueA === valueB
-            || (Number.isNaN(valueB) && Number.isNaN(valueA));
-    };
-    const isList = function TK_DebugTestAssertions_isList(value) {
-        return typeof value === "object" && value !== null || typeof value === "function";
-    };
-    const report = function TK_DebugTestAssertions_report(inputs) {
-        const { message } = inputs;
-        return [
-            "~ " + inputs.name + " ~ " + message[0],
-            ...message.slice(1)
-        ];
-    };
-    const watchPromiseDuration = function TK_DEBUG_TestAssertions_watchPromiseDuration(inputs) {
-        setTimeout(function TK_DEBUG_TestAssertions_watchPromiseDurationCheck() {
+    const watchPromiseDuration = function TK_DEBUG_TestAssertion_watchPromiseDuration(inputs) {
+        setTimeout(function TK_DEBUG_TestAssertion_watchPromiseDurationCheck() {
             if (inputs.promise.done !== true) {
                 inputs.promise.fail(inputs.overTimeMessage);
             }
@@ -862,7 +871,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestAssertions.js"] = module.exports;
+registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
