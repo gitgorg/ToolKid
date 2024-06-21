@@ -62,8 +62,9 @@ interface TK_DebugTest_file {
     ) {
         console.warn(
             colorText("negative",
-                ">> failed test \"" + result.name + "\" for " + result.subject.name),
-            logFailureNice(result.errorMessage)
+                ">> failed test \"" + result.name + "\" for " + result.subject.name
+            ),
+            logFailureNice(result.errorMessage).map(shortenValue)
         );
     };
 
@@ -136,6 +137,27 @@ interface TK_DebugTest_file {
         exceeding: function (value: any) {
             return { current: value, wanted: undefined }
         }
+    };
+
+    const shortenValue = function TK_DebugTestFull_shortenValue (value:any) {
+        if (typeof value === "string") {
+            if (value.length > 100) {
+                return value.slice(0,40)
+                    + ">>[...]<<"
+                    + value.slice(-40)
+                    + ">>total length:" + value.length + "<<";
+            }
+        } else if (value instanceof Array) {
+            if (value.length > 50) {
+                return [
+                    ...value.slice(0,20),
+                    ">>[...]<<",
+                    ...value.slice(-20),
+                    ">>total length:" + value.length + "<<"
+                ];
+            }
+        }
+        return value;
     };
 
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {

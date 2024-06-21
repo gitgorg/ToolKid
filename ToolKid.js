@@ -887,7 +887,7 @@ registeredFiles["TK_DebugTestAssertions.js"] = module.exports;
         return failure[failure.length - 2] === "difference:";
     };
     const logFailure = function TK_DebugTestFull_logFailure(result) {
-        console.warn(colorText("negative", ">> failed test \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage));
+        console.warn(colorText("negative", ">> failed test \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
@@ -937,6 +937,27 @@ registeredFiles["TK_DebugTestAssertions.js"] = module.exports;
         exceeding: function (value) {
             return { current: value, wanted: undefined };
         }
+    };
+    const shortenValue = function TK_DebugTestFull_shortenValue(value) {
+        if (typeof value === "string") {
+            if (value.length > 100) {
+                return value.slice(0, 40)
+                    + ">>[...]<<"
+                    + value.slice(-40)
+                    + ">>total length:" + value.length + "<<";
+            }
+        }
+        else if (value instanceof Array) {
+            if (value.length > 50) {
+                return [
+                    ...value.slice(0, 20),
+                    ">>[...]<<",
+                    ...value.slice(-20),
+                    ">>total length:" + value.length + "<<"
+                ];
+            }
+        }
+        return value;
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
         ToolKid.debug.test.clearSummaryState();
