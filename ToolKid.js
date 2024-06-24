@@ -220,6 +220,45 @@ registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
 })();
 registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 
+(function TK_DataTypesPromise_init() {
+    const publicExports = module.exports = {};
+    publicExports.combine = function TK_DataTypesPromise_combine(...promises) {
+        if (promises.length === 0) {
+            return Promise.resolve();
+        }
+        let missing = promises.length;
+        const datas = new Array(promises.length);
+        const result = publicExports.createPromise();
+        const handleSucces = function (position, data) {
+            datas[position] = data;
+            missing -= 1;
+            if (missing === 0) {
+                result.resolve(datas);
+            }
+        };
+        const handleFailure = function (data) {
+            result.reject(data);
+        };
+        promises.forEach(function (promise, position) {
+            promise.then(handleSucces.bind(null, position), handleFailure);
+        });
+        return result.promise;
+    };
+    publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
+        const result = {};
+        result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(resolve, reject) {
+            result.resolve = resolve;
+            result.reject = reject;
+        });
+        return result;
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "dataTypes", subSection: "promise", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DataTypesPromise.js"] = module.exports;
+
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
     const colorsServer = {

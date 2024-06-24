@@ -3,16 +3,16 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     condition(
-        name?: string
-    ): Condition,
-    condition(
-        timeLimit: number
+        timeLimit?:number
     ): Condition,
     condition(inputs: {
         timeLimit: number,
         overTimeMessage?: any,
         registerWithName?: string
-    }): Condition
+    }): Condition,
+    condition(
+        name: string
+    ): Condition
 }
 
 type Condition = Promise<any> & {
