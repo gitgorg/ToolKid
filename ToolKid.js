@@ -751,7 +751,15 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         if (isIdentical(value, shouldBe)) {
             return true;
         }
-        else if (isDifferentAndSimple(value, shouldBe)) {
+        if (typeof shouldBe === "function" && shouldBe.isValueChecker === true) {
+            if (shouldBe(value) === true) {
+                return true;
+            }
+            else {
+                return ["value:", value, " didnt pass check:", shouldBe];
+            }
+        }
+        if (isDifferentAndSimple(value, shouldBe)) {
             const location = path.length === 0
                 ? "value"
                 : ["value", ...path].join(".");
@@ -833,6 +841,11 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             "~ " + inputs.name + " ~ " + message[0],
             ...message.slice(1)
         ];
+    };
+    publicExports.shouldPass = function TK_DebugTestAssertion_shouldPass(checker) {
+        const copy = checker.bind(null);
+        copy.isValueChecker = true;
+        return copy;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

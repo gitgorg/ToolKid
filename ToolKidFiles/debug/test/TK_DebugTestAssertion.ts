@@ -9,11 +9,18 @@ interface TK_DebugTest_file {
             toleranceDepth?: number
         } | {
             value: any,
-            shouldBeAtLeast: any,
+            shouldBeAtLeast: ValueChecker | any,
             toleranceDepth?: number
         }
-    }): void
+    }): void,
+    shouldPass(
+        checker: (value: any) => boolean
+    ): ValueChecker
 }
+
+type ValueChecker = (
+    value: any
+) => boolean
 
 
 
@@ -33,13 +40,13 @@ interface TK_DebugTest_file {
             assertEqualityRegular(...nameAndValue);
         } else {
             assertEqualityLoose(Object.assign(
-                {name:nameAndValue[0], path:[]},
+                { name: nameAndValue[0], path: [] },
                 nameAndValue[1]
             ));
         }
     };
 
-    const fastResponse = function TK_DebugTestAssertion_fastResponse(path:any[], details: {
+    const fastResponse = function TK_DebugTestAssertion_fastResponse(path: any[], details: {
         value: any,
         shouldBe: any,
         toleranceDepth?: number
@@ -47,10 +54,20 @@ interface TK_DebugTest_file {
         const { value, shouldBe } = details;
         if (isIdentical(value, shouldBe)) {
             return true;
-        } else if (isDifferentAndSimple(value, shouldBe)) {
+        }
+
+        if (typeof shouldBe === "function" && shouldBe.isValueChecker === true) {
+            if (shouldBe(value) === true) {
+                return true;
+            } else {
+                return ["value:", value, " didnt pass check:", shouldBe];
+            }
+        }
+
+        if (isDifferentAndSimple(value, shouldBe)) {
             const location = path.length === 0
-                ?"value"
-                :["value",...path].join(".");
+                ? "value"
+                : ["value", ...path].join(".");
             return [location + " is:", value, "but should be equal to:", shouldBe];
         } else if (details.toleranceDepth === 0) {
             return ["differences not tollerated between value:", value, " and :", shouldBe]
@@ -67,7 +84,7 @@ interface TK_DebugTest_file {
             toleranceDepth?: number
         }
     ) {
-        const response = fastResponse([],details);
+        const response = fastResponse([], details);
         if (response === true) {
             return;
         } else if (response !== false) {
@@ -102,7 +119,7 @@ interface TK_DebugTest_file {
         }
     };
 
-    const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs:{
+    const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs: {
         name: string,
         value: any,
         shouldBeAtLeast: any,
@@ -134,11 +151,11 @@ interface TK_DebugTest_file {
             assertEqualityLoose(Object.assign(
                 {},
                 inputs, {
-                    path: inputs.path.concat(key),
-                    value: value[key],
-                    shouldBeAtLeast: keyValue[1],
-                    toleranceDepth
-                }
+                path: inputs.path.concat(key),
+                value: value[key],
+                shouldBeAtLeast: keyValue[1],
+                toleranceDepth
+            }
             ));
         });
     };
@@ -170,6 +187,12 @@ interface TK_DebugTest_file {
             "~ " + inputs.name + " ~ " + message[0],
             ...message.slice(1)
         ];
+    };
+
+    publicExports.shouldPass = function TK_DebugTestAssertion_shouldPass (checker) {
+        const copy = checker.bind(null);
+        copy.isValueChecker = true;
+        return copy;
     };
 
     Object.freeze(publicExports);

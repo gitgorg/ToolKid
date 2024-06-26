@@ -1,6 +1,11 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, test } = Debug.test;
+    const { assertFailure, assertEquality, shouldPass, test } = Debug.test;
+
+
+
+    const isNumber = function (value:any) {return typeof value === "number" && !Number.isNaN(value)};
+    const isString = function (value:any) {return typeof value === "string" && value.length !== 0};
 
 
 
@@ -120,7 +125,7 @@
                 }
             });
         }
-    },{
+    }, {
         subject: assertEquality,
         execute: function fail_shouldBeAtLeast() {
             const testObject = { text: "bla" };
@@ -133,7 +138,7 @@
                         shouldBeAtLeast: testObject
                     }
                 },
-                shouldThrow: ["~ fail1 ~ value.text is:",undefined,"but should be equal to:","bla"]
+                shouldThrow: ["~ fail1 ~ value.text is:", undefined, "but should be equal to:", "bla"]
             }, {
                 name: "not deeply extended",
                 execute: assertEquality,
@@ -152,6 +157,71 @@
                         shouldBeAtLeast: { sub: testObject },
                         toleranceDepth: 1
                     }
+                }
+            });
+        }
+    });
+
+    test({
+        subject: shouldPass,
+        execute: function basicSuccess () {
+            assertEquality({
+                "valid object 1": {
+                    value: {
+                        boolean: true,
+                        extra: [],
+                        number:10,
+                        text: "testText"
+                    },
+                    shouldBeAtLeast: {
+                        boolean: true,
+                        number: shouldPass(isNumber),
+                        text: shouldPass(isString)
+                    }
+                },
+                "valid object 2": {
+                    value: {
+                        boolean: false,
+                        extra: {},
+                        number: 0,
+                        text: "another text"
+                    },
+                    shouldBeAtLeast: {
+                        boolean:false,
+                        number: shouldPass(isNumber),
+                        text: shouldPass(isString)
+                    }
+                }
+            });
+        }
+    },{
+        subject: shouldPass,
+        execute: function fail_basic() {
+            assertFailure({
+                name:"wrong value",
+                execute: assertEquality,
+                withInputs:{
+                    "broken value": {
+                        value: {
+                            text: 10
+                        },
+                        shouldBeAtLeast: {
+                            text: shouldPass(isString)
+                        }
+                    },
+                }
+            },{
+                name:"unprepared valueChecker",
+                execute: assertEquality,
+                withInputs:{
+                    "broken check": {
+                        value: {
+                            text: "text"
+                        },
+                        shouldBeAtLeast: {
+                            text: isString
+                        }
+                    },
                 }
             });
         }
