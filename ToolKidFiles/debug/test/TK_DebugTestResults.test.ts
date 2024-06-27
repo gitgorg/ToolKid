@@ -1,28 +1,35 @@
 (function TK_DebugTestResults_test() {
     const Debug = ToolKid.debug.test;
-    const { getSummary, test, assertEquality } = Debug;
+    const { assertEquality, getSummary, shouldPass, test } = Debug;
 
 
 
     const testResults = <(TestResult | Promise<TestResult>)[]>[];
 
+    const isNumber = function isNumber (value:any) {
+        return typeof value === "number" && !Number.isNaN(value);
+    };
+
+    const isSet = function isSet (value:any) {
+        return value instanceof Set;
+    };
+
     let initalSummary: TestSummary;
     testResults.push(...test({
         subject: getSummary,
-        execute: function basic() {
+        execute: function currentSummary() {
             initalSummary = Debug.getSummary();
             assertEquality({
-                ".testCount is number": {
-                    value: typeof initalSummary.testCount === "number",
-                    shouldBe: true
-                },
-                ".failures is array": {
-                    value: initalSummary.failures instanceof Array,
-                    shouldBe: true
-                },
-                ".successes is map": {
-                    value: initalSummary.successes instanceof Map,
-                    shouldBe: true
+                "initial summary":{
+                    value: initalSummary,
+                    shouldBe: {
+                        failures: shouldPass((value) => value instanceof Array),
+                        missingSuspects: shouldPass(isSet),
+                        pending: shouldPass(isSet),
+                        successes: shouldPass((value) => value instanceof Map),
+                        testCount: shouldPass(isNumber),
+                        timeTotal: shouldPass(isNumber)
+                    }
                 }
             });
         }
@@ -34,9 +41,9 @@
         execute: function basic() {
             saveStateID = Debug.saveSummaryState();
             assertEquality({
-                "returns number": {
-                    value: typeof saveStateID === "number",
-                    shouldBe: true
+                "saveStateID": {
+                    value: saveStateID,
+                    shouldBe: shouldPass(isNumber)
                 }
             });
         }
@@ -60,7 +67,6 @@
                 }
             });
             const successes = <any[]>newSummary.successes.get(Debug.registerTestResult);
-            //log(successes)
             assertEquality({
                 "last stored result": {
                     value: successes[successes.length - 1],

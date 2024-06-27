@@ -11,13 +11,13 @@ interface TK_DebugTest_file {
         }
     }): void,
     shouldPass(
-        checker: (value: any) => boolean
-    ): ValueChecker
+        check: (value: any) => boolean
+    ): ValueAsserter
 }
 
-type ValueChecker = (
-    value: any
-) => boolean
+type ValueAsserter = {
+    check(value: any): boolean
+}
 
 
 
@@ -33,7 +33,7 @@ type ValueChecker = (
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(
         nameAndValue: [name: string, value: any]
     ) {
-        const settings = Object.assign({},nameAndValue[1]);
+        const settings = Object.assign({}, nameAndValue[1]);
         if (typeof settings.toleranceDepth !== "number") {
             settings.toleranceDepth = 1;
         }
@@ -41,52 +41,6 @@ type ValueChecker = (
             { name: nameAndValue[0], path: [] },
             settings
         ));
-    };
-
-    const isEqualShallow = function TK_DebugTestAssertion_isEqualShallow(
-        path: any[],
-        details: {
-            value: any,
-            shouldBe: any,
-            toleranceDepth: number
-        }
-    ): boolean | [string, ...any[]] {
-        const { value, shouldBe } = details;
-        if (isIdentical(value, shouldBe)) {
-            return true;
-        }
-
-        if (typeof shouldBe === "function" && shouldBe.isValueChecker === true) {
-            if (shouldBe(value) === true) {
-                return true;
-            } else {
-                return ["value:", value, " didnt pass check:", shouldBe];
-            }
-        }
-
-        if (isDifferentAndSimple(value, shouldBe)) {
-            return [buildPathName(path) + " is:", value, "but should be equal to:", shouldBe];
-        } else if (details.toleranceDepth === 0) {
-            return [buildPathName(path) + " exceeds tolerance depth:", value]
-        }
-
-        return false;
-    };
-
-    const buildPathName = function (path:any[]) {
-        if (path.length === 0) {
-            return "value";
-        }
-
-        let result = "value";
-        path.forEach(function (part) {
-            if (typeof part === "function") {
-                result += ".>>function:" + part.name+"<<";
-            } else {
-                result += "." + part;
-            }
-        });
-        return result;
     };
 
     const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs: {
@@ -97,23 +51,14 @@ type ValueChecker = (
         path: any[],
         allowAdditions?: true
     }) {
-        const { value, shouldBe } = inputs;
-        const message = isEqualShallow(
-            inputs.path,
-            {
-                value,
-                shouldBe,
-                toleranceDepth: inputs.toleranceDepth
-            }
-        );
-        if (message === true) {
+        const simpleTestResult = isSimpleAndEqual(inputs);
+        if (simpleTestResult === true) {
             return;
-        } else if (message !== false) {
-            throw report({
-                name: inputs.name, message
-            });
+        } else if (simpleTestResult instanceof Array) {
+            throw report({ inputs, message: simpleTestResult });
         }
 
+        const { value, shouldBe } = inputs;
         const toleranceDepth = inputs.toleranceDepth - 1;
         const additionalKeys = new Set(getKeys(value));
         let reader = readProperty.basic;
@@ -128,19 +73,44 @@ type ValueChecker = (
                 {},
                 inputs, {
                 path: inputs.path.concat(key),
-                value: reader(value,key),
-                shouldBe: reader(shouldBe,key),
+                value: reader(value, key),
+                shouldBe: reader(shouldBe, key),
                 toleranceDepth,
                 allowAdditions: inputs.allowAdditions
             }
             ));
         });
         if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
-            throw [buildPathName(inputs.path) + " has unwanted properties:", additionalKeys];
+            const cleaned = new Map();
+            additionalKeys.forEach(function (key) {
+                const abundantValue = reader(value, key);
+                if (abundantValue !== undefined) {
+                    cleaned.set(key, abundantValue);
+                }
+            });
+            if (cleaned.size !== 0) {
+                throw [buildPathName(inputs.path) + " has unwanted properties:", cleaned];
+            }
         }
     };
 
-    const getKeys = function TK_DebugTestAssertion_getKeys (value:any) {
+    const buildPathName = function (path: any[]) {
+        if (path.length === 0) {
+            return "value";
+        }
+
+        let result = "value";
+        path.forEach(function (part) {
+            if (typeof part === "function") {
+                result += ".>>function:" + part.name + "<<";
+            } else {
+                result += "." + part;
+            }
+        });
+        return result;
+    };
+
+    const getKeys = function TK_DebugTestAssertion_getKeys(value: any) {
         if (value instanceof Map) {
             return Array.from(value.keys());
         } else if (value instanceof Set) {
@@ -151,26 +121,19 @@ type ValueChecker = (
     };
 
     const readProperty = {
-        basic: function (container:any, key:any) {
+        basic: function (container: any, key: any) {
             return container[key];
         },
-        Set: function (container:Set<any>, key:any) {
+        Set: function (container: Set<any>, key: any) {
             return container.has(key);
         },
         Map: function (
-            container: Map<any,any>,
-            key:any
+            container: Map<any, any>,
+            key: any
         ) {
             return container.get(key);
         }
     }
-
-    const isDifferentAndSimple = function TK_DebugTestAssertion_isDifferentAndSimple(
-        valueA: any, valueB: any
-    ) {
-        return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB);
-    };
 
     const isIdentical = function TK_DebugTestAssertion_isIdentical(
         valueA: any, valueB: any
@@ -183,21 +146,61 @@ type ValueChecker = (
         return typeof value === "object" && value !== null || typeof value === "function";
     };
 
+    const isSimpleAndDifferent = function TK_DebugTestAssertion_isSimpleAndDifferent(
+        valueA: any, valueB: any
+    ) {
+        return typeof valueA !== typeof valueB
+            || !isList(valueA) || !isList(valueB);
+    };
+
+    const isSimpleAndEqual = function TK_DebugTestAssertion_isSimpleAndEqual(inputs: {
+        value: any,
+        shouldBe: any,
+        toleranceDepth: number
+    }): boolean | [string, ...any[]] {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return true;
+        }
+
+        if (shouldBe instanceof ValueAsserter) {
+            if ((<ValueAsserter>shouldBe).check(value) === true) {
+                return true;
+            } else {
+                return [":", value, " didn't pass check:", (<ValueAsserter>shouldBe).check];
+            }
+        }
+
+        if (isSimpleAndDifferent(value, shouldBe)) {
+            return [" is:", value, "but should be equal to:", shouldBe];
+        } else if (inputs.toleranceDepth === 0) {
+            return [" exceeds tolerance depth:", value];
+        }
+
+        return false;
+    };
+
     const report = function TK_DebugTestAssertion_report(inputs: {
-        name: string,
+        inputs: Dictionary,
         message: [string, ...any[]]
     }) {
         const { message } = inputs;
         return [
-            "~ " + inputs.name + " ~ " + message[0],
+            "~ " + inputs.inputs.name + " ~ " + buildPathName(inputs.inputs.path) + message[0],
             ...message.slice(1)
         ];
     };
 
-    publicExports.shouldPass = function TK_DebugTestAssertion_shouldPass (checker) {
-        const copy = checker.bind(null);
-        copy.isValueChecker = true;
-        return copy;
+    publicExports.shouldPass = function TK_DebugTestAssertion_shouldPass(check) {
+        //@ts-ignore
+        return new ValueAsserter(check);
+    };
+
+    const ValueAsserter = function (
+        check: (value: any) => boolean
+    ) {
+        //@ts-ignore
+        this.check = check;
     };
 
     Object.freeze(publicExports);
