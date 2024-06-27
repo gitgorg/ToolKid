@@ -6,11 +6,8 @@ interface TK_DebugTest_file {
         [name: string]: {
             value: any,
             shouldBe: any,
-            toleranceDepth?: number
-        } | {
-            value: any,
-            shouldBeAtLeast: ValueChecker | any,
-            toleranceDepth?: number
+            toleranceDepth?: number,
+            allowAdditions?: true
         }
     }): void,
     shouldPass(
@@ -36,21 +33,24 @@ type ValueChecker = (
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(
         nameAndValue: [name: string, value: any]
     ) {
-        if (nameAndValue[1].shouldBeAtLeast === undefined) {
-            assertEqualityRegular(...nameAndValue);
-        } else {
-            assertEqualityLoose(Object.assign(
-                { name: nameAndValue[0], path: [] },
-                nameAndValue[1]
-            ));
+        const settings = Object.assign({},nameAndValue[1]);
+        if (typeof settings.toleranceDepth !== "number") {
+            settings.toleranceDepth = 1;
         }
+        assertEqualityLoose(Object.assign(
+            { name: nameAndValue[0], path: [] },
+            settings
+        ));
     };
 
-    const fastResponse = function TK_DebugTestAssertion_fastResponse(path: any[], details: {
-        value: any,
-        shouldBe: any,
-        toleranceDepth?: number
-    }): boolean | [string, ...any[]] {
+    const isEqualShallow = function TK_DebugTestAssertion_isEqualShallow(
+        path: any[],
+        details: {
+            value: any,
+            shouldBe: any,
+            toleranceDepth: number
+        }
+    ): boolean | [string, ...any[]] {
         const { value, shouldBe } = details;
         if (isIdentical(value, shouldBe)) {
             return true;
@@ -65,100 +65,105 @@ type ValueChecker = (
         }
 
         if (isDifferentAndSimple(value, shouldBe)) {
-            const location = path.length === 0
-                ? "value"
-                : ["value", ...path].join(".");
-            return [location + " is:", value, "but should be equal to:", shouldBe];
+            return [buildPathName(path) + " is:", value, "but should be equal to:", shouldBe];
         } else if (details.toleranceDepth === 0) {
-            return ["differences not tollerated between value:", value, " and :", shouldBe]
+            return [buildPathName(path) + " exceeds tolerance depth:", value]
         }
 
         return false;
     };
 
-    const assertEqualityRegular = function TK_DebugTestAssertion_assertEqualityRegular(
-        name: string,
-        details: {
-            value: any,
-            shouldBe: any,
-            toleranceDepth?: number
-        }
-    ) {
-        const response = fastResponse([], details);
-        if (response === true) {
-            return;
-        } else if (response !== false) {
-            throw report({
-                name, message: response
-            });
+    const buildPathName = function (path:any[]) {
+        if (path.length === 0) {
+            return "value";
         }
 
-        assertEqualityDeep({
-            name,
-            value: details.value,
-            shouldBe: details.shouldBe,
-            toleranceDepth: details.toleranceDepth || 1
+        let result = "value";
+        path.forEach(function (part) {
+            if (typeof part === "function") {
+                result += ".>>function:" + part.name+"<<";
+            } else {
+                result += "." + part;
+            }
         });
-    };
-
-    const assertEqualityDeep = function TK_DebugTestAssertion_assertEqualityDeep(inputs: {
-        name: string,
-        value: any,
-        shouldBe: any,
-        toleranceDepth: number
-    }) {
-        const difference = ToolKid.object.compareDeep(
-            inputs.value,
-            inputs.shouldBe
-        );
-        if (difference.count !== 0) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", inputs.value, "but should be equal to:", inputs.shouldBe, "difference:", difference]
-            });
-        }
+        return result;
     };
 
     const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs: {
         name: string,
         value: any,
-        shouldBeAtLeast: any,
-        toleranceDepth?: number
-        path: any[]
+        shouldBe: any,
+        toleranceDepth: number,
+        path: any[],
+        allowAdditions?: true
     }) {
-        const { value, shouldBeAtLeast } = inputs;
-        let toleranceDepth = (inputs.toleranceDepth === undefined)
-            ? 1 : inputs.toleranceDepth;
-        const response = fastResponse(
+        const { value, shouldBe } = inputs;
+        const message = isEqualShallow(
             inputs.path,
             {
                 value,
-                shouldBe: shouldBeAtLeast,
-                toleranceDepth
+                shouldBe,
+                toleranceDepth: inputs.toleranceDepth
             }
         );
-        if (response === true) {
+        if (message === true) {
             return;
-        } else if (response !== false) {
+        } else if (message !== false) {
             throw report({
-                name: inputs.name, message: response
+                name: inputs.name, message
             });
         }
 
-        toleranceDepth -= 1;
-        Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            const key = keyValue[0];
+        const toleranceDepth = inputs.toleranceDepth - 1;
+        const additionalKeys = new Set(getKeys(value));
+        let reader = readProperty.basic;
+        if (shouldBe instanceof Map) {
+            reader = readProperty.Map;
+        } else if (shouldBe instanceof Set) {
+            reader = readProperty.Set;
+        }
+        getKeys(shouldBe).forEach(function (key) {
+            additionalKeys.delete(key);
             assertEqualityLoose(Object.assign(
                 {},
                 inputs, {
                 path: inputs.path.concat(key),
-                value: value[key],
-                shouldBeAtLeast: keyValue[1],
-                toleranceDepth
+                value: reader(value,key),
+                shouldBe: reader(shouldBe,key),
+                toleranceDepth,
+                allowAdditions: inputs.allowAdditions
             }
             ));
         });
+        if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
+            throw [buildPathName(inputs.path) + " has unwanted properties:", additionalKeys];
+        }
     };
+
+    const getKeys = function TK_DebugTestAssertion_getKeys (value:any) {
+        if (value instanceof Map) {
+            return Array.from(value.keys());
+        } else if (value instanceof Set) {
+            return Array.from(value);
+        } else {
+            return Object.keys(value);
+        }
+    };
+
+    const readProperty = {
+        basic: function (container:any, key:any) {
+            return container[key];
+        },
+        Set: function (container:Set<any>, key:any) {
+            return container.has(key);
+        },
+        Map: function (
+            container: Map<any,any>,
+            key:any
+        ) {
+            return container.get(key);
+        }
+    }
 
     const isDifferentAndSimple = function TK_DebugTestAssertion_isDifferentAndSimple(
         valueA: any, valueB: any

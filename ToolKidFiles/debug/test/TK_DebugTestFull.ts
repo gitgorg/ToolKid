@@ -141,10 +141,10 @@ interface TK_DebugTest_file {
 
     const shortenValue = function TK_DebugTestFull_shortenValue (value:any) {
         if (typeof value === "string") {
-            if (value.length > 100) {
-                return value.slice(0,40)
+            if (value.length > 200) {
+                return value.slice(0,100)
                     + ">>[...]<<"
-                    + value.slice(-40)
+                    + value.slice(-100)
                     + ">>total length:" + value.length + "<<";
             }
         } else if (value instanceof Array) {

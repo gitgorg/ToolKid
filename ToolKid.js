@@ -739,14 +739,13 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         });
     };
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(nameAndValue) {
-        if (nameAndValue[1].shouldBeAtLeast === undefined) {
-            assertEqualityRegular(...nameAndValue);
+        const settings = Object.assign({}, nameAndValue[1]);
+        if (typeof settings.toleranceDepth !== "number") {
+            settings.toleranceDepth = 1;
         }
-        else {
-            assertEqualityLoose(Object.assign({ name: nameAndValue[0], path: [] }, nameAndValue[1]));
-        }
+        assertEqualityLoose(Object.assign({ name: nameAndValue[0], path: [] }, settings));
     };
-    const fastResponse = function TK_DebugTestAssertion_fastResponse(path, details) {
+    const isEqualShallow = function TK_DebugTestAssertion_isEqualShallow(path, details) {
         const { value, shouldBe } = details;
         if (isIdentical(value, shouldBe)) {
             return true;
@@ -760,69 +759,87 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             }
         }
         if (isDifferentAndSimple(value, shouldBe)) {
-            const location = path.length === 0
-                ? "value"
-                : ["value", ...path].join(".");
-            return [location + " is:", value, "but should be equal to:", shouldBe];
+            return [buildPathName(path) + " is:", value, "but should be equal to:", shouldBe];
         }
         else if (details.toleranceDepth === 0) {
-            return ["differences not tollerated between value:", value, " and :", shouldBe];
+            return [buildPathName(path) + " exceeds tolerance depth:", value];
         }
         return false;
     };
-    const assertEqualityRegular = function TK_DebugTestAssertion_assertEqualityRegular(name, details) {
-        const response = fastResponse([], details);
-        if (response === true) {
-            return;
+    const buildPathName = function (path) {
+        if (path.length === 0) {
+            return "value";
         }
-        else if (response !== false) {
-            throw report({
-                name, message: response
-            });
-        }
-        assertEqualityDeep({
-            name,
-            value: details.value,
-            shouldBe: details.shouldBe,
-            toleranceDepth: details.toleranceDepth || 1
+        let result = "value";
+        path.forEach(function (part) {
+            if (typeof part === "function") {
+                result += ".>>function:" + part.name + "<<";
+            }
+            else {
+                result += "." + part;
+            }
         });
-    };
-    const assertEqualityDeep = function TK_DebugTestAssertion_assertEqualityDeep(inputs) {
-        const difference = ToolKid.object.compareDeep(inputs.value, inputs.shouldBe);
-        if (difference.count !== 0) {
-            throw report({
-                name: inputs.name,
-                message: ["value is:", inputs.value, "but should be equal to:", inputs.shouldBe, "difference:", difference]
-            });
-        }
+        return result;
     };
     const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs) {
-        const { value, shouldBeAtLeast } = inputs;
-        let toleranceDepth = (inputs.toleranceDepth === undefined)
-            ? 1 : inputs.toleranceDepth;
-        const response = fastResponse(inputs.path, {
+        const { value, shouldBe } = inputs;
+        const message = isEqualShallow(inputs.path, {
             value,
-            shouldBe: shouldBeAtLeast,
-            toleranceDepth
+            shouldBe,
+            toleranceDepth: inputs.toleranceDepth
         });
-        if (response === true) {
+        if (message === true) {
             return;
         }
-        else if (response !== false) {
+        else if (message !== false) {
             throw report({
-                name: inputs.name, message: response
+                name: inputs.name, message
             });
         }
-        toleranceDepth -= 1;
-        Object.entries(shouldBeAtLeast).forEach(function (keyValue) {
-            const key = keyValue[0];
+        const toleranceDepth = inputs.toleranceDepth - 1;
+        const additionalKeys = new Set(getKeys(value));
+        let reader = readProperty.basic;
+        if (shouldBe instanceof Map) {
+            reader = readProperty.Map;
+        }
+        else if (shouldBe instanceof Set) {
+            reader = readProperty.Set;
+        }
+        getKeys(shouldBe).forEach(function (key) {
+            additionalKeys.delete(key);
             assertEqualityLoose(Object.assign({}, inputs, {
                 path: inputs.path.concat(key),
-                value: value[key],
-                shouldBeAtLeast: keyValue[1],
-                toleranceDepth
+                value: reader(value, key),
+                shouldBe: reader(shouldBe, key),
+                toleranceDepth,
+                allowAdditions: inputs.allowAdditions
             }));
         });
+        if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
+            throw [buildPathName(inputs.path) + " has unwanted properties:", additionalKeys];
+        }
+    };
+    const getKeys = function TK_DebugTestAssertion_getKeys(value) {
+        if (value instanceof Map) {
+            return Array.from(value.keys());
+        }
+        else if (value instanceof Set) {
+            return Array.from(value);
+        }
+        else {
+            return Object.keys(value);
+        }
+    };
+    const readProperty = {
+        basic: function (container, key) {
+            return container[key];
+        },
+        Set: function (container, key) {
+            return container.has(key);
+        },
+        Map: function (container, key) {
+            return container.get(key);
+        }
     };
     const isDifferentAndSimple = function TK_DebugTestAssertion_isDifferentAndSimple(valueA, valueB) {
         return typeof valueA !== typeof valueB
@@ -1001,10 +1018,10 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     const shortenValue = function TK_DebugTestFull_shortenValue(value) {
         if (typeof value === "string") {
-            if (value.length > 100) {
-                return value.slice(0, 40)
+            if (value.length > 200) {
+                return value.slice(0, 100)
                     + ">>[...]<<"
-                    + value.slice(-40)
+                    + value.slice(-100)
                     + ">>total length:" + value.length + "<<";
             }
         }

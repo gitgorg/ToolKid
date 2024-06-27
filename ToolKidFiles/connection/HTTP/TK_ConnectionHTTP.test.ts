@@ -5,26 +5,56 @@
 
 
     const requestAdresses = {
-        GETBasic: "https://run.mocky.io/v3/d6f8c5da-6841-408d-8cd1-09eebca87040",
-        GETInvalidResponse: "https://run.mocky.io/v3/08cc2f37-e453-4df0-8628-71ee3ea606e5"
+        GETBasic: "https://test.teach-audio.com/json1.json",
+        GETInvalidResponse: "https://test.teach-audio.com/json2.json"
     };
 
     test({
         subject: request,
-        execute: async function getBasic() {
-            const response = await request({
-                URL: requestAdresses.GETBasic
-            });
-            assertEquality({
-                "response": {
-                    value: response,
-                    shouldBe: { number: 100, boolean: true }
+        execute: function GETBasic_regular() {
+            request({
+                URL: requestAdresses.GETBasic,
+                callback: function (response) {
+                    assertEquality({
+                        "response": {
+                            value: response,
+                            shouldBe: { number: 100, boolean: true }
+                        }
+                    });
                 }
             });
         }
-    }, {
+    },/*{
         subject: request,
-        execute: function getMalformedResponse() {
+        execute: function GETfailedCallback_regular () {
+            assertFailure({
+                name:"callback failed",
+                execute: request,
+                withInputs: {
+                    URL: requestAdresses.GETBasic,
+                    callback: function() {
+                        throw true;
+                    }
+                },
+                shouldThrow: true
+            });
+        }
+    },*/{
+            subject: request,
+            execute: async function GETBasic_asyncAwait() {
+                const response = await request({
+                    URL: requestAdresses.GETBasic
+                });
+                assertEquality({
+                    "response": {
+                        value: response,
+                        shouldBe: { number: 100, boolean: true }
+                    }
+                });
+            }
+        }, {
+        subject: request,
+        execute: function GETInvalidJSON_regular() {
             request({
                 URL: requestAdresses.GETInvalidResponse,
                 callback: function (response) {

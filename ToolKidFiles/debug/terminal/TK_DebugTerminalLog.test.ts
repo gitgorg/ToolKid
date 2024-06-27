@@ -44,7 +44,8 @@
                         colors.red + "ABC" + colors.white,
                         {},
                         colors.red + "DE" + colors.white
-                    ]
+                    ],
+                    toleranceDepth: 2
                 }
             });
         }
@@ -65,7 +66,7 @@
 
     test({
         subject: Terminal.logError,
-        execute: function basic() {
+        execute: function logError() {
             Terminal.logError("string first", 1);
             assertEquality({
                 "errors": {
@@ -88,14 +89,15 @@
 
     test({
         subject: Terminal.logBasic,
-        execute: function basic() {
+        execute: function logBasic() {
             Terminal.logBasic("basic", 1, [true]);
             assertEquality({
                 "warnings": {
                     value: warnings,
                     shouldBe: [
                         colors.grey + ">> basic" + colors.white, 1, [true]
-                    ]
+                    ],
+                    toleranceDepth: 2
                 }
             });
         }
@@ -103,14 +105,15 @@
 
     test({
         subject: Terminal.logImportant,
-        execute: function basic() {
+        execute: function logImportant() {
             Terminal.logImportant("important", 2, [true]);
             assertEquality({
                 "warnings": {
                     value: warnings,
                     shouldBe: [
                         colors.cyan + ">> important" + colors.white, 2, [true]
-                    ]
+                    ],
+                    toleranceDepth: 2
                 }
             });
         }
@@ -118,14 +121,15 @@
 
     test({
         subject: Terminal.logWarning,
-        execute: function basic() {
+        execute: function logWarning() {
             Terminal.logWarning("warning", 3, [true]);
             assertEquality({
                 "warnings": {
                     value: warnings,
                     shouldBe: [
                         colors.orange + ">> warning" + colors.white, 3, [true]
-                    ]
+                    ],
+                    toleranceDepth: 2
                 }
             });
         }

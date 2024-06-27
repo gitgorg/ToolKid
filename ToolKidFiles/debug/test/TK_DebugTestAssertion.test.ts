@@ -11,22 +11,7 @@
 
     test({
         subject: assertEquality,
-        execute: function basicFailure() {
-            try {
-                assertEquality({
-                    "basicFailure": {
-                        value: true,
-                        shouldBe: false
-                    }
-                });
-            } catch (error) {
-                return;
-            }
-            throw ["basicFailure din't throw"];
-        }
-    }, {
-        subject: assertEquality,
-        execute: function simpleEquality() {
+        execute: function simpleValues() {
             assertEquality({
                 "number": {
                     value: 10,
@@ -43,24 +28,96 @@
                 "null": {
                     value: null,
                     shouldBe: null
+                },"undefined": {
+                    value: undefined,
+                    shouldBe: undefined
                 }
             });
         }
     }, {
         subject: assertEquality,
-        execute: function trickyEquality() {
+        execute: function fail_simpleValues() {
+            assertFailure({
+                name: "boolean",
+                execute: assertEquality,
+                withInputs: {
+                    "boolean": {
+                        value: true,
+                        shouldBe: false
+                    }
+                }
+            },{
+                name: "falsy",
+                execute: assertEquality,
+                withInputs: {
+                    "falsy": {
+                        value: undefined,
+                        shouldBe: null
+                    }
+                }
+            });
+        }
+    },{
+        subject: assertEquality,
+        execute: function specialValues() {
             assertEquality({
                 "NaN": {
                     value: NaN,
                     shouldBe: NaN
-                },
-                "object": {
-                    value: {},
-                    shouldBe: {}
-                },
-                "array": {
-                    value: [1],
-                    shouldBe: [1]
+                }, "object": {
+                    value: {number:100},
+                    shouldBe: {number:100}
+                }, "array": {
+                    value: [1,2,3],
+                    shouldBe: [1,2,3]
+                }, "map": {
+                    value: new Map(<any>[["text","bla"],[10,100]]),
+                    shouldBe: new Map(<any>[["text","bla"],[10,100]])
+                }, "set": {
+                    value: new Set([1, true, "text"]),
+                    shouldBe: new Set([true, 1, true, "text"])
+                }
+            });
+        }
+    }, {
+        subject: assertEquality,
+        execute: function fail_specialValues() {
+            assertFailure({
+                name: "fail extended object",
+                execute: assertEquality,
+                withInputs: {
+                    "fail extended object": {
+                        value: { text: "bla", number: 100 },
+                        shouldBe: { text: "bla" }
+                    }
+                }
+            }, {
+                name: "fail extended map",
+                execute: assertEquality,
+                withInputs: {
+                    "fail extended map": {
+                        value: new Map(<any>[["text","bla"],[10,100]]),
+                        shouldBe: new Map(<any>[["text","bla"]])
+                    }
+                }
+            }, {
+                name: "fail extended set",
+                execute: assertEquality,
+                withInputs: {
+                    "fail extended map": {
+                        value: new Set([1,true,"text"]),
+                        shouldBe: new Set([1,true,"text",{}]),
+                        toleranceDepth: 2
+                    }
+                }
+            }, {
+                name: "fail map with non-identical special keys",
+                execute: assertEquality,
+                withInputs: {
+                    "fail map with non-identical special keys": {
+                        value: new Map(<any>[[{},true]]),
+                        shouldBe: new Map(<any>[[{},true]])
+                    }
                 }
             });
         }
@@ -80,72 +137,89 @@
                     toleranceDepth: 0
                 }
             });
+        }
+    }, {
+        subject: assertEquality,
+        execute: function fail_strictIdentity() {
             assertFailure({
                 name: "equal but not identical objects",
                 execute: assertEquality,
                 withInputs: {
                     "object": {
                         value: {},
-                        shouldBe: testObject,
+                        shouldBe: {},
                         toleranceDepth: 0
                     }
-                },
-                shouldThrow: ["~ object ~ differences not tollerated between value:", {}, " and :", {}]
+                }
             }, {
                 name: "equal but not identical arrays",
                 execute: assertEquality,
                 withInputs: {
                     "object": {
                         value: [1],
-                        shouldBe: testArray,
+                        shouldBe: [1],
                         toleranceDepth: 0
                     }
-                },
-                shouldThrow: ["~ object ~ differences not tollerated between value:", [1], " and :", [1]]
-            });
+                }
+            }, {
+                name: "equal but not identical maps",
+                    execute: assertEquality,
+                    withInputs: {
+                        "object": {
+                            value: new Map(<any>[["text","bla"],[10,100]]),
+                            shouldBe: new Map(<any>[["text","bla"],[10,100]]),
+                            toleranceDepth: 0
+                        }
+                    }
+                });
         }
     }, {
         subject: assertEquality,
-        execute: function shouldBeAtLeast() {
+        execute: function looseComparison() {
             const testObject = { text: "bla" };
             assertEquality({
                 "identical object": {
                     value: testObject,
-                    shouldBeAtLeast: testObject
+                    shouldBe: testObject,
+                    allowAdditions: true
                 }, "equal object": {
                     value: { text: "bla" },
-                    shouldBeAtLeast: testObject
+                    shouldBe: testObject,
+                    allowAdditions: true
                 }, "extended object": {
                     value: { text: "bla", number: 100 },
-                    shouldBeAtLeast: testObject
+                    shouldBe: testObject,
+                    allowAdditions: true
                 }, "deeply extended": {
                     value: { number: 100, sub: { bonus: true, text: "bla" } },
-                    shouldBeAtLeast: { sub: testObject },
+                    shouldBe: { sub: testObject },
+                    allowAdditions: true,
                     toleranceDepth: 2
                 }
             });
         }
     }, {
         subject: assertEquality,
-        execute: function fail_shouldBeAtLeast() {
+        execute: function fail_looseComparison() {
             const testObject = { text: "bla" };
             assertFailure({
-                name: "not extended",
+                name: "value missing flat property",
                 execute: assertEquality,
                 withInputs: {
                     "fail1": {
                         value: { number: 100 },
-                        shouldBeAtLeast: testObject
+                        shouldBe: testObject,
+                        allowAdditons: true
                     }
-                },
-                shouldThrow: ["~ fail1 ~ value.text is:", undefined, "but should be equal to:", "bla"]
+                }
             }, {
-                name: "not deeply extended",
+                name: "value missing deep property",
                 execute: assertEquality,
                 withInputs: {
                     "fail2": {
                         value: { number: 100, sub: { bonus: true } },
-                        shouldBeAtLeast: { sub: testObject }
+                        shouldBe: { sub: testObject },
+                        allowAdditons: true
                     }
                 }
             }, {
@@ -154,7 +228,8 @@
                 withInputs: {
                     "fail3": {
                         value: { number: 100, sub: { bonus: true, text: "bla" } },
-                        shouldBeAtLeast: { sub: testObject },
+                        shouldBe: { sub: testObject },
+                        allowAdditons: true,
                         toleranceDepth: 1
                     }
                 }
@@ -173,11 +248,12 @@
                         number:10,
                         text: "testText"
                     },
-                    shouldBeAtLeast: {
+                    shouldBe: {
                         boolean: true,
                         number: shouldPass(isNumber),
                         text: shouldPass(isString)
-                    }
+                    },
+                    allowAdditions: true
                 },
                 "valid object 2": {
                     value: {
@@ -186,11 +262,12 @@
                         number: 0,
                         text: "another text"
                     },
-                    shouldBeAtLeast: {
+                    shouldBe: {
                         boolean:false,
                         number: shouldPass(isNumber),
                         text: shouldPass(isString)
-                    }
+                    },
+                    allowAdditions: true
                 }
             });
         }
@@ -205,9 +282,10 @@
                         value: {
                             text: 10
                         },
-                        shouldBeAtLeast: {
+                        shouldBe: {
                             text: shouldPass(isString)
-                        }
+                        },
+                        allowAdditions: true
                     },
                 }
             },{
@@ -218,9 +296,10 @@
                         value: {
                             text: "text"
                         },
-                        shouldBeAtLeast: {
+                        shouldBe: {
                             text: isString
-                        }
+                        },
+                        allowAdditions: true
                     },
                 }
             });

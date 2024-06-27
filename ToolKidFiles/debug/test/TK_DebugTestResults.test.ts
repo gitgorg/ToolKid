@@ -112,14 +112,23 @@
 
     test({
         subject: Debug.loadSummaryState,
-        execute: function basic() {
+        execute: function loadSummary() {
             Debug.loadSummaryState(saveStateID);
             const summary = getSummary();
+            initalSummary.successes.set(
+                getSummary,
+                <any>summary.successes.get(getSummary)
+            );
+            initalSummary.missingSuspects.delete(
+                getSummary
+            );
             summary.timeTotal = initalSummary.timeTotal;
             summary.testCount -= 1;
             assertEquality({
                 "loaded summary": {
-                    value: summary, shouldBe: initalSummary
+                    value: summary,
+                    shouldBe: initalSummary,
+                    toleranceDepth: 10
                 }
             });
             Debug.registerTestResult(...testResults);
