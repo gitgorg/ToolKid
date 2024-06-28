@@ -1,6 +1,6 @@
 (function TK_ConnectionHTTPtest() {
     const { request } = ToolKid.connection.HTTP;
-    const { assertEquality, test } = ToolKid.debug.test;
+    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
 
 
 
@@ -11,16 +11,28 @@
 
     test({
         subject: request,
-        execute: function GETBasic_regular() {
+        execute: function GETBasic_regularCallback() {
             request({
                 URL: requestAdresses.GETBasic,
-                callback: function (response) {
+                callback: function handleResponse (response) {
                     assertEquality({
                         "response": {
                             value: response,
                             shouldBe: { number: 100, boolean: true }
                         }
                     });
+                }
+            });
+        }
+    }, {
+        subject: request,
+        execute: async function GETBasic_asyncAwait() {
+            assertEquality({
+                "response": {
+                    value: await request({
+                        URL: requestAdresses.GETBasic
+                    }),
+                    shouldBe: { number: 100, boolean: true }
                 }
             });
         }
@@ -39,22 +51,9 @@
                 shouldThrow: true
             });
         }
-    },*/{
-            subject: request,
-            execute: async function GETBasic_asyncAwait() {
-                const response = await request({
-                    URL: requestAdresses.GETBasic
-                });
-                assertEquality({
-                    "response": {
-                        value: response,
-                        shouldBe: { number: 100, boolean: true }
-                    }
-                });
-            }
-        }, {
+    },*/ {
         subject: request,
-        execute: function GETInvalidJSON_regular() {
+        execute: function fail_GETInvalidJSON_regularCallback() {
             request({
                 URL: requestAdresses.GETInvalidResponse,
                 callback: function (response) {
@@ -67,6 +66,17 @@
                             shouldBe: true
                         }
                     });
+                }
+            });
+        }
+    },{
+        subject: request,
+        execute: async function fail_GETInvalidJSON_asyncAwait() {
+            await assertFailure({
+                name:"failing with missing error handler throws",
+                execute: request,
+                withInputs: {
+                    URL: requestAdresses.GETInvalidResponse,
                 }
             });
         }

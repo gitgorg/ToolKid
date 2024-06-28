@@ -220,6 +220,39 @@ registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
 })();
 registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 
+(function TK_DataTypesChecks_init() {
+    const publicExports = module.exports = {};
+    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
+        return value instanceof Array && value.length !== 0;
+    };
+    publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
+        return typeof value === "boolean";
+    };
+    publicExports.isFunction = function TK_DataTypesChecks_isFunction(value) {
+        return typeof value === "function";
+    };
+    publicExports.isInteger = function TK_DataTypesChecks_isInteger(value) {
+        return Number.isInteger(value);
+    };
+    publicExports.isMap = function TK_DataTypesChecks_isMap(value) {
+        return value instanceof Map && value.size !== 0;
+    };
+    publicExports.isNumber = function TK_DataTypesChecks_isNumber(value) {
+        return typeof value === "number" && !Number.isNaN(value);
+    };
+    publicExports.isPromise = function TK_DataTypesChecks_isPromise(value) {
+        return value instanceof Promise;
+    };
+    publicExports.isString = function TK_DataTypesChecks_isString(value) {
+        return typeof value === "string" && value !== "";
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "dataTypes", subSection: "checks", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DataTypesChecks.js"] = module.exports;
+
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combine = function TK_DataTypesPromise_combine(...promises) {
@@ -591,7 +624,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
             .map(assertFailureSingle)
             .filter(isPromised);
         if (promisedResults.length === 0) {
-            return;
+            return Promise.resolve();
         }
         let rejecter, resolver;
         const resultPromise = new Promise(function (resolve, reject) {
@@ -887,7 +920,7 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
                 return found;
             }
             const result = conditionCreate();
-            result.fail("unregistered condition: \"" + inputs + "\"");
+            result.reject("unregistered condition: \"" + inputs + "\"");
             return result;
         }
         if (inputs === undefined) {
@@ -917,8 +950,8 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
                 rejectFunction(reason);
             };
         });
-        result.succeed = resolve;
-        result.fail = reject;
+        result.resolve = resolve;
+        result.reject = reject;
         result.done = false;
         return result;
     };
@@ -937,7 +970,7 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
     const watchPromiseDuration = function TK_DEBUG_TestAssertion_watchPromiseDuration(inputs) {
         setTimeout(function TK_DEBUG_TestAssertion_watchPromiseDurationCheck() {
             if (inputs.promise.done !== true) {
-                inputs.promise.fail(inputs.overTimeMessage);
+                inputs.promise.reject(inputs.overTimeMessage);
             }
         }, inputs.timeLimit);
     };

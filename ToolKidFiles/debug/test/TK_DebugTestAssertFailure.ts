@@ -10,7 +10,7 @@ interface TK_DebugTest_file {
         withInputs?: any | any[],
         shouldThrow?: any | ErrorConstructor,
         toleranceDepth?: number
-    }[]): void | Promise<any>
+    }[]): Promise<any>
 }
 
 
@@ -25,7 +25,7 @@ interface TK_DebugTest_file {
             .map(assertFailureSingle)
             .filter(isPromised);
         if (promisedResults.length === 0) {
-            return;
+            return Promise.resolve();
         }
 
         let rejecter: any, resolver: any;

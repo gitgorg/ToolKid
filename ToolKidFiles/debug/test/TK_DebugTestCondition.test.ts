@@ -1,6 +1,13 @@
 (function TK_DebugTest_test() {
-    const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, condition, test } = Debug.test;
+    const { assertFailure, assertEquality, condition, shouldPass, test } = ToolKid.debug.test;
+
+
+    const isFunction = function (value: any) {
+        return typeof value === "function";
+    };
+    const isPromise = function (value: any) {
+        return value instanceof Promise;
+    };
 
 
 
@@ -10,29 +17,29 @@
         execute: async function createAndResolve() {
             const promise = condition();
             assertEquality({
-                "promise is instanceof Promise": {
-                    value: promise instanceof Promise,
-                    shouldBe: true
+                "promise": {
+                    value: promise,
+                    shouldBe: shouldPass(isPromise)
                 },
                 "promise.done": {
                     value: promise.done,
                     shouldBe: false
                 },
-                "typeof promise.resolve": {
-                    value: typeof promise.succeed,
-                    shouldBe: "function"
+                "promise.resolve": {
+                    value: promise.resolve,
+                    shouldBe: shouldPass(isFunction)
                 },
-                "typeof promise.reject": {
-                    value: typeof promise.fail,
-                    shouldBe: "function"
+                "promise.fail": {
+                    value: promise.reject,
+                    shouldBe: shouldPass(isFunction)
                 }
             });
         }
     }, {
-        subject: referenceCondition.succeed,
+        subject: referenceCondition.resolve,
         execute: async function createAndResolve() {
             const promise = condition();
-            promise.succeed(200);
+            promise.resolve(200);
             assertEquality({
                 "promise.done": {
                     value: promise.done,
@@ -45,10 +52,10 @@
             });
         }
     }, {
-        subject: referenceCondition.fail,
+        subject: referenceCondition.reject,
         execute: async function createAndReject() {
             const promise = condition();
-            promise.fail(400);
+            promise.reject(400);
             await assertFailure({
                 name: "promise",
                 execute: promise,
@@ -61,7 +68,7 @@
                 }
             });
         }
-    },{
+    }, {
         subject: condition,
         execute: async function registeredConditions() {
             await assertFailure({
@@ -74,7 +81,7 @@
                 timeLimit: 1000,
                 registerWithName: "debug.test.condition1"
             });
-            setTimeout(promise.succeed,100);
+            setTimeout(promise.resolve, 100);
             assertEquality({
                 "successfull registered condition": {
                     value: await condition("debug.test.condition1"),
@@ -96,7 +103,7 @@
                 timeLimit: 1000,
                 registerWithName: "debug.test.condition3"
             });
-            promise.fail("testCondition3 failure");
+            promise.reject("testCondition3 failure");
             await assertFailure({
                 name: "outtimed registered condition",
                 execute: condition("debug.test.condition3"),

@@ -16,10 +16,10 @@ interface TK_DebugTest_file {
 }
 
 type Condition = Promise<any> & {
-    succeed(
+    resolve(
         value?: any
     ): void,
-    fail(
+    reject(
         reason?: any
     ): void,
     done: boolean
@@ -39,7 +39,7 @@ type Condition = Promise<any> & {
             }
 
             const result = conditionCreate();
-            result.fail("unregistered condition: \"" + inputs + "\"");
+            result.reject("unregistered condition: \"" + inputs + "\"");
             return result;
         }
 
@@ -74,8 +74,8 @@ type Condition = Promise<any> & {
                 }
             }
         );
-        result.succeed = resolve;
-        result.fail = reject;
+        result.resolve = resolve;
+        result.reject = reject;
         result.done = false;
         return result;
     };
@@ -101,7 +101,7 @@ type Condition = Promise<any> & {
     }) {
         setTimeout(function TK_DEBUG_TestAssertion_watchPromiseDurationCheck() {
             if (inputs.promise.done !== true) {
-                inputs.promise.fail(inputs.overTimeMessage);
+                inputs.promise.reject(inputs.overTimeMessage);
             }
         }, inputs.timeLimit);
     };

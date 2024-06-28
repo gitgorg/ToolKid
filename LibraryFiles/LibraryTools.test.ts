@@ -13,7 +13,7 @@
 
     test({
         subject: easyExpression,
-        execute: function basic () {
+        execute: function filteringPaths () {
             const filterPathsEasy = function LibraryTools_test_filterPathsEasy (
                 easyString:string
             ) {
