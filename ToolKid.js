@@ -872,12 +872,12 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         if (isIdentical(value, shouldBe)) {
             return true;
         }
-        if (shouldBe instanceof ValueAsserter) {
-            if (shouldBe.check(value) === true) {
+        if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
+            if (shouldBe(value) === true) {
                 return true;
             }
             else {
-                return [":", value, " didn't pass check:", shouldBe.check];
+                return [":", value, " didn't pass check - should " + shouldBe.to + " " + shouldBe.wants + " of ", shouldBe.valueChecks];
             }
         }
         if (isSimpleAndDifferent(value, shouldBe)) {
@@ -894,14 +894,6 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
             "~ " + inputs.inputs.name + " ~ " + buildPathName(inputs.inputs.path) + message[0],
             ...message.slice(1)
         ];
-    };
-    publicExports.shouldPass = function TK_DebugTestAssertion_shouldPass(check) {
-        //@ts-ignore
-        return new ValueAsserter(check);
-    };
-    const ValueAsserter = function (check) {
-        //@ts-ignore
-        this.check = check;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -1096,6 +1088,60 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     }
 })();
 registeredFiles["TK_DebugTestFull.js"] = module.exports;
+
+(function TK_DebugTestShouldPass_init() {
+    const publicExports = module.exports = {};
+    publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
+        if (checks.length === 0) {
+            throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];
+        }
+        return ValueAsserter({
+            checks,
+            want: "none",
+            to: "fail"
+        });
+    };
+    publicExports.shouldPassAny = function TK_DebugTestShouldPass_shouldPassAny(...checks) {
+        if (checks.length < 2) {
+            throw ["TK_DebugTestShouldPass_shouldPassAny - needs at least two check functions"];
+        }
+        return ValueAsserter({
+            checks,
+            want: "any",
+            to: "pass"
+        });
+    };
+    const testFailure = function K_DebugTestAssertion_testFailure(value, check) {
+        return check(value) !== true;
+    };
+    const testSuccess = function K_DebugTestAssertion_testSuccess(value, check) {
+        return check(value) === true;
+    };
+    const getChecker = function (mode, value) {
+        const base = (mode === "fail") ? testFailure : testSuccess;
+        return base.bind(null, value);
+    };
+    const ValueAsserter = function TK_DebugTestShouldPass_ValueAsserter(inputs) {
+        const asserter = (inputs.want === "none")
+            ? wantsNone.bind(null, inputs)
+            : wantsAny.bind(null, inputs);
+        asserter.valueChecks = inputs.checks;
+        asserter.wants = inputs.want;
+        asserter.to = inputs.to;
+        return asserter;
+    };
+    const wantsAny = function TK_DebugTestShouldPass_wantsAny(bound, value) {
+        return bound.checks.findIndex(getChecker(bound.to, value)) !== -1;
+    };
+    const wantsNone = function TK_DebugTestShouldPass_wantsNone(bound, value) {
+        return bound.checks.findIndex(getChecker(bound.to, value)) === -1;
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
 
 (function RS_h_object_init() {
     const publicExports = module.exports = {};

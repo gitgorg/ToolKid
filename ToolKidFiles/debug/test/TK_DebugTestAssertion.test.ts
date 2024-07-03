@@ -1,11 +1,6 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, shouldPass, test } = Debug.test;
-
-
-
-    const isNumber = function (value:any) {return typeof value === "number" && !Number.isNaN(value)};
-    const isString = function (value:any) {return typeof value === "string" && value.length !== 0};
+    const { assertFailure, assertEquality, test } = Debug.test;
 
 
 
@@ -28,7 +23,7 @@
                 "null": {
                     value: null,
                     shouldBe: null
-                },"undefined": {
+                }, "undefined": {
                     value: undefined,
                     shouldBe: undefined
                 }
@@ -46,7 +41,7 @@
                         shouldBe: false
                     }
                 }
-            },{
+            }, {
                 name: "falsy",
                 execute: assertEquality,
                 withInputs: {
@@ -57,7 +52,7 @@
                 }
             });
         }
-    },{
+    }, {
         subject: assertEquality,
         execute: function specialValues() {
             assertEquality({
@@ -65,14 +60,14 @@
                     value: NaN,
                     shouldBe: NaN
                 }, "object": {
-                    value: {number:100},
-                    shouldBe: {number:100}
+                    value: { number: 100 },
+                    shouldBe: { number: 100 }
                 }, "array": {
-                    value: [1,2,3],
-                    shouldBe: [1,2,3]
+                    value: [1, 2, 3],
+                    shouldBe: [1, 2, 3]
                 }, "map": {
-                    value: new Map(<any>[["text","bla"],[10,100]]),
-                    shouldBe: new Map(<any>[["text","bla"],[10,100]])
+                    value: new Map(<any>[["text", "bla"], [10, 100]]),
+                    shouldBe: new Map(<any>[["text", "bla"], [10, 100]])
                 }, "set": {
                     value: new Set([1, true, "text"]),
                     shouldBe: new Set([true, 1, true, "text"])
@@ -96,8 +91,8 @@
                 execute: assertEquality,
                 withInputs: {
                     "fail extended map": {
-                        value: new Map(<any>[["text","bla"],[10,100]]),
-                        shouldBe: new Map(<any>[["text","bla"]])
+                        value: new Map(<any>[["text", "bla"], [10, 100]]),
+                        shouldBe: new Map(<any>[["text", "bla"]])
                     }
                 }
             }, {
@@ -105,8 +100,8 @@
                 execute: assertEquality,
                 withInputs: {
                     "fail extended map": {
-                        value: new Set([1,true,"text"]),
-                        shouldBe: new Set([1,true,"text",{}]),
+                        value: new Set([1, true, "text"]),
+                        shouldBe: new Set([1, true, "text", {}]),
                         toleranceDepth: 2
                     }
                 }
@@ -115,8 +110,8 @@
                 execute: assertEquality,
                 withInputs: {
                     "fail map with non-identical special keys": {
-                        value: new Map(<any>[[{},true]]),
-                        shouldBe: new Map(<any>[[{},true]])
+                        value: new Map(<any>[[{}, true]]),
+                        shouldBe: new Map(<any>[[{}, true]])
                     }
                 }
             });
@@ -163,15 +158,15 @@
                 }
             }, {
                 name: "equal but not identical maps",
-                    execute: assertEquality,
-                    withInputs: {
-                        "object": {
-                            value: new Map(<any>[["text","bla"],[10,100]]),
-                            shouldBe: new Map(<any>[["text","bla"],[10,100]]),
-                            toleranceDepth: 0
-                        }
+                execute: assertEquality,
+                withInputs: {
+                    "object": {
+                        value: new Map(<any>[["text", "bla"], [10, 100]]),
+                        shouldBe: new Map(<any>[["text", "bla"], [10, 100]]),
+                        toleranceDepth: 0
                     }
-                });
+                }
+            });
         }
     }, {
         subject: assertEquality,
@@ -232,75 +227,6 @@
                         allowAdditons: true,
                         toleranceDepth: 1
                     }
-                }
-            });
-        }
-    });
-
-    test({
-        subject: shouldPass,
-        execute: function basicSuccess () {
-            assertEquality({
-                "valid object 1": {
-                    value: {
-                        boolean: true,
-                        extra: [],
-                        number:10,
-                        text: "testText"
-                    },
-                    shouldBe: {
-                        boolean: true,
-                        number: shouldPass(isNumber),
-                        text: shouldPass(isString)
-                    },
-                    allowAdditions: true
-                },
-                "valid object 2": {
-                    value: {
-                        boolean: false,
-                        extra: {},
-                        number: 0,
-                        text: "another text"
-                    },
-                    shouldBe: {
-                        boolean:false,
-                        number: shouldPass(isNumber),
-                        text: shouldPass(isString)
-                    },
-                    allowAdditions: true
-                }
-            });
-        }
-    },{
-        subject: shouldPass,
-        execute: function fail_basic() {
-            assertFailure({
-                name:"wrong value",
-                execute: assertEquality,
-                withInputs:{
-                    "broken value": {
-                        value: {
-                            text: 10
-                        },
-                        shouldBe: {
-                            text: shouldPass(isString)
-                        },
-                        allowAdditions: true
-                    },
-                }
-            },{
-                name:"unprepared valueChecker",
-                execute: assertEquality,
-                withInputs:{
-                    "broken check": {
-                        value: {
-                            text: "text"
-                        },
-                        shouldBe: {
-                            text: isString
-                        },
-                        allowAdditions: true
-                    },
                 }
             });
         }

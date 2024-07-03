@@ -9,14 +9,7 @@ interface TK_DebugTest_file {
             toleranceDepth?: number,
             allowAdditions?: true
         }
-    }): void,
-    shouldPass(
-        check: (value: any) => boolean
-    ): ValueAsserter
-}
-
-type ValueAsserter = {
-    check(value: any): boolean
+    }): void
 }
 
 
@@ -163,11 +156,11 @@ type ValueAsserter = {
             return true;
         }
 
-        if (shouldBe instanceof ValueAsserter) {
-            if ((<ValueAsserter>shouldBe).check(value) === true) {
+        if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
+            if (shouldBe(value) === true) {
                 return true;
             } else {
-                return [":", value, " didn't pass check:", (<ValueAsserter>shouldBe).check];
+                return [":", value, " didn't pass check - should " + shouldBe.to + " " + shouldBe.wants + " of ", shouldBe.valueChecks];
             }
         }
 
@@ -191,17 +184,7 @@ type ValueAsserter = {
         ];
     };
 
-    publicExports.shouldPass = function TK_DebugTestAssertion_shouldPass(check) {
-        //@ts-ignore
-        return new ValueAsserter(check);
-    };
 
-    const ValueAsserter = function (
-        check: (value: any) => boolean
-    ) {
-        //@ts-ignore
-        this.check = check;
-    };
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
