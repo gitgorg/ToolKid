@@ -13,7 +13,7 @@ interface TK_ConnectionHTTP_file {
         //get?: string | { [key: string]: string },
         responseType?: string
         headers?: Dictionary,
-        //maxTime?: number,
+        //TODO: maxTime?: number,
     }): Promise<any>
 }
 

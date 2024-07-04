@@ -18,6 +18,7 @@
         execute: async function simplePromise() {
             let result = createPromise();
             result.resolve(100);
+            const value = await result.promise;
             assertEquality({
                 "result": {
                     value: result,
@@ -28,7 +29,7 @@
                     }
                 },
                 "awaited result.promise": {
-                    value: await result.promise,
+                    value,
                     shouldBe: 100
                 }
             });
@@ -48,7 +49,9 @@
         execute: async function bothPositive() {
             assertEquality({
                 "both positive": {
-                    value: await combine(Promise.resolve("a"), Promise.resolve("b")),
+                    value: await combine(
+                        Promise.resolve("a"), Promise.resolve("b")
+                    ),
                     shouldBe: ["a", "b"]
                 }
             });
@@ -66,7 +69,7 @@
         subject: combine,
         execute: async function fail_bothNetative() {
             await assertFailure({
-                name: "positive and negative",
+                name: "both negative",
                 execute: combine(Promise.reject("e"), Promise.reject("f")),
                 shouldThrow: "e"
             });
