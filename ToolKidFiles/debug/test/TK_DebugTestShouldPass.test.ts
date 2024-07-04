@@ -113,6 +113,12 @@
                 }, "shouldPassAnyMatchSecond": {
                     value: "text",
                     shouldBe: shouldPassAny(isNumber, isString)
+                },  "shouldPassAnyStaticValue": {
+                    value: 20,
+                    shouldBe: shouldPassAny(10,20,30)
+                }, "shouldPassAnyMixedStaticValue": {
+                    value: shouldPassAny(0,isString)("0"),
+                    shouldBe: true
                 }
             });
         }
@@ -122,6 +128,12 @@
             assertEquality({
                 "fail_shouldPassAnyUnwantedType": {
                     value: shouldPassAny(isNumber, isString)(true),
+                    shouldBe: false
+                }, "fail_shouldPassAnyWrongStaticValue": {
+                    value: shouldPassAny(10,20,30)(0),
+                    shouldBe: false
+                }, "fail_shouldPassAnyMixedStaticValue": {
+                    value: shouldPassAny(isString,undefined,NaN)(null),
                     shouldBe: false
                 }
             });

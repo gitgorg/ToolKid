@@ -1000,7 +1000,9 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
-            return failure;
+            return (failure instanceof Array)
+                ? failure
+                : [failure];
         }
         const differences = failure[failure.length - 1];
         return [
@@ -1091,6 +1093,11 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
 
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
+    const createValueChecker = function TK_DebugTestAssertion_createValueChecker(mode, value) {
+        return (mode === "fail")
+            ? testFailure.bind(null, value)
+            : testSuccess.bind(null, value);
+    };
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
             throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];
@@ -1117,10 +1124,6 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
     const testSuccess = function K_DebugTestAssertion_testSuccess(value, check) {
         return check(value) === true;
     };
-    const getChecker = function (mode, value) {
-        const base = (mode === "fail") ? testFailure : testSuccess;
-        return base.bind(null, value);
-    };
     const ValueAsserter = function TK_DebugTestShouldPass_ValueAsserter(inputs) {
         const asserter = (inputs.want === "none")
             ? wantsNone.bind(null, inputs)
@@ -1131,10 +1134,18 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
         return asserter;
     };
     const wantsAny = function TK_DebugTestShouldPass_wantsAny(bound, value) {
-        return bound.checks.findIndex(getChecker(bound.to, value)) !== -1;
+        return bound.checks.findIndex(wantsAnySub.bind(null, createValueChecker(bound.to, value), value)) !== -1;
+    };
+    const wantsAnySub = function TK_DebugTestShouldPass_wantsAnySub(checker, value, shouldBe) {
+        if (typeof shouldBe === "function") {
+            return checker(shouldBe);
+        }
+        else {
+            return shouldBe === value;
+        }
     };
     const wantsNone = function TK_DebugTestShouldPass_wantsNone(bound, value) {
-        return bound.checks.findIndex(getChecker(bound.to, value)) === -1;
+        return bound.checks.findIndex(createValueChecker(bound.to, value)) === -1;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

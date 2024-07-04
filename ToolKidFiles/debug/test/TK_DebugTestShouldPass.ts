@@ -9,17 +9,17 @@ interface TK_DebugTest_file {
         }[]
     ): ValueAsserter,
     shouldPassAny(
-        check1: (value: any) => boolean,
-        check2: (value: any) => boolean,
-        ...additionalChecks: {
-            (value: any): boolean
-        }[]
+        check1: shouldPassAnyInput,
+        check2: shouldPassAnyInput,
+        ...additionalChecks: shouldPassAnyInput[]
     ): ValueAsserter
 }
 
+type shouldPassAnyInput = ValueAsserter | number | string | Dictionary | any[] | undefined | null
+
 type ValueAsserter = {
     (value: any): boolean,
-    valueChecks: { (value: any): boolean }[],
+    valueChecks: any[],
     wants: "any" | "none",
     to: "pass" | "fail"
 }
@@ -79,7 +79,7 @@ type ValueAsserter = {
     };
 
     const ValueAsserter = function TK_DebugTestShouldPass_ValueAsserter(inputs: {
-        checks: { (value: any): boolean }[],
+        checks: any[],
         want: "none" | "any",
         to: "pass" | "fail"
     }) {
@@ -97,8 +97,24 @@ type ValueAsserter = {
         checks: any, to: "pass" | "fail"
     }, value: any) {
         return bound.checks.findIndex(
-            createValueChecker(bound.to, value)
+            wantsAnySub.bind(
+                null,
+                createValueChecker(bound.to, value),
+                value
+            )
         ) !== -1;
+    };
+
+    const wantsAnySub = function TK_DebugTestShouldPass_wantsAnySub(
+        checker: (shouldBe: any) => boolean,
+        value: any,
+        shouldBe: any
+    ) {
+        if (typeof shouldBe === "function") {
+            return checker(shouldBe);
+        } else {
+            return shouldBe === value;
+        }
     };
 
     const wantsNone = function TK_DebugTestShouldPass_wantsNone(bound: {

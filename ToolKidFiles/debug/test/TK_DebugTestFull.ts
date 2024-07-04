@@ -72,7 +72,9 @@ interface TK_DebugTest_file {
         failure: any[]
     ) {
         if (!isDifferenceFailure(failure)) {
-            return failure;
+            return (failure instanceof Array)
+                ? failure
+                : [failure];
         }
 
         const differences = failure[failure.length - 1];
@@ -139,10 +141,10 @@ interface TK_DebugTest_file {
         }
     };
 
-    const shortenValue = function TK_DebugTestFull_shortenValue (value:any) {
+    const shortenValue = function TK_DebugTestFull_shortenValue(value: any) {
         if (typeof value === "string") {
             if (value.length > 200) {
-                return value.slice(0,100)
+                return value.slice(0, 100)
                     + ">>[...]<<"
                     + value.slice(-100)
                     + ">>total length:" + value.length + "<<";
@@ -150,7 +152,7 @@ interface TK_DebugTest_file {
         } else if (value instanceof Array) {
             if (value.length > 50) {
                 return [
-                    ...value.slice(0,20),
+                    ...value.slice(0, 20),
                     ">>[...]<<",
                     ...value.slice(-20),
                     ">>total length:" + value.length + "<<"
@@ -165,7 +167,7 @@ interface TK_DebugTest_file {
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
-        const summary = ToolKid.debug.test.getSummary(function(summary){
+        const summary = ToolKid.debug.test.getSummary(function (summary) {
             logMissingSuspects(summary);
             summary.failures.forEach(logFailure);
             logFazit(summary);
