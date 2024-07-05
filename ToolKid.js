@@ -262,15 +262,17 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
         let missing = promises.length;
         const datas = new Array(promises.length);
         const result = publicExports.createPromise();
-        const handleSucces = function (position, data) {
+        const handleSucces = function TK_DataTypesPromise_combineSuccess(position, data) {
             datas[position] = data;
             missing -= 1;
             if (missing === 0) {
                 result.resolve(datas);
             }
         };
-        const handleFailure = function (data) {
-            result.reject(data);
+        const handleFailure = function TK_DataTypesPromise_combineFailure(data) {
+            if (result.state === "pending") {
+                result.reject(data);
+            }
         };
         promises.forEach(function (promise, position) {
             promise.then(handleSucces.bind(null, position), handleFailure);
@@ -278,12 +280,37 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
         return result.promise;
     };
     publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
-        const result = {};
+        const result = {
+            state: "pending"
+        };
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(resolve, reject) {
-            result.resolve = resolve;
-            result.reject = reject;
+            result.resolve = promiseDecide.bind(null, {
+                promiseData: result,
+                method: resolve,
+                state: "fulfilled"
+            });
+            result.reject = promiseDecide.bind(null, {
+                promiseData: result,
+                method: reject,
+                state: "rejected"
+            });
         });
         return result;
+    };
+    const promiseDecide = function TK_DataTypesPromise_promiseDecide(bound, data) {
+        const { promiseData } = bound;
+        if (promiseData.state !== "pending") {
+            console.error([
+                "TK_DataTypesPromise_createPromiseReject - promise allready " + promiseData.state + " with:",
+                promiseData.data,
+                " then tried " + bound.state + " with:",
+                data
+            ]);
+            return;
+        }
+        bound.method(data);
+        promiseData.data = data;
+        promiseData.state = bound.state;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

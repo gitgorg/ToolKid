@@ -18,14 +18,16 @@
         execute: async function simplePromise() {
             let result = createPromise();
             result.resolve(100);
-            const value = await result.promise;
+            let value = await result.promise;
             assertEquality({
                 "result": {
                     value: result,
                     shouldBe: {
                         promise: shouldPass(isPromise),
                         resolve: shouldPass(isFunction),
-                        reject: shouldPass(isFunction)
+                        reject: shouldPass(isFunction),
+                        state: "fulfilled",
+                        data: 100
                     }
                 },
                 "awaited result.promise": {
@@ -36,7 +38,7 @@
 
             result = createPromise();
             result.reject(false);
-            await assertFailure({
+            value = await assertFailure({
                 name: "promise was rejected",
                 execute: result.promise,
                 shouldThrow: false

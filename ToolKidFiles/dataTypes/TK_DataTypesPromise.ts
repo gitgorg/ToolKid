@@ -5,24 +5,23 @@ interface TK_DataTypesPromise_file {
     combine(
         ...promises: Promise<any>[]
     ): Promise<any[]>,
-    createPromise(): {
-        promise: Promise<any>,
-        resolve(data?:any):void,
-        reject(reason?:any):void,
-        state: "pending" | "resolved" | "rejected"
-    }
+    createPromise(): CustomPromise
+}
+
+type CustomPromise = {
+    promise: Promise<any>,
+    resolve(data?: any): void,
+    reject(reason?: any): void,
+    state: "pending" | "fulfilled" | "rejected",
+    data: any
 }
 
 
 
-
 (function TK_DataTypesPromise_init() {
-
-
-
     const publicExports = module.exports = <TK_DataTypesPromise_file>{};
 
-    publicExports.combine = function TK_DataTypesPromise_combine (...promises) {
+    publicExports.combine = function TK_DataTypesPromise_combine(...promises) {
         if (promises.length === 0) {
             return Promise.resolve();
         }
@@ -30,50 +29,64 @@ interface TK_DataTypesPromise_file {
         let missing = promises.length;
         const datas = new Array(promises.length);
         const result = publicExports.createPromise();
-        const handleSucces = function (position:number, data:any) {
+        const handleSucces = function TK_DataTypesPromise_combineSuccess(position: number, data: any) {
             datas[position] = data;
             missing -= 1;
             if (missing === 0) {
                 result.resolve(datas);
             }
         };
-        const handleFailure = function (data:any) {
-            result.reject(data);
+        const handleFailure = function TK_DataTypesPromise_combineFailure(data: any) {
+            if (result.state === "pending") {
+                result.reject(data);
+            }
         };
-        promises.forEach(function(promise, position){
-            promise.then(handleSucces.bind(null,position), handleFailure);
+        promises.forEach(function (promise, position) {
+            promise.then(handleSucces.bind(null, position), handleFailure);
         });
         return result.promise;
     };
 
     publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
-        const result = <{
-            promise: Promise<any>,
-            resolve(data?:any):void,
-            reject(reason?:any):void,
-            state: "pending" | "resolved" | "rejected"
-        }>{};
+        const result = <CustomPromise>{
+            state: "pending"
+        };
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(
             resolve, reject
         ) {
-            result.resolve = function TK_DataTypesPromise_createPromiseResolve(data:any){
-                if (result.state !== "pending") {
-                    throw ["TK_DataTypesPromise_createPromiseResolve - promise allready resolved"];
-                }
-
-                resolve(data);
-                result.state = "resolved";
-            };
-            result.reject = function TK_DataTypesPromise_createPromiseReject(reason:any) {
-                if (result.state !== "pending") {
-                    throw ["TK_DataTypesPromise_createPromiseReject - promise allready resolved"];
-                }
-
-                reject(reason);
-                result.state = "rejected";
-            };
+            result.resolve = promiseDecide.bind(null, {
+                promiseData: result,
+                method: resolve,
+                state: "fulfilled"
+            });
+            result.reject = promiseDecide.bind(null, {
+                promiseData: result,
+                method: reject,
+                state: "rejected"
+            });
         });
         return result;
+    };
+
+    const promiseDecide = function TK_DataTypesPromise_promiseDecide(bound: {
+        promiseData: CustomPromise,
+        method(reason: any): void,
+        state: "fulfilled" | "rejected"
+    }, data: any) {
+        const { promiseData } = bound;
+        if (promiseData.state !== "pending") {
+            console.error([
+                "TK_DataTypesPromise_createPromiseReject - promise allready "+promiseData.state+" with:",
+                promiseData.data,
+                " then tried " + bound.state + " with:",
+                data
+            ]);
+            return;
+        }
+
+        bound.method(data);
+        promiseData.data = data;
+        promiseData.state = bound.state;
     };
 
 
