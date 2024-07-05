@@ -8,7 +8,8 @@ interface TK_DataTypesPromise_file {
     createPromise(): {
         promise: Promise<any>,
         resolve(data?:any):void,
-        reject(reason?:any):void
+        reject(reason?:any):void,
+        state: "pending" | "resolved" | "rejected"
     }
 }
 
@@ -48,14 +49,29 @@ interface TK_DataTypesPromise_file {
     publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
         const result = <{
             promise: Promise<any>,
-            resolve(data:any):void,
-            reject(reason:any):void
+            resolve(data?:any):void,
+            reject(reason?:any):void,
+            state: "pending" | "resolved" | "rejected"
         }>{};
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(
             resolve, reject
         ) {
-            result.resolve = resolve;
-            result.reject = reject;
+            result.resolve = function TK_DataTypesPromise_createPromiseResolve(data:any){
+                if (result.state !== "pending") {
+                    throw ["TK_DataTypesPromise_createPromiseResolve - promise allready resolved"];
+                }
+
+                resolve(data);
+                result.state = "resolved";
+            };
+            result.reject = function TK_DataTypesPromise_createPromiseReject(reason:any) {
+                if (result.state !== "pending") {
+                    throw ["TK_DataTypesPromise_createPromiseReject - promise allready resolved"];
+                }
+
+                reject(reason);
+                result.state = "rejected";
+            };
         });
         return result;
     };
