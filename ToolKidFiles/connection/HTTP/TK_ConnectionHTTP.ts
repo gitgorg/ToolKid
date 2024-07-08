@@ -110,15 +110,16 @@ interface TK_ConnectionHTTP_file {
         },
         detail: Error
     ) {
+        const {inputs} = bound;
         const error = Error(
             "TK_ConnectionHTTPRequest - " + errorInfos[bound.type] + "."
         );
         (<Dictionary>error).cause = {
             detail,
-            inputs: bound.inputs
+            inputs
         };
-        if (typeof bound.inputs.errorHandler === "function") {
-            bound.inputs.errorHandler(error);
+        if (typeof inputs.errorHandler === "function") {
+            inputs.errorHandler(error);
             return error;
         } else {
             throw error;
