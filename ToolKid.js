@@ -158,14 +158,13 @@ registeredFiles["Library.js"] = module.exports;
         parsing: "response is malformed"
     };
     const requestFailed = function TK_ConnectionHTTPRequestFailed(bound, detail) {
-        const { inputs } = bound;
         const error = Error("TK_ConnectionHTTPRequest - " + errorInfos[bound.type] + ".");
         error.cause = {
             detail,
-            inputs
+            inputs: bound.inputs
         };
-        if (typeof inputs.errorHandler === "function") {
-            inputs.errorHandler(error);
+        if (typeof bound.inputs.errorHandler === "function") {
+            bound.inputs.errorHandler(error);
             return error;
         }
         else {

@@ -12,7 +12,7 @@
     test({
         subject: request,
         execute: function GETBasic_regularCallback() {
-            request({
+            return request({
                 URL: requestAdresses.GETBasic,
                 callback: function handleResponse (response) {
                     assertEquality({
