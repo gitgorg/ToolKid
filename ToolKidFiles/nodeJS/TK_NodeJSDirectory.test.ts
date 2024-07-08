@@ -1,5 +1,5 @@
 (function TK_nodeJSDirectory_test() {
-    const paths = <T_pathList_file>require("./T_fileDirectory/T_pathList");
+    const paths = <T_pathList_test>require("./T_fileDirectory/T_pathList.test.js");
 
     const { assertFailure, assertEquality, test } = ToolKid.debug.test;
     const { readDirectory, resolvePath } = ToolKid.nodeJS;
@@ -13,7 +13,7 @@
                 "directory with mixed files":{
                     value: readDirectory(paths.directoryMixedContents),
                     shouldBe: [
-                        "T_empty","T_empty.txt","T_file.json","T_pathList.ts"
+                        "T_empty","T_empty.txt","T_file.json","T_pathList.test.js"
                     ]
                 },
                 "empty directory":{

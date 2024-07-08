@@ -1330,20 +1330,6 @@ registeredFiles["TK_NodeJSFile.js"] = module.exports;
 })();
 registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
-(function T_pathList_init() {
-    const root = "ToolKidFiles/nodeJS/";
-    module.exports = {
-        directoryMixedContents: root + "T_fileDirectory",
-        directoryEmpty: root + "T_fileDirectory/T_empty",
-        directoryNonExisting: root + "T_nonExistant",
-        file: root + "T_fileDirectory/T_file.json",
-        fileEmpty: root + "T_fileDirectory/T_empty.txt",
-        fileNonExisting: root + "T_fileDirectory/T_nonExistant.json",
-        fileTypeScript: root + "T_fileDirectory/T_pathList.ts"
-    };
-})();
-registeredFiles["T_pathList.js"] = module.exports;
-
 (function LibraryTools_init() {
     const FS = require("fs");
     const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;

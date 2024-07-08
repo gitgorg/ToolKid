@@ -1,4 +1,6 @@
 //combining all ToolKid parts
+type ToolKidBuild_file = {(inputs?:ToolKidConfig): void}
+
 declare const ToolKid: ToolKid_file
 
 interface ToolKid_file extends Library {
@@ -14,6 +16,7 @@ type ToolKidConfig = {
     rootLibraryFiles: string,
     include: string[],
     exclude: string[],
+    exportFile?: string,
     runTests?: false
 }
 
@@ -55,7 +58,6 @@ type ToolKidConfig = {
             registeredFiles: {},
         };
 
-
         ToolKid.registerFunction({
             section: "nodeJS", functions: {
                 loopFiles: LibraryTools.loopFiles
@@ -72,7 +74,8 @@ type ToolKidConfig = {
 
     const writeLibraryFile = function (inputs:{
         rootLibraryFiles:string,
-        fileLocations:Dictionary
+        fileLocations:Dictionary,
+        exportFile?:string
     }) {
         const libraryPath = Path.resolve(inputs.rootLibraryFiles)+"/Library.js";
 
@@ -97,10 +100,10 @@ type ToolKidConfig = {
         privateData.combinedFile += "module.exports = ToolKid;\n";
         privateData.combinedFile += "})();";
         Library.getTools().writeFile({
-            path:"./ToolKid.js",
+            path: inputs.exportFile || (__dirname.slice(0,-5) + "ToolKid.js"),
             content: privateData.combinedFile
         });
-    }
+    };
 
     const executeAndRegisterFile = function (
         registeredFiles: Dictionary,
@@ -202,15 +205,19 @@ type ToolKidConfig = {
         return result;
     };
 
-    const exectueBuild = function ToolKidBuild_exectueBuild () {
-        const config = readConfig();
+    const exectueBuild = <ToolKidBuild_file>function ToolKidBuild_exectueBuild (config) {
+        console.log("building ToolKid");
+        if (config === undefined) {
+            config = readConfig();
+        }
+        Library = require(Path.resolve(config.rootLibraryFiles,"Library"));
         const fileList = collectToolKid(config);
         (<Dictionary>global).log = ToolKid.debug.terminal.logImportant;
         writeLibraryFile({
             rootLibraryFiles:config.rootLibraryFiles,
-            fileLocations:fileList
+            fileLocations:fileList,
+            exportFile: config.exportFile
         });
-        console.log("composed ToolKid is ready:", ToolKid);
         if (config.runTests !== false) {
             runTests(config);
         }
@@ -227,7 +234,6 @@ type ToolKidConfig = {
             let content = FS.readFileSync("./ToolKidConfig.json", "utf8");
             result = JSON.parse(content);
         }
-        Library = require(Path.resolve(result.rootLibraryFiles,"Library"));
         return result;
     };
 
@@ -246,6 +252,7 @@ type ToolKidConfig = {
     const runTests = function ToolKidBuild_runTests (
         config:ToolKidConfig
     ) {
+        console.log("testing ToolKid");
         const TKTest = ToolKid.debug.test;
         TKTest.registerTestSuspect({
             suspect: ToolKid,
@@ -256,5 +263,10 @@ type ToolKidConfig = {
         );
     };
 
-    exectueBuild();
+    const executionFile = Path.basename(process.argv[1]);
+    const isExecutedDirectly = executionFile.slice(0,12) === "ToolKidBuild";
+    if (isExecutedDirectly) {
+        exectueBuild();
+    }
+    module.exports = exectueBuild;
 })();

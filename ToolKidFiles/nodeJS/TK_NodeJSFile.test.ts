@@ -1,5 +1,5 @@
 (function TK_nodeJSFile_test() {
-    const paths = <T_pathList_file>require("./T_fileDirectory/T_pathList");
+    const paths = <T_pathList_test>require("./T_fileDirectory/T_pathList.test.js");
 
     const { assertFailure, assertEquality, test } = ToolKid.debug.test;
     const { readFile, resolvePath } = ToolKid.nodeJS;

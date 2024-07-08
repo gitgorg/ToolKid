@@ -1,14 +1,8 @@
 (function TK_nodeJSPath_file_test() {
-    const FS = require("fs");
-    const paths = <T_pathList_file>require("./T_fileDirectory/T_pathList");
+    const paths = <T_pathList_test>require("./T_fileDirectory/T_pathList.test.js");
 
     const { assertFailure, assertEquality, test } = ToolKid.debug.test;
     const { isDirectory, isUsedPath } = ToolKid.nodeJS;
-
-    //create empty directory if not there (because you can't read those from git)
-    if (!FS.existsSync(paths.directoryEmpty)) {
-        FS.mkdirSync(paths.directoryEmpty);
-    }
 
     test({
         subject: isDirectory,
