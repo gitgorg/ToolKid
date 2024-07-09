@@ -114,7 +114,11 @@ type TestResult = {
         const promise = <Promise<TestResult>>new Promise(function (resolve) {
             resolver = resolve;
         });
-        const bound = {result, startTime: inputs.startTime, resolver};
+        const bound = {
+            resolver,
+            result,
+            startTime: inputs.startTime
+        };
         inputs.promise.then(
             testPromiseSuccess.bind(null, bound),
             testPromiseFailure.bind(null, bound)
@@ -138,13 +142,14 @@ type TestResult = {
             resolver: GenericFunction
         }, reason:any
     ) {
-        bound.result.errorMessage = reason;
-        bound.result.time = Date.now() - bound.startTime;
+        const {result} = bound;
+        result.errorMessage = reason;
+        result.time = Date.now() - bound.startTime;
         if (reason === undefined) {
             reason = "Unspecified Error"
         }
-        bound.result.errorMessage = reason;
-        bound.resolver(bound.result);
+        result.errorMessage = reason;
+        bound.resolver(result);
     };
 
     Object.freeze(publicExports);

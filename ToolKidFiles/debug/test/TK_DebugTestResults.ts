@@ -107,6 +107,7 @@ type TestSummary = {
         return result;
     };
 
+    let pendingSummaries = <TestSummary[]>[];
     publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
         const result = <TestSummary>{
             testCount: testResults.length,
@@ -121,6 +122,8 @@ type TestSummary = {
             summaryRegisterResult.bind(null, result));
         if (result.pending.size === 0) {
             getSummaryFinal(result);
+        } else {
+            pendingSummaries.push(result);
         }
         return result;
     };
@@ -128,6 +131,10 @@ type TestSummary = {
     const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal (
         summary:TestSummary
     ) {
+        const pos = pendingSummaries.indexOf(summary);
+        if (pos !== -1) {
+            pendingSummaries.splice(pos,1);
+        }
         summary.timeTotal = Date.now() - timeStart;
         const {callback} = summary;
         if (typeof callback === "function") {
@@ -155,19 +162,32 @@ type TestSummary = {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
 
+    const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise (
+        bound:{
+            summary:TestSummary,
+            promise: Promise<TestResult>
+        },
+        result:TestResult
+    ){
+        const {summary} = bound;
+        summary.pending.delete(bound.promise);
+        summaryRegisterResult(summary, result);
+        if (summary.pending.size === 0) {
+            getSummaryFinal(summary);
+        }
+    };
+
     const summaryRegisterResult = function TK_DebugTest_summaryRegisterResults(
         summary: TestSummary,
         testResult: TestResult | Promise<TestResult>
     ) {
         if (testResult instanceof Promise) {
             summary.pending.add(testResult);
-            testResult.then(function(result){
-                summary.pending.delete(testResult);
-                summaryRegisterResult(summary, result);
-                if (summary.pending.size === 0) {
-                    getSummaryFinal(summary);
-                }
+            const handleResolve = summaryHandlePromise.bind(null,{
+                summary,
+                promise: testResult
             });
+            testResult.then(handleResolve);
             return;
         }
 
@@ -176,10 +196,12 @@ type TestSummary = {
             summary.failures.push(
                 beautifyErrorMessage(testResult)
             );
+            return false;
         } else {
             summaryRegisterSuccess({
                 list: summary.successes, testResult
             });
+            return true;
         }
     };
 
@@ -205,7 +227,14 @@ type TestSummary = {
     publicExports.registerTestResult = function TK_DebugTestResults_registerTestResult(
         ...results
     ) {
+        pendingSummaries.forEach(registerResultsDelayed.bind(null,results));
         testResults.push(...results);
+    };
+
+    const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed (
+        results:any[], summary:TestSummary
+    ) {
+        results.forEach(summaryRegisterResult.bind(null,summary));
     };
 
     publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {

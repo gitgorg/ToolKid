@@ -457,6 +457,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         });
         return result;
     };
+    let pendingSummaries = [];
     publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
         const result = {
             testCount: testResults.length,
@@ -471,9 +472,16 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         if (result.pending.size === 0) {
             getSummaryFinal(result);
         }
+        else {
+            pendingSummaries.push(result);
+        }
         return result;
     };
     const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(summary) {
+        const pos = pendingSummaries.indexOf(summary);
+        if (pos !== -1) {
+            pendingSummaries.splice(pos, 1);
+        }
         summary.timeTotal = Date.now() - timeStart;
         const { callback } = summary;
         if (typeof callback === "function") {
@@ -496,26 +504,34 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
     const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs) {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
+    const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise(bound, result) {
+        const { summary } = bound;
+        summary.pending.delete(bound.promise);
+        summaryRegisterResult(summary, result);
+        if (summary.pending.size === 0) {
+            getSummaryFinal(summary);
+        }
+    };
     const summaryRegisterResult = function TK_DebugTest_summaryRegisterResults(summary, testResult) {
         if (testResult instanceof Promise) {
             summary.pending.add(testResult);
-            testResult.then(function (result) {
-                summary.pending.delete(testResult);
-                summaryRegisterResult(summary, result);
-                if (summary.pending.size === 0) {
-                    getSummaryFinal(summary);
-                }
+            const handleResolve = summaryHandlePromise.bind(null, {
+                summary,
+                promise: testResult
             });
+            testResult.then(handleResolve);
             return;
         }
         summary.missingSuspects.delete(testResult.subject);
         if (testResult.errorMessage !== undefined) {
             summary.failures.push(beautifyErrorMessage(testResult));
+            return false;
         }
         else {
             summaryRegisterSuccess({
                 list: summary.successes, testResult
             });
+            return true;
         }
     };
     const summaryRegisterSuccess = function TK_DebugTest_summaryRegisterSuccess(inputs) {
@@ -533,7 +549,11 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         }
     };
     publicExports.registerTestResult = function TK_DebugTestResults_registerTestResult(...results) {
+        pendingSummaries.forEach(registerResultsDelayed.bind(null, results));
         testResults.push(...results);
+    };
+    const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed(results, summary) {
+        results.forEach(summaryRegisterResult.bind(null, summary));
     };
     publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {
         if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
@@ -620,7 +640,11 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
         const promise = new Promise(function (resolve) {
             resolver = resolve;
         });
-        const bound = { result, startTime: inputs.startTime, resolver };
+        const bound = {
+            resolver,
+            result,
+            startTime: inputs.startTime
+        };
         inputs.promise.then(testPromiseSuccess.bind(null, bound), testPromiseFailure.bind(null, bound));
         return promise;
     };
@@ -629,13 +653,14 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
         bound.resolver(bound.result);
     };
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
-        bound.result.errorMessage = reason;
-        bound.result.time = Date.now() - bound.startTime;
+        const { result } = bound;
+        result.errorMessage = reason;
+        result.time = Date.now() - bound.startTime;
         if (reason === undefined) {
             reason = "Unspecified Error";
         }
-        bound.result.errorMessage = reason;
-        bound.resolver(bound.result);
+        result.errorMessage = reason;
+        bound.resolver(result);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -1024,6 +1049,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     const logFailure = function TK_DebugTestFull_logFailure(result) {
         console.warn(colorText("negative", ">> failed test \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
+        console.log(result.errorMessage.cause);
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
