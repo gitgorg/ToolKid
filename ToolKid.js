@@ -1028,8 +1028,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
-        positive: "\u001b[32m", //green
-        default: "\u001b[97m", //white
+        positive: "\u001b[32m",
+        default: "\u001b[97m",
         negative: "\u001b[31m" //red
     };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
@@ -1049,7 +1049,6 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     const logFailure = function TK_DebugTestFull_logFailure(result) {
         console.warn(colorText("negative", ">> failed test \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
-        console.log(result.errorMessage.cause);
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {

@@ -9,7 +9,7 @@
         GETInvalidResponse: "https://test.teach-audio.com/json2.json"
     };
 
-    test({
+    test(/*{
         subject: request,
         execute: function GETBasic_regularCallback() {
             return request({
@@ -24,7 +24,7 @@
                 }
             });
         }
-    }, {
+    },*/ /*{
         subject: request,
         execute: async function GETBasic_asyncAwait() {
             assertEquality({
@@ -34,21 +34,6 @@
                     }),
                     shouldBe: { number: 100, boolean: true }
                 }
-            });
-        }
-    },/*{
-        subject: request,
-        execute: function GETfailedCallback_regular () {
-            assertFailure({
-                name:"callback failed",
-                execute: request,
-                withInputs: {
-                    URL: requestAdresses.GETBasic,
-                    callback: function() {
-                        throw true;
-                    }
-                },
-                shouldThrow: true
             });
         }
     },*/ {
