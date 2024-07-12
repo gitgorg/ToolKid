@@ -24,7 +24,7 @@ interface TK_DebugTest_file {
     };
 
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(
-        nameAndValue: [name: string, value: any]
+        nameAndValue: [testName: string, config: any]
     ) {
         const settings = Object.assign({}, nameAndValue[1]);
         if (typeof settings.toleranceDepth !== "number") {
@@ -63,14 +63,12 @@ interface TK_DebugTest_file {
         getKeys(shouldBe).forEach(function (key) {
             additionalKeys.delete(key);
             assertEqualityLoose(Object.assign(
-                {},
-                inputs, {
-                path: inputs.path.concat(key),
-                value: reader(value, key),
-                shouldBe: reader(shouldBe, key),
-                toleranceDepth,
-                allowAdditions: inputs.allowAdditions
-            }
+                {}, inputs, {
+                    path: inputs.path.concat(key),
+                    value: reader(value, key),
+                    shouldBe: reader(shouldBe, key),
+                    toleranceDepth
+                }
             ));
         });
         if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
@@ -104,13 +102,21 @@ interface TK_DebugTest_file {
     };
 
     const getKeys = function TK_DebugTestAssertion_getKeys(value: any) {
-        if (value instanceof Map) {
+        if (value instanceof Array) {
+            return value.map(getKeysArray);
+        } else if (value instanceof Map) {
             return Array.from(value.keys());
         } else if (value instanceof Set) {
             return Array.from(value);
         } else {
             return Object.keys(value);
         }
+    };
+
+    const getKeysArray = function TK_DebugTestAssertions(
+        value:any, key:number
+    ) {
+        return key;
     };
 
     const readProperty = {

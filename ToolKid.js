@@ -854,8 +854,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
                 path: inputs.path.concat(key),
                 value: reader(value, key),
                 shouldBe: reader(shouldBe, key),
-                toleranceDepth,
-                allowAdditions: inputs.allowAdditions
+                toleranceDepth
             }));
         });
         if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
@@ -887,7 +886,10 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         return result;
     };
     const getKeys = function TK_DebugTestAssertion_getKeys(value) {
-        if (value instanceof Map) {
+        if (value instanceof Array) {
+            return value.map(getKeysArray);
+        }
+        else if (value instanceof Map) {
             return Array.from(value.keys());
         }
         else if (value instanceof Set) {
@@ -896,6 +898,9 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         else {
             return Object.keys(value);
         }
+    };
+    const getKeysArray = function TK_DebugTestAssertions(value, key) {
+        return key;
     };
     const readProperty = {
         basic: function (container, key) {
