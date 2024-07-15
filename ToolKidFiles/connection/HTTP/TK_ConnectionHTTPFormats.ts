@@ -13,7 +13,7 @@ interface TK_ConnectionHTTP_file {
 
     const publicExports = module.exports = <TK_ConnectionHTTP_file>{};
 
-    publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType (path) {
+    publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType(path) {
         path = path.slice(path.lastIndexOf(".") + 1).toLocaleLowerCase();
         return mediaTypes[<"js">path];
     };
@@ -52,6 +52,6 @@ interface TK_ConnectionHTTP_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "connection", subSection:"HTTP", functions: publicExports });
+        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();

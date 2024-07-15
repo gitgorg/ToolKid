@@ -16,6 +16,8 @@ interface TK_DebugTest_file {
 
 
 (function TK_DebugTestAssertFailure_init() {
+    const {areEqual} = ToolKid.dataTypes.checks;
+
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
 
@@ -170,14 +172,14 @@ interface TK_DebugTest_file {
                 });
             }
 
-            const difference = ToolKid.object.compareDeep(
-                error,
-                shouldThrow
-            );
-            if (difference.count !== 0) {
+            const differences = areEqual({
+                value: error,
+                shouldBe: shouldThrow
+            });
+            if (differences !== true) {
                 return report({
                     name: inputs.name,
-                    message: ["did not throw expected message. threw:", error, "~details~", difference]
+                    message: ["did not throw expected message. threw:", error, "~details~", differences]
                 });
             }
         }

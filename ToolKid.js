@@ -253,6 +253,128 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesChecks.js"] = module.exports;
 
+(function TK_DataTypesChecksEquality_init() {
+    const publicExports = module.exports = {};
+    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(inputs) {
+        return assertEqualityLoose(Object.assign({ path: [], toleranceDepth: 1 }, inputs));
+    };
+    const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(inputs) {
+        const simpleTestResult = isSimpleAndEqual(inputs);
+        if (simpleTestResult === true) {
+            return true;
+        }
+        else if (simpleTestResult !== false) {
+            simpleTestResult.path = inputs.path;
+            return [simpleTestResult];
+        }
+        const toleranceDepth = inputs.toleranceDepth - 1;
+        const { value, shouldBe } = inputs;
+        const additionalKeys = new Set(getKeys(value));
+        let reader = readProperty.basic;
+        if (shouldBe instanceof Map) {
+            reader = readProperty.Map;
+        }
+        else if (shouldBe instanceof Set) {
+            reader = readProperty.Set;
+        }
+        let differences = [];
+        let returned;
+        getKeys(shouldBe).forEach(function (key) {
+            additionalKeys.delete(key);
+            returned = assertEqualityLoose(Object.assign({}, inputs, {
+                path: inputs.path.concat(key),
+                value: reader(value, key),
+                shouldBe: reader(shouldBe, key),
+                toleranceDepth
+            }));
+            if (returned !== true) {
+                differences.push(...returned);
+            }
+        });
+        if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
+            additionalKeys.forEach(function (key) {
+                returned = reader(value, key);
+                if (returned !== undefined) {
+                    differences.push({
+                        path: inputs.path.concat(key),
+                        type: "unwanted",
+                        value: returned
+                    });
+                }
+            });
+        }
+        return (differences.length === 0)
+            ? true
+            : differences;
+    };
+    const getKeys = function TK_DataTypesChecksEquality_getKeys(value) {
+        if (value instanceof Array) {
+            return value.map(getKeysArray);
+        }
+        else if (value instanceof Map) {
+            return Array.from(value.keys());
+        }
+        else if (value instanceof Set) {
+            return Array.from(value);
+        }
+        else {
+            return Object.keys(value);
+        }
+    };
+    const getKeysArray = function TK_DebugTestAssertions(value, key) {
+        return key;
+    };
+    const isIdentical = function TK_DataTypesChecksEquality_isIdentical(valueA, valueB) {
+        return valueA === valueB
+            || (Number.isNaN(valueB) && Number.isNaN(valueA));
+    };
+    const isList = function TK_DataTypesChecksEquality_isList(value) {
+        return typeof value === "object" && value !== null || typeof value === "function";
+    };
+    const isSimpleAndDifferent = function TK_DataTypesChecksEquality_isSimpleAndDifferent(valueA, valueB) {
+        return typeof valueA !== typeof valueB
+            || !isList(valueA) || !isList(valueB);
+    };
+    const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(inputs) {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return true;
+        }
+        if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
+            if (shouldBe(value) === true) {
+                return true;
+            }
+            else {
+                return { type: "invalid", value, shouldBe };
+            }
+        }
+        ;
+        if (isSimpleAndDifferent(value, shouldBe)) {
+            return { type: "different", value, shouldBe };
+        }
+        else if (inputs.toleranceDepth === 0) {
+            return { type: "tooDeep", value };
+        }
+        return false;
+    };
+    const readProperty = {
+        basic: function (container, key) {
+            return container[key];
+        },
+        Set: function (container, key) {
+            return container.has(key);
+        },
+        Map: function (container, key) {
+            return container.get(key);
+        }
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "dataTypes", subSection: "checks", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
+
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combine = function TK_DataTypesPromise_combine(...promises) {
@@ -409,32 +531,60 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
     let testResults = [];
     let testSuspects = new Set();
     const publicExports = module.exports = {};
-    const beautifyErrorMessage = function TK_DebugTestResults_beautifyErrorMessage(testResult) {
-        const message = testResult.errorMessage;
-        const length = message.length;
-        if (message[length - 2] !== "~details~") {
+    const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(testResult) {
+        if (testResult.errorMessage[0].slice(-13) !== "expectations:") {
             return testResult;
         }
-        const subMessages = [];
-        const difference = message[length - 1];
-        let part = difference.onlyA;
-        if (Object.keys(part).length !== 0) { //extensive properties
-            subMessages.push(["unwanted properties: ", part]);
-        }
-        part = difference.onlyB;
-        if (Object.keys(part).length !== 0) { //missing properties
-            subMessages.push(["missing properties: ", part]);
-        }
-        Object.entries(difference.changed).forEach(function (keyAndValues) {
-            subMessages.push([
-                "   property " + keyAndValues[0] + "is :",
-                keyAndValues[1][0],
-                "   and should have been:",
-                keyAndValues[1][1]
-            ]);
-        }, difference.changed);
+        const differences = testResult.errorMessage.slice(1);
+        let path;
+        const subMessages = differences.map(function (difference) {
+            path = ["value", ...difference.path].join(".");
+            if (difference.type === "different") {
+                return [
+                    path + " should have been:", difference.shouldBe,
+                    "but instead is:", difference.value
+                ];
+            }
+            else if (difference.type === "tooDeep") {
+                return [
+                    path + " is exceeding comparison depth"
+                ];
+            }
+            else if (difference.type === "invalid") {
+                return [
+                    path + " did not pass test:", difference.shouldBe,
+                    "with value:", difference.value
+                ];
+            }
+            else if (difference.type === "unwanted") {
+                return [
+                    "unwanted property " + path + ":", difference.value
+                ];
+            }
+            return difference;
+        });
+        // const difference = <EqualityDifference>message[length - 1];
+        // let part = difference.onlyA;
+        // if (Object.keys(part).length !== 0) { //extensive properties
+        //     subMessages.push(["unwanted properties: ", part]);
+        // }
+        // part = difference.onlyB;
+        // if (Object.keys(part).length !== 0) { //missing properties
+        //     subMessages.push(["missing properties: ", part]);
+        // }
+        // Object.entries(difference.changed).forEach(function (keyAndValues) { //changed properties
+        //     subMessages.push([
+        //         "   property " + keyAndValues[0] + "is :",
+        //         keyAndValues[1][0],
+        //         "   and should have been:",
+        //         keyAndValues[1][1]
+        //     ]);
+        // }, difference.changed);
+        // return Object.assign({}, testResult, {
+        //     errorMessage: [...message.slice(0, -2), "~ details ~", ...subMessages]
+        // });
         return Object.assign({}, testResult, {
-            errorMessage: [...message.slice(0, -2), "~ details ~", ...subMessages]
+            errorMessage: [testResult.errorMessage[0], ...subMessages]
         });
     };
     publicExports.clearSummaryState = function TK_DebugTestResults_clearSummaryState(inputs = {}) {
@@ -524,7 +674,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         }
         summary.missingSuspects.delete(testResult.subject);
         if (testResult.errorMessage !== undefined) {
-            summary.failures.push(beautifyErrorMessage(testResult));
+            summary.failures.push(beautifyDifferences(testResult));
             return false;
         }
         else {
@@ -670,6 +820,7 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
 registeredFiles["TK_DebugTest.js"] = module.exports;
 
 (function TK_DebugTestAssertFailure_init() {
+    const { areEqual } = ToolKid.dataTypes.checks;
     const publicExports = module.exports = {};
     publicExports.assertFailure = function TK_DebugTestAssertFailure_assertFailure(...inputs) {
         const promisedResults = inputs
@@ -789,11 +940,14 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
                     ]
                 });
             }
-            const difference = ToolKid.object.compareDeep(error, shouldThrow);
-            if (difference.count !== 0) {
+            const differences = areEqual({
+                value: error,
+                shouldBe: shouldThrow
+            });
+            if (differences !== true) {
                 return report({
                     name: inputs.name,
-                    message: ["did not throw expected message. threw:", error, "~details~", difference]
+                    message: ["did not throw expected message. threw:", error, "~details~", differences]
                 });
             }
         }
@@ -828,129 +982,10 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         if (typeof settings.toleranceDepth !== "number") {
             settings.toleranceDepth = 1;
         }
-        assertEqualityLoose(Object.assign({ name: nameAndValue[0], path: [] }, settings));
-    };
-    const assertEqualityLoose = function TK_DebugTestAssertion_assertEqualityLoose(inputs) {
-        const simpleTestResult = isSimpleAndEqual(inputs);
-        if (simpleTestResult === true) {
-            return;
+        const returned = ToolKid.dataTypes.checks.areEqual(settings);
+        if (returned !== true) {
+            throw ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
         }
-        else if (simpleTestResult instanceof Array) {
-            throw report({ inputs, message: simpleTestResult });
-        }
-        const { value, shouldBe } = inputs;
-        const toleranceDepth = inputs.toleranceDepth - 1;
-        const additionalKeys = new Set(getKeys(value));
-        let reader = readProperty.basic;
-        if (shouldBe instanceof Map) {
-            reader = readProperty.Map;
-        }
-        else if (shouldBe instanceof Set) {
-            reader = readProperty.Set;
-        }
-        getKeys(shouldBe).forEach(function (key) {
-            additionalKeys.delete(key);
-            assertEqualityLoose(Object.assign({}, inputs, {
-                path: inputs.path.concat(key),
-                value: reader(value, key),
-                shouldBe: reader(shouldBe, key),
-                toleranceDepth
-            }));
-        });
-        if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
-            const cleaned = new Map();
-            additionalKeys.forEach(function (key) {
-                const abundantValue = reader(value, key);
-                if (abundantValue !== undefined) {
-                    cleaned.set(key, abundantValue);
-                }
-            });
-            if (cleaned.size !== 0) {
-                throw [buildPathName(inputs.path) + " has unwanted properties:", cleaned];
-            }
-        }
-    };
-    const buildPathName = function (path) {
-        if (path.length === 0) {
-            return "value";
-        }
-        let result = "value";
-        path.forEach(function (part) {
-            if (typeof part === "function") {
-                result += ".>>function:" + part.name + "<<";
-            }
-            else {
-                result += "." + part;
-            }
-        });
-        return result;
-    };
-    const getKeys = function TK_DebugTestAssertion_getKeys(value) {
-        if (value instanceof Array) {
-            return value.map(getKeysArray);
-        }
-        else if (value instanceof Map) {
-            return Array.from(value.keys());
-        }
-        else if (value instanceof Set) {
-            return Array.from(value);
-        }
-        else {
-            return Object.keys(value);
-        }
-    };
-    const getKeysArray = function TK_DebugTestAssertions(value, key) {
-        return key;
-    };
-    const readProperty = {
-        basic: function (container, key) {
-            return container[key];
-        },
-        Set: function (container, key) {
-            return container.has(key);
-        },
-        Map: function (container, key) {
-            return container.get(key);
-        }
-    };
-    const isIdentical = function TK_DebugTestAssertion_isIdentical(valueA, valueB) {
-        return valueA === valueB
-            || (Number.isNaN(valueB) && Number.isNaN(valueA));
-    };
-    const isList = function TK_DebugTestAssertion_isList(value) {
-        return typeof value === "object" && value !== null || typeof value === "function";
-    };
-    const isSimpleAndDifferent = function TK_DebugTestAssertion_isSimpleAndDifferent(valueA, valueB) {
-        return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB);
-    };
-    const isSimpleAndEqual = function TK_DebugTestAssertion_isSimpleAndEqual(inputs) {
-        const { value, shouldBe } = inputs;
-        if (isIdentical(value, shouldBe)) {
-            return true;
-        }
-        if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
-            if (shouldBe(value) === true) {
-                return true;
-            }
-            else {
-                return [":", value, " didn't pass check - should " + shouldBe.to + " " + shouldBe.wants + " of ", shouldBe.valueChecks];
-            }
-        }
-        if (isSimpleAndDifferent(value, shouldBe)) {
-            return [" is:", value, "but should be equal to:", shouldBe];
-        }
-        else if (inputs.toleranceDepth === 0) {
-            return [" exceeds tolerance depth:", value];
-        }
-        return false;
-    };
-    const report = function TK_DebugTestAssertion_report(inputs) {
-        const { message } = inputs;
-        return [
-            "~ " + inputs.inputs.name + " ~ " + buildPathName(inputs.inputs.path) + message[0],
-            ...message.slice(1)
-        ];
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -1210,56 +1245,6 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
     }
 })();
 registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
-
-(function RS_h_object_init() {
-    const publicExports = module.exports = {};
-    publicExports.compareDeep = function RS_helpers_object_compareDeep(objA = {}, objB = {}) {
-        const result = {
-            count: 0, changed: {}, onlyA: {}, onlyB: Object.assign({}, objB)
-        };
-        Object.keys(objA).forEach(compareDeepSub.bind(null, result, objA, objB));
-        result.count += Object.keys(result.onlyB).length;
-        return result;
-    };
-    const compareDeepSub = function RS_helpers_object_compareDeepSub(result, objA, objB, key) {
-        delete result.onlyB[key];
-        const valA = objA[key];
-        const valB = objB[key];
-        if (valA === valB || (Number.isNaN(valA) && Number.isNaN(valB))) {
-            return;
-        }
-        if (valB === undefined) {
-            result.count += 1;
-            result.onlyA[key] = valA;
-            return;
-        }
-        else if (typeof valA !== typeof valB || typeof valA !== "object" || valA === null || valB === null) {
-            result.count += 1;
-            result.changed[key] = [valA, valB];
-            return;
-        }
-        const subs = publicExports.compareDeep(valA, valB);
-        if (subs.count === 0) {
-            return;
-        }
-        Object.entries(subs.onlyA).forEach(function (data) {
-            result.count += 1;
-            result.onlyA[key + "." + data[0]] = data[1];
-        });
-        Object.entries(subs.onlyB).forEach(function (data) {
-            result.onlyB[key + "." + data[0]] = data[1];
-        });
-        Object.entries(subs.changed).forEach(function (data) {
-            result.count += 1;
-            result.changed[key + "." + data[0]] = data[1];
-        });
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "object", functions: publicExports });
-    }
-})();
-registeredFiles["h_objectCompare.js"] = module.exports;
 
 (function TK_nodeJSDirectory_init() {
     const { readdirSync: readDirectory, existsSync: isUsedPath } = require("fs");

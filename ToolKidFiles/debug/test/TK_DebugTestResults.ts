@@ -18,7 +18,7 @@ interface TK_DebugTest_file {
 
     // summary
     getSummary(
-        callback?: (summary:TestSummary) => void
+        callback?: (summary: TestSummary) => void
     ): TestSummary,
     clearSummaryState(inputs?: {
         clearSuspects?: true
@@ -39,7 +39,7 @@ type TestSummary = {
     }[]>,
     pending: Set<Promise<TestResult>>,
     missingSuspects: Set<any>,
-    callback?: (summary:TestSummary) => void
+    callback?: (summary: TestSummary) => void
 }
 
 
@@ -53,35 +53,60 @@ type TestSummary = {
 
 
 
-    const beautifyErrorMessage = function TK_DebugTestResults_beautifyErrorMessage(
+    const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(
         testResult: TestResult
     ) {
-        const message = <any[]>testResult.errorMessage;
-        const length = message.length;
-        if (message[length - 2] !== "~details~") {
+        if (testResult.errorMessage[0].slice(-13) !== "expectations:") {
             return testResult;
         }
 
-        const subMessages = [];
-        const difference = <ObjectDifference>message[length - 1];
-        let part = difference.onlyA;
-        if (Object.keys(part).length !== 0) { //extensive properties
-            subMessages.push(["unwanted properties: ", part]);
-        }
-        part = difference.onlyB;
-        if (Object.keys(part).length !== 0) { //missing properties
-            subMessages.push(["missing properties: ", part]);
-        }
-        Object.entries(difference.changed).forEach(function (keyAndValues) { //changed properties
-            subMessages.push([
-                "   property " + keyAndValues[0] + "is :",
-                keyAndValues[1][0],
-                "   and should have been:",
-                keyAndValues[1][1]
-            ]);
-        }, difference.changed);
+        const differences = <EqualityDifference[]>testResult.errorMessage.slice(1);
+        let path: string;
+        const subMessages = differences.map(function (difference) {
+            path = ["value", ...difference.path].join(".");
+            if (difference.type === "different") {
+                return [
+                    path + " should have been:",difference.shouldBe,
+                    "but instead is:",difference.value
+                ];
+            } else if (difference.type === "tooDeep") {
+                return [
+                    path + " is exceeding comparison depth"
+                ];
+            } else if (difference.type === "invalid") {
+                return [
+                    path + " did not pass test:",difference.shouldBe,
+                    "with value:",difference.value
+                ];
+            } else if (difference.type === "unwanted") {
+                return [
+                    "unwanted property "+path + ":",difference.value
+                ];
+            }
+            return difference;
+        });
+        // const difference = <EqualityDifference>message[length - 1];
+        // let part = difference.onlyA;
+        // if (Object.keys(part).length !== 0) { //extensive properties
+        //     subMessages.push(["unwanted properties: ", part]);
+        // }
+        // part = difference.onlyB;
+        // if (Object.keys(part).length !== 0) { //missing properties
+        //     subMessages.push(["missing properties: ", part]);
+        // }
+        // Object.entries(difference.changed).forEach(function (keyAndValues) { //changed properties
+        //     subMessages.push([
+        //         "   property " + keyAndValues[0] + "is :",
+        //         keyAndValues[1][0],
+        //         "   and should have been:",
+        //         keyAndValues[1][1]
+        //     ]);
+        // }, difference.changed);
+        // return Object.assign({}, testResult, {
+        //     errorMessage: [...message.slice(0, -2), "~ details ~", ...subMessages]
+        // });
         return Object.assign({}, testResult, {
-            errorMessage: [...message.slice(0, -2), "~ details ~", ...subMessages]
+            errorMessage: [testResult.errorMessage[0], ...subMessages]
         });
     };
 
@@ -128,15 +153,15 @@ type TestSummary = {
         return result;
     };
 
-    const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal (
-        summary:TestSummary
+    const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(
+        summary: TestSummary
     ) {
         const pos = pendingSummaries.indexOf(summary);
         if (pos !== -1) {
-            pendingSummaries.splice(pos,1);
+            pendingSummaries.splice(pos, 1);
         }
         summary.timeTotal = Date.now() - timeStart;
-        const {callback} = summary;
+        const { callback } = summary;
         if (typeof callback === "function") {
             delete summary.callback;
             callback(summary);
@@ -162,14 +187,14 @@ type TestSummary = {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
 
-    const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise (
-        bound:{
-            summary:TestSummary,
+    const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise(
+        bound: {
+            summary: TestSummary,
             promise: Promise<TestResult>
         },
-        result:TestResult
-    ){
-        const {summary} = bound;
+        result: TestResult
+    ) {
+        const { summary } = bound;
         summary.pending.delete(bound.promise);
         summaryRegisterResult(summary, result);
         if (summary.pending.size === 0) {
@@ -183,7 +208,7 @@ type TestSummary = {
     ) {
         if (testResult instanceof Promise) {
             summary.pending.add(testResult);
-            const handleResolve = summaryHandlePromise.bind(null,{
+            const handleResolve = summaryHandlePromise.bind(null, {
                 summary,
                 promise: testResult
             });
@@ -194,7 +219,7 @@ type TestSummary = {
         summary.missingSuspects.delete(testResult.subject);
         if (testResult.errorMessage !== undefined) {
             summary.failures.push(
-                beautifyErrorMessage(testResult)
+                beautifyDifferences(testResult)
             );
             return false;
         } else {
@@ -227,14 +252,14 @@ type TestSummary = {
     publicExports.registerTestResult = function TK_DebugTestResults_registerTestResult(
         ...results
     ) {
-        pendingSummaries.forEach(registerResultsDelayed.bind(null,results));
+        pendingSummaries.forEach(registerResultsDelayed.bind(null, results));
         testResults.push(...results);
     };
 
-    const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed (
-        results:any[], summary:TestSummary
+    const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed(
+        results: any[], summary: TestSummary
     ) {
-        results.forEach(summaryRegisterResult.bind(null,summary));
+        results.forEach(summaryRegisterResult.bind(null, summary));
     };
 
     publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {
