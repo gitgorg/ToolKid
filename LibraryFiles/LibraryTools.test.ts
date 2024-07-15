@@ -1,6 +1,6 @@
-(function LibraryBuilder_test () {
-    const {easyExpression} = <LibraryTools_file>require("./LibraryTools.js");
-    const {test, assertEquality} = ToolKid.debug.test;
+(function LibraryBuilder_test() {
+    const { easyExpression, loopFiles } = <LibraryTools_file>require("./LibraryTools.js");
+    const { test, assertEquality } = ToolKid.debug.test;
 
     const paths = [
         "a/b/c.ts",
@@ -13,9 +13,9 @@
 
     test({
         subject: easyExpression,
-        execute: function filteringPaths () {
-            const filterPathsEasy = function LibraryTools_test_filterPathsEasy (
-                easyString:string
+        execute: function filteringPaths() {
+            const filterPathsEasy = function LibraryTools_test_filterPathsEasy(
+                easyString: string
             ) {
                 const expression = easyExpression(easyString);
                 return paths.filter(
@@ -50,6 +50,29 @@
                     value: filterPathsEasy("*/b"),
                     shouldBe: [
                         "a/b"
+                    ]
+                }
+            });
+        }
+    });
+
+    const Path = require("path");
+    test({
+        subject: loopFiles,
+        execute: function basicFileLoop() {
+            const fileDirectory = __dirname;
+            let found = <string[]>[];
+            loopFiles({
+                path: fileDirectory,
+                execute: found.push.bind(found)
+            });
+            assertEquality({
+                "siblingFiles": {
+                    value: found,
+                    shouldBe: [
+                        Path.resolve(fileDirectory, "Library.js"),
+                        Path.resolve(fileDirectory, "LibraryTools.js"),
+                        Path.resolve(fileDirectory, "LibraryTools.test.js")
                     ]
                 }
             });

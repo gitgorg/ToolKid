@@ -2,6 +2,10 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { checks: TK_DataTypesChecks_file }
 interface TK_DataTypesChecks_file {
+    areEqual(
+        value: any,
+        shouldBe: any
+    ): true | EqualityDifference[],
     areEqual(inputs: {
         value: any,
         shouldBe: any,
@@ -20,8 +24,16 @@ type EqualityDifference = {
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
 
-    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(inputs) {
-        return assertEqualityLoose(<any>Object.assign({ path: [], toleranceDepth:1 }, inputs));
+    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(...inputs:any[]) {
+        if (inputs.length === 2) {
+            return assertEqualityLoose({
+                path: [], toleranceDepth:1, value:inputs[0], shouldBe:inputs[1]
+            });
+        } else {
+            return assertEqualityLoose(Object.assign({
+                path: [], toleranceDepth:1
+            }, inputs[0]));
+        }
     };
 
     const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(inputs: {
