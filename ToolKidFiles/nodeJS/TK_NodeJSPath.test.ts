@@ -2,7 +2,7 @@
     const paths = <T_pathList_test>require("./T_fileDirectory/T_pathList.test.js");
 
     const { assertFailure, assertEquality, test } = ToolKid.debug.test;
-    const { isDirectory, isUsedPath } = ToolKid.nodeJS;
+    const { isDirectory, isUsedPath, resolvePath } = ToolKid.nodeJS;
 
     test({
         subject: isDirectory,
@@ -53,6 +53,23 @@
                 "non-existing directory":{
                     value: isUsedPath(paths.directoryNonExisting),
                     shouldBe: false
+                }
+            });
+        }
+    });
+
+    const Path = require("path");
+    test({
+        subject: resolvePath,
+        execute: function basicResolvePath() {
+            assertEquality({
+                "__dirname":{
+                    value: resolvePath(__dirname),
+                    shouldBe: __dirname
+                },
+                "./test.js":{
+                    value: resolvePath("./test.js"),
+                    shouldBe: Path.resolve("test.js")
                 }
             });
         }

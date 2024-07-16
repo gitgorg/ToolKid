@@ -1,8 +1,8 @@
 (function TK_nodeJSDirectory_test() {
     const paths = <T_pathList_test>require("./T_fileDirectory/T_pathList.test.js");
 
-    const { assertFailure, assertEquality, test } = ToolKid.debug.test;
-    const { readDirectory, resolvePath } = ToolKid.nodeJS;
+    const { assertFailure, assertEquality, shouldPass, test } = ToolKid.debug.test;
+    const { loopDirectory, readDirectory, resolvePath } = ToolKid.nodeJS;
 
 
 
@@ -32,9 +32,57 @@
         }
     }, {
         subject: readDirectory,
-        execute: function crashes() {
+        execute: function fail_readDirectory() {
             assertFailure({
                 name: "file",
+                execute: readDirectory,
+                withInputs: paths.file,
+                shouldThrow: ["TK_nodeJSDirectory_read - path is a file, not a directory:", resolvePath(paths.file)]
+            });
+        }
+    });
+
+    test({
+        subject: loopDirectory,
+        execute: function success_loopDirectory() {
+            let list = <any[]>[];
+            loopDirectory({
+                path:paths.directoryMixedContents,
+                execute: list.push.bind(list)
+            });
+            const isDirectoryStats = function (value:any) {
+                if (Object.keys(value).length !== 4) {
+                    return false;
+                }
+                const {name, root, path} = value;
+                if (
+                    typeof name !== "string"
+                    || typeof root !== "string"
+                    || typeof path !== "string"
+                    || typeof value.isDirectory !== "boolean"
+                ) {
+                    return false;
+                }
+                return (
+                    path.indexOf(root) === 0
+                    && path.slice(-name.length) === name
+                );
+            };
+            const checker = shouldPass(isDirectoryStats);
+            assertEquality({
+                "directory with mixed files":{
+                    value: list,
+                    shouldBe: [
+                        checker, checker, checker, checker
+                    ]
+                }
+            });
+        }
+    },{
+        subject: loopDirectory,
+        execute: function fail_loopDirectory() {
+            assertFailure({
+                name: "notADirectory",
                 execute: readDirectory,
                 withInputs: paths.file,
                 shouldThrow: ["TK_nodeJSDirectory_read - path is a file, not a directory:", resolvePath(paths.file)]
