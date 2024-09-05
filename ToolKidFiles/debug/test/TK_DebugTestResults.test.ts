@@ -130,7 +130,7 @@
             );
             summary.timeTotal = initalSummary.timeTotal;
             summary.testCount -= 1;
-            //TODO: repair getSummary so the test passes
+            // TODO: repair getSummary so the test passes
             // assertEquality({
             //     "loaded summary": {
             //         value: summary,

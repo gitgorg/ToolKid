@@ -56,11 +56,16 @@ type TestSummary = {
     const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(
         testResult: TestResult
     ) {
-        if (testResult.errorMessage[0].slice(-13) !== "expectations:") {
+        const {errorMessage} = testResult;
+        if (
+            !(errorMessage instanceof Array)
+            || errorMessage[0] !== "string"
+            || errorMessage[0].slice(-13) !== "expectations:"
+        ) {
             return testResult;
         }
 
-        const differences = <EqualityDifference[]>testResult.errorMessage.slice(1);
+        const differences = <EqualityDifference[]>errorMessage.slice(1);
         let path: string;
         const subMessages = differences.map(function (difference) {
             path = ["value", ...difference.path].join(".");
