@@ -541,10 +541,13 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
     let testSuspects = new Set();
     const publicExports = module.exports = {};
     const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(testResult) {
-        if (testResult.errorMessage[0].slice(-13) !== "expectations:") {
+        const { errorMessage } = testResult;
+        if (!(errorMessage instanceof Array)
+            || errorMessage[0] !== "string"
+            || errorMessage[0].slice(-13) !== "expectations:") {
             return testResult;
         }
-        const differences = testResult.errorMessage.slice(1);
+        const differences = errorMessage.slice(1);
         let path;
         const subMessages = differences.map(function (difference) {
             path = ["value", ...difference.path].join(".");
@@ -1177,7 +1180,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
             execute: require
         }));
         const summary = ToolKid.debug.test.getSummary(function (summary) {
-            //TODO: real test for .testFull
+            // TODO: real test for .testFull
             summary.missingSuspects.delete(publicExports.testFull);
             logMissingSuspects(summary);
             summary.failures.forEach(logFailure);
