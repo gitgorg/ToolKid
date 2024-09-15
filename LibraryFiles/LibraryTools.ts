@@ -11,6 +11,9 @@ type LibraryTools_file = {
             path: string
         ) => void
     }): void,
+    resolvePath(
+        ...parts:string[]
+    ) :string,
     writeFile(inputs: {
         path: string,
         content: any,
@@ -81,6 +84,10 @@ type LibraryTools_file = {
         } else {
             loopFilesFrom(privateData, path);
         }
+    };
+
+    publicExports.resolvePath = function LibraryTools_resolvePath(...parts) {
+        return Path.resolve(...parts);
     };
 
     const testPath = function LibraryTools_testPath(

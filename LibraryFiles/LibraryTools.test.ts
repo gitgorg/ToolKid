@@ -1,5 +1,5 @@
 (function LibraryBuilder_test() {
-    const { easyExpression, loopFiles } = <LibraryTools_file>require("./LibraryTools.js");
+    const { easyExpression, loopFiles } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname,"./LibraryTools.js"));
     const { test, assertEquality } = ToolKid.debug.test;
 
     const paths = [

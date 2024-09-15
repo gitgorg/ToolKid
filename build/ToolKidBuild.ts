@@ -22,7 +22,7 @@ type ToolKidConfig = {
 
 
 
-(function ToolKid_init() {
+(function ToolKidBuild_init() {
     const FS = require("fs");
     const Path = require("path");
     let Library: Library_file;
@@ -60,7 +60,8 @@ type ToolKidConfig = {
 
         ToolKid.registerFunction({
             section: "nodeJS", functions: {
-                loopFiles: LibraryTools.loopFiles
+                loopFiles: LibraryTools.loopFiles,
+                resolvePath: LibraryTools.resolvePath
             }
         });
         LibraryTools.loopFiles({
@@ -205,14 +206,19 @@ type ToolKidConfig = {
         return result;
     };
 
-    const exectueBuild = <ToolKidBuild_file>function ToolKidBuild_exectueBuild (config) {
+    const executeBuild = <ToolKidBuild_file>function ToolKidBuild_executeBuild (config) {
+        if (typeof ToolKid !== "undefined") {
+            return;
+        }
+
         console.log("building ToolKid");
         if (config === undefined) {
             config = readConfig();
         }
+        console.log(444,config);
         Library = require(Path.resolve(config.rootLibraryFiles,"Library"));
         const fileList = collectToolKid(config);
-        (<Dictionary>global).log = ToolKid.debug.terminal.logImportant;
+        (<Dictionary>global).log = (<ToolKid_file>ToolKid).debug.terminal.logImportant;
         writeLibraryFile({
             rootLibraryFiles:config.rootLibraryFiles,
             fileLocations:fileList,
@@ -225,8 +231,8 @@ type ToolKidConfig = {
 
     const readConfig = function ToolKidBuild_readConfig () {
         let result = <ToolKidConfig>{
-            rootToolKidFiles: "./compiled/ToolKidFiles",
-            rootLibraryFiles: "./compiled/LibraryFiles",
+            rootToolKidFiles: "../ToolKidFiles",
+            rootLibraryFiles: "../LibraryFiles",
             include: ["*.js"],
             exclude: ["*.test.js"]
         };
@@ -266,7 +272,8 @@ type ToolKidConfig = {
     const executionFile = Path.basename(process.argv[1]);
     const isExecutedDirectly = executionFile.slice(0,12) === "ToolKidBuild";
     if (isExecutedDirectly) {
-        exectueBuild();
+        executeBuild();
     }
-    module.exports = exectueBuild;
+
+    module.exports = executeBuild;
 })();

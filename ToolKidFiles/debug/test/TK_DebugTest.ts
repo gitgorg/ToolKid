@@ -25,8 +25,6 @@ type TestResult = {
 
 
 
-    const { registerTestResult } = <TK_DebugTest_file>require("./TK_DebugTestResults");
-
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
 
@@ -65,7 +63,7 @@ type TestResult = {
         }
 
         const testResults = inputs.map(testSingle);
-        registerTestResult(...testResults);
+        ToolKid.debug.test.registerTestResult(...testResults);
         return testResults;
     };
 
