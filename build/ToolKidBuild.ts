@@ -215,7 +215,6 @@ type ToolKidConfig = {
         if (config === undefined) {
             config = readConfig();
         }
-        console.log(444,config);
         Library = require(Path.resolve(config.rootLibraryFiles,"Library"));
         const fileList = collectToolKid(config);
         (<Dictionary>global).log = (<ToolKid_file>ToolKid).debug.terminal.logImportant;
