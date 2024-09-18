@@ -3,6 +3,12 @@ type LibraryTools_file = {
     easyExpression(
         simpleExpression: string
     ): RegExp,
+    isArray(
+        value: any
+    ): boolean,
+    isDirectory(
+        path: string
+    ): boolean,
     loopFiles(inputs: {
         path: string | string[],
         include?: string | string[],
@@ -11,6 +17,10 @@ type LibraryTools_file = {
             path: string
         ) => void
     }): void,
+    preset<T>(
+        baseFunction: { (...inputs: any[]): T },
+        ...appliedInputs: any[]
+    ): { (...inputs: any[]): T }
     writeFile(inputs: {
         path: string,
         content: any,
@@ -39,54 +49,80 @@ type LibraryTools_file = {
 
     const publicExports = module.exports = <LibraryTools_file>{};
 
-    publicExports.easyExpression = function LibrarBuilder_easyExpression(
+    // const replacements = {
+    //     "\\": "\\\\",
+    //     ".": "\\.",
+    //     "\*": ".+"
+    // };
+    publicExports.easyExpression = function LibraryTools_easyExpression(
         expression
     ) {
         expression = expression.replaceAll("\\", "\\\\");
         expression = expression.replaceAll(".", "\\.");
         expression = expression.replaceAll("\*", ".+");
+        //expression = expression.replace(replaceRegex, easyExpressionReplacer);
         return new RegExp("^" + expression + "$");
     };
 
-    const isDirectory = function TK_LibraryTools_file_isDirectory(path: string) {
+    // var replaceRegex = new RegExp('[' + Object.keys(replacements).join('') + ']', 'ig');
+    // const easyExpressionReplacer = function (old:string) {
+    //     return replacements[<".">old];
+    // };
+
+    const isArray = publicExports.isArray = function LibraryTools_isArray(value) {
+        return value instanceof Array && value.length !== 0;
+    };
+
+    const isDirectory = publicExports.isDirectory = function LibraryTools_isDirectory(path) {
         return readPathStats(path).isDirectory();
     };
 
-    const isIncluded = function LibraryTools_isIncluded(
-        privateData: {
-            include: RegExp[],
-            exclude: RegExp[]
-        },
-        path: string
-    ) {
-        const test = testPath.bind(null, path);
-        return (
-            privateData.include.length === 0
-            || privateData.include.find(test) !== undefined
-        ) && privateData.exclude.find(test) === undefined
+    const buildPathChecker = function (inputs: {
+        include: RegExp[],
+        exclude: RegExp[]
+    },) {
+        const hasIncludes = isArray(inputs.include);
+        const hasExcludes = isArray(inputs.exclude);
+        if (hasIncludes && hasExcludes) {
+            return preset(pathCheckerBoth, inputs.include, inputs.exclude);
+        } else if (hasIncludes) {
+            return preset(pathCheckerIncludes, inputs.include);
+        } else if(hasExcludes){
+            return preset(pathCheckerExcludes, inputs.exclude);
+        } else {
+            return function(){return true};
+        }
+    };
+    const pathCheckerBoth = function(include:any, exclude:any, path:any){
+        const test = preset(testPath, path);
+        return exclude.find(test) === undefined && include.find(test) !== undefined
+    };
+
+    const pathCheckerIncludes = function(include:any, path:any){
+        const test = preset(testPath, path);
+        return include.find(test) !== undefined
+    };
+
+    const pathCheckerExcludes = function(exclude:any, path:any){
+        const test = preset(testPath, path);
+        return exclude.find(test) === undefined
     };
 
     publicExports.loopFiles = function LibraryTools_loopFiles(inputs) {
-        const pathChecker = isIncluded.bind(null, {
+        const pathChecker = buildPathChecker({
             include: toRegExp(inputs.include || []),
             exclude: toRegExp(inputs.exclude || []),
         });
         const privateData = <PrivateData>{
             isIncluded: pathChecker,
             execute: inputs.execute
-        }
+        };
         const { path } = inputs;
         if (path instanceof Array) {
-            path.forEach(loopFilesFrom.bind(null, privateData));
+            path.forEach(preset(loopFilesFrom, privateData));
         } else {
             loopFilesFrom(privateData, path);
         }
-    };
-
-    const testPath = function LibraryTools_testPath(
-        path: string, expression: RegExp
-    ) {
-        return expression.test(path);
     };
 
     const loopFilesFrom = function LibraryTools_loopFilesFrom(
@@ -108,7 +144,7 @@ type LibraryTools_file = {
         privateData: PrivateData, path: string
     ) {
         readDirectory(path)
-            .forEach(loopFilesExecute.bind(null, privateData, path));
+            .forEach(preset(loopFilesExecute, privateData, path));
     };
 
     const loopFilesExecute = function LibraryTools_loopFilesExecute(
@@ -123,6 +159,19 @@ type LibraryTools_file = {
         if (privateData.isIncluded(path)) {
             privateData.execute(path);
         }
+    };
+
+    publicExports.preset = function LibraryTools_preset(
+        baseFunction, ...inputs
+    ) {
+        return baseFunction.bind(null, ...inputs);
+    };
+    const preset = publicExports.preset;
+
+    const testPath = function LibraryTools_testPath(
+        path: string, expression: RegExp
+    ) {
+        return expression.test(path);
     };
 
     const toRegExp = function (
