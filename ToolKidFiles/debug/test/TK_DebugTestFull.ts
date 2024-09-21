@@ -5,7 +5,8 @@ interface TK_DebugTest_file {
     testFull(inputs: {
         path: string | string[],
         include?: string | string[],
-        exclude?: string | string[]
+        exclude?: string | string[],
+        title?: string
         //suspect?: any | any[]
     }): void
 }
@@ -170,6 +171,11 @@ interface TK_DebugTest_file {
         const summary = ToolKid.debug.test.getSummary(function (summary) {
             // TODO: real test for .testFull
             summary.missingSuspects.delete(publicExports.testFull);
+            console.log(colorText("positive","\n>> testing done"
+                + ((typeof inputs.title === "string")
+                ? " for " + inputs.title
+                : "")
+            ));
             logMissingSuspects(summary);
             summary.failures.forEach(logFailure);
             logFazit(summary);

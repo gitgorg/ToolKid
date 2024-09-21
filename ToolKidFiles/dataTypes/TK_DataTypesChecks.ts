@@ -2,7 +2,7 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { checks: TK_DataTypesChecks_file }
 interface TK_DataTypesChecks_file {
-    isArray(value: any): boolean,
+    isArray: LibraryTools_file["isArray"],
     isBoolean(value: any): boolean,
     isFunction(value: any): boolean,
     isInteger(value: any): boolean,
@@ -14,10 +14,6 @@ interface TK_DataTypesChecks_file {
 
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
-
-    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
-        return value instanceof Array && value.length !== 0;
-    };
 
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";

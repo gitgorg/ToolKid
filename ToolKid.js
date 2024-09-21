@@ -227,9 +227,6 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
-    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
-        return value instanceof Array && value.length !== 0;
-    };
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
     };
@@ -981,6 +978,10 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         const summary = ToolKid.debug.test.getSummary(function (summary) {
             // TODO: real test for .testFull
             summary.missingSuspects.delete(publicExports.testFull);
+            console.log(colorText("positive", "\n>> testing done"
+                + ((typeof inputs.title === "string")
+                    ? " for " + inputs.title
+                    : "")));
             logMissingSuspects(summary);
             summary.failures.forEach(logFailure);
             logFazit(summary);
@@ -1311,9 +1312,23 @@ registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
 registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
 
 (function TK_nodeJSFile_init() {
-    const { existsSync: isUsedPath, readFileSync: readFile } = require("fs");
+    const { existsSync: isUsedPath, readFileSync: readFile, unlink: deleteFile } = require("fs");
     const { resolve: resolvePath } = require("path");
     const publicExports = module.exports = {};
+    publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
+        if (typeof inputs === "string") {
+            inputs = { path: inputs };
+        }
+        deleteFile(inputs.path, deleteFileHandler.bind(null, inputs));
+    };
+    const deleteFileHandler = function TK_nodeJSFile_deleteFileHandler(boundInputs, error) {
+        if (error !== null) {
+            if (error.code !== "ENOENT"
+                || boundInputs.ignoreMissingFile !== true) {
+                throw error;
+            }
+        }
+    };
     publicExports.readFile = function TK_nodeJSFile_read(inputs) {
         let { path, checkExistance, encoding } = inputs;
         path = resolvePath(path);
@@ -1346,15 +1361,9 @@ registeredFiles["TK_NodeJSFile.js"] = module.exports;
 (function TK_nodeJSPath_init() {
     const FS = require("fs");
     const publicExports = module.exports = {};
-    publicExports.isDirectory = function TK_nodeJSPath_file_isDirectory(path) {
-        return FS.lstatSync(path).isDirectory();
-    };
     publicExports.isUsedPath = function TK_nodeJSPath_file_isUsedPath(path) {
         return FS.existsSync(path);
     };
-    // publicExports.resolvePath = function TK_nodeJSPath_file_resolvePath(...path) {
-    //     return Path.resolve(...path);
-    // };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunction({ section: "nodeJS", functions: publicExports });
@@ -1464,6 +1473,9 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
         }
     };
     publicExports.partial = function LibraryTools_partial(baseFunction, ...inputs) {
+        if (inputs.length === 0) {
+            throw ["LibraryTools_partial - no inputs to preset for:", baseFunction];
+        }
         const result = baseFunction.bind(null, ...inputs);
         if (result.presetInputs instanceof Array) {
             result.presetInputs.push(...inputs);

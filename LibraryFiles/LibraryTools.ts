@@ -173,6 +173,10 @@ type LibraryTools_file = {
     publicExports.partial = function LibraryTools_partial(
         baseFunction, ...inputs
     ) {
+        if (inputs.length === 0) {
+            throw ["LibraryTools_partial - no inputs to preset for:",baseFunction];
+        }
+
         const result = baseFunction.bind(null, ...inputs);
         if (result.presetInputs instanceof Array) {
             result.presetInputs.push(...inputs);

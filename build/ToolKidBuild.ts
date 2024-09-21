@@ -3,13 +3,7 @@ type ToolKidBuild_file = {(inputs?:ToolKidConfig): void}
 
 declare const ToolKid: ToolKid_file
 
-interface ToolKid_file extends Library {
-    nodeJS: TK_nodeJS_file
-}
-
-interface TK_nodeJS_file {
-    loopFiles: LibraryTools_file["loopFiles"]
-}
+interface ToolKid_file extends Library {}
 
 type ToolKidConfig = {
     rootToolKidFiles: string | string[],
@@ -60,15 +54,21 @@ type ToolKidConfig = {
 
         ToolKid.registerFunction({
             section: "nodeJS", functions: {
+                isDirectory: LibraryTools.isDirectory,
                 loopFiles: LibraryTools.loopFiles,
                 resolvePath: LibraryTools.resolvePath
+            }
+        });
+        ToolKid.registerFunction({
+            section: "dataTypes", subSection:"checks", functions: {
+                isArray: LibraryTools.isArray
             }
         });
         LibraryTools.loopFiles({
             path: config.rootToolKidFiles,
             include: config.include,
             exclude: config.exclude,
-            execute: executeAndRegisterFile.bind(null,privateData.registeredFiles)
+            execute: LibraryTools.partial(executeAndRegisterFile,privateData.registeredFiles)
         });
         return privateData.registeredFiles;
     };
@@ -224,7 +224,9 @@ type ToolKidConfig = {
             exportFile: config.exportFile
         });
         if (config.runTests !== false) {
-            runTests(config);
+            setTimeout(
+                runTests.bind(null,config)
+            ,100);
         }
     };
 
@@ -249,21 +251,25 @@ type ToolKidConfig = {
             path: (typeof config.rootToolKidFiles === "string")
                 ? [config.rootToolKidFiles, config.rootLibraryFiles]
                 : [...config.rootToolKidFiles, config.rootLibraryFiles],
-            include: [...config.include, "*.test.js"],
-            exclude: config.exclude.slice(1)
+            include: ["*.test.js"],
+            exclude: config.exclude.slice(1),
+            title: "ToolKid"
         }
     };
 
     const runTests = function ToolKidBuild_runTests (
         config:ToolKidConfig
     ) {
-        console.log("testing ToolKid");
-        const TKTest = ToolKid.debug.test;
-        TKTest.registerTestSuspect({
+        console.log(">> testing ToolKid");
+        ToolKid.debug.test.registerTestSuspect({
             suspect: ToolKid,
             mode: "allMethods"
         });
-        TKTest.testFull(
+        ToolKid.debug.test.registerTestSuspect({
+            suspect: Library.getTools(),
+            mode: "allMethods"
+        });
+        ToolKid.debug.test.testFull(
             prepareInputsFullTest(config)
         );
     };

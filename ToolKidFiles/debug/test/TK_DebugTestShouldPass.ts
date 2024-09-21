@@ -3,10 +3,8 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     shouldPass(
-        check: (value: any) => boolean,
-        ...additionalChecks: {
-            (value: any): boolean
-        }[]
+        check: { (value: any): boolean },
+        ...additionalChecks: { (value: any): boolean }[]
     ): ValueAsserter,
     shouldPassAny(
         check1: shouldPassAnyInput,

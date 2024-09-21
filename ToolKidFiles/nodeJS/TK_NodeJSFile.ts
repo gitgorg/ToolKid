@@ -1,6 +1,14 @@
 //file operations for nodeJS
 interface ToolKid_file { nodeJS: TK_nodeJS_file }
 interface TK_nodeJS_file {
+    deleteFile(
+        path: string
+    ): void
+    deleteFile(inputs: {
+        path: string,
+        ignoreMissingFile?: true
+    }): void,
+    loopFiles: LibraryTools_file["loopFiles"],
     readFile(inputs: {
         path: string,
 
@@ -9,7 +17,7 @@ interface TK_nodeJS_file {
     }): {
         encoding: "directory" | string,
         content: any
-    } | undefined,
+    } | undefined
 }
 
 
@@ -17,13 +25,37 @@ interface TK_nodeJS_file {
 (function TK_nodeJSFile_init() {
     const {
         existsSync: isUsedPath,
-        readFileSync: readFile
+        readFileSync: readFile,
+        unlink: deleteFile
     } = require("fs");
     const { resolve: resolvePath } = require("path");
 
 
 
     const publicExports = module.exports = <TK_nodeJS_file>{};
+
+    publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
+        if (typeof inputs === "string") {
+            inputs = { path: inputs };
+        }
+        deleteFile(inputs.path, deleteFileHandler.bind(null, inputs));
+    };
+
+    const deleteFileHandler = function TK_nodeJSFile_deleteFileHandler(
+        boundInputs: {
+            ignoreMissingFile?: true
+        },
+        error: Error
+    ) {
+        if (error !== null) {
+            if (
+                (<Dictionary>error).code !== "ENOENT"
+                || boundInputs.ignoreMissingFile !== true
+            ) {
+                throw error;
+            }
+        }
+    };
 
     publicExports.readFile = function TK_nodeJSFile_read(inputs) {
         let { path, checkExistance, encoding } = inputs;
