@@ -20,7 +20,10 @@ type LibraryTools_file = {
     preset<T>(
         baseFunction: { (...inputs: any[]): T },
         ...appliedInputs: any[]
-    ): { (...inputs: any[]): T }
+    ): { (...inputs: any[]): T },
+    resolvePath(
+        ...parts:string[]
+    ) :string,
     writeFile(inputs: {
         path: string,
         content: any,
@@ -123,6 +126,10 @@ type LibraryTools_file = {
         } else {
             loopFilesFrom(privateData, path);
         }
+    };
+
+    publicExports.resolvePath = function LibraryTools_resolvePath(...parts) {
+        return Path.resolve(...parts);
     };
 
     const loopFilesFrom = function LibraryTools_loopFilesFrom(

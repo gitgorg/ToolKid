@@ -7,16 +7,13 @@ interface TK_nodeJS_file {
     isUsedPath(
         path: string
     ): boolean,
-    resolvePath(
-        ...path: string[]
-    ): string
+    resolvePath: LibraryTools_file["resolvePath"]
 }
 
 
 
 (function TK_nodeJSPath_init() {
     const FS = require("fs");
-    const Path = require("path");
 
 
 
@@ -30,9 +27,9 @@ interface TK_nodeJS_file {
         return FS.existsSync(path);
     };
 
-    publicExports.resolvePath = function TK_nodeJSPath_file_resolvePath(...path) {
-        return Path.resolve(...path);
-    };
+    // publicExports.resolvePath = function TK_nodeJSPath_file_resolvePath(...path) {
+    //     return Path.resolve(...path);
+    // };
 
 
 

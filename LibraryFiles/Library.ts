@@ -75,7 +75,8 @@ interface GenericFunction {(
 
     publicExports.getTools = function Library_getTools () {
         if (LibraryTools === undefined) {
-            LibraryTools = require("./LibraryTools");
+            const toolsPath = require("path").resolve(__dirname, "./LibraryTools");
+            LibraryTools = require(toolsPath);
         }
         return LibraryTools;
     };
@@ -130,6 +131,11 @@ interface GenericFunction {(
         if (isValidInput(inputs)) {
             printRegisterError(inputs);
             return;
+        }
+
+        const {section, name} = inputs;
+        if (section[name] !== undefined) {
+            throw ["overwriting methods is forbidden. tried to overwrite ."+name+":",section[name]," with:",inputs.helperFunction];
         }
 
         addAsReadOnly({
