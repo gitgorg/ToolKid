@@ -11,19 +11,20 @@ type LibraryTools_file = {
     ): boolean,
     loopFiles(inputs: {
         path: string | string[],
-        include?: string | string[],
-        exclude?: string | string[],
-        execute: (
+        execute (
             path: string
-        ) => void
+        ): void,
+        include?: string | string[],
+        exclude?: string | string[]
     }): void,
-    preset<T>(
-        baseFunction: { (...inputs: any[]): T },
-        ...appliedInputs: any[]
-    ): { (...inputs: any[]): T },
+    partial<ReturnType>(
+        baseFunction: { (...inputs: any[]): ReturnType },
+        presetInput: any,
+        ...additionalPresetInputs: any[]
+    ): { (...inputs: any[]): ReturnType },
     resolvePath(
-        ...parts:string[]
-    ) :string,
+        ...parts: string[]
+    ): string,
     writeFile(inputs: {
         path: string,
         content: any,
@@ -35,12 +36,12 @@ type LibraryTools_file = {
 
 (function LibraryTools_init() {
     type PrivateData = {
-        isIncluded: (
+        isIncluded(
             path: string
-        ) => boolean,
-        execute: (
+        ): boolean,
+        execute(
             path: string
-        ) => void
+        ): void
     }
 
 
@@ -72,42 +73,42 @@ type LibraryTools_file = {
     //     return replacements[<".">old];
     // };
 
-    const isArray = publicExports.isArray = function LibraryTools_isArray(value) {
+    publicExports.isArray = function LibraryTools_isArray(value) {
         return value instanceof Array && value.length !== 0;
     };
 
-    const isDirectory = publicExports.isDirectory = function LibraryTools_isDirectory(path) {
+    publicExports.isDirectory = function LibraryTools_isDirectory(path) {
         return readPathStats(path).isDirectory();
     };
 
-    const buildPathChecker = function (inputs: {
+    const buildPathChecker = function LibraryTools_buildPathChecker(inputs: {
         include: RegExp[],
         exclude: RegExp[]
-    },) {
-        const hasIncludes = isArray(inputs.include);
-        const hasExcludes = isArray(inputs.exclude);
+    }) {
+        const hasIncludes = publicExports.isArray(inputs.include);
+        const hasExcludes = publicExports.isArray(inputs.exclude);
         if (hasIncludes && hasExcludes) {
-            return preset(pathCheckerBoth, inputs.include, inputs.exclude);
+            return publicExports.partial(pathCheckerBoth, inputs.include, inputs.exclude);
         } else if (hasIncludes) {
-            return preset(pathCheckerIncludes, inputs.include);
-        } else if(hasExcludes){
-            return preset(pathCheckerExcludes, inputs.exclude);
+            return publicExports.partial(pathCheckerIncludes, inputs.include);
+        } else if (hasExcludes) {
+            return publicExports.partial(pathCheckerExcludes, inputs.exclude);
         } else {
-            return function(){return true};
+            return function LibraryTools_pathCheckerNone() { return true };
         }
     };
-    const pathCheckerBoth = function(include:any, exclude:any, path:any){
-        const test = preset(testPath, path);
+    const pathCheckerBoth = function LibraryTools_pathCheckerBoth(include: any, exclude: any, path: any) {
+        const test = publicExports.partial(testPath, path);
         return exclude.find(test) === undefined && include.find(test) !== undefined
     };
 
-    const pathCheckerIncludes = function(include:any, path:any){
-        const test = preset(testPath, path);
+    const pathCheckerIncludes = function pathCheckerIncludes(include: any, path: any) {
+        const test = publicExports.partial(testPath, path);
         return include.find(test) !== undefined
     };
 
-    const pathCheckerExcludes = function(exclude:any, path:any){
-        const test = preset(testPath, path);
+    const pathCheckerExcludes = function pathCheckerExcludes(exclude: any, path: any) {
+        const test = publicExports.partial(testPath, path);
         return exclude.find(test) === undefined
     };
 
@@ -122,7 +123,7 @@ type LibraryTools_file = {
         };
         const { path } = inputs;
         if (path instanceof Array) {
-            path.forEach(preset(loopFilesFrom, privateData));
+            path.forEach(publicExports.partial(loopFilesFrom, privateData));
         } else {
             loopFilesFrom(privateData, path);
         }
@@ -140,7 +141,7 @@ type LibraryTools_file = {
             return;
         }
 
-        if (isDirectory(path)) {
+        if (publicExports.isDirectory(path)) {
             loopFilesFromDirectory(privateData, path);
         } else {
             loopFilesExecute(privateData, "", path);
@@ -150,15 +151,16 @@ type LibraryTools_file = {
     const loopFilesFromDirectory = function LibraryTools_loopFilesFromDirectory(
         privateData: PrivateData, path: string
     ) {
-        readDirectory(path)
-            .forEach(preset(loopFilesExecute, privateData, path));
+        readDirectory(path).forEach(
+            publicExports.partial(loopFilesExecute, privateData, path)
+        );
     };
 
     const loopFilesExecute = function LibraryTools_loopFilesExecute(
         privateData: PrivateData, root: string, path: string
     ) {
         path = resolvePath(root, path);
-        if (isDirectory(path)) {
+        if (publicExports.isDirectory(path)) {
             loopFilesFromDirectory(privateData, path);
             return;
         }
@@ -168,29 +170,34 @@ type LibraryTools_file = {
         }
     };
 
-    publicExports.preset = function LibraryTools_preset(
+    publicExports.partial = function LibraryTools_partial(
         baseFunction, ...inputs
     ) {
-        return baseFunction.bind(null, ...inputs);
+        const result = baseFunction.bind(null, ...inputs);
+        if (result.presetInputs instanceof Array) {
+            result.presetInputs.push(...inputs);
+        } else {
+            result.presetInputs = inputs
+        }
+        return result;
     };
-    const preset = publicExports.preset;
-
+    
     const testPath = function LibraryTools_testPath(
         path: string, expression: RegExp
     ) {
         return expression.test(path);
     };
 
-    const toRegExp = function (
-        expressionList: string | string[]
+    const toRegExp = function LibraryTools_toRegExp(
+        expressions: string | string[]
     ) {
-        if (typeof expressionList === "string") {
-            expressionList = [expressionList];
-        } else if (!(expressionList instanceof Array)) {
+        if (typeof expressions === "string") {
+            expressions = [expressions];
+        } else if (!(expressions instanceof Array)) {
             return [];
         }
 
-        return expressionList
+        return expressions
             .map(normalize)
             .map(publicExports.easyExpression);
     };
@@ -221,4 +228,5 @@ type LibraryTools_file = {
         );
     };
 
+    Object.freeze(publicExports);
 })();
