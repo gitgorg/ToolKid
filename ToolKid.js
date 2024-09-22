@@ -230,6 +230,9 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
     };
+    publicExports.isError = function TK_DataTypesChecks_isError(value) {
+        return value instanceof Error;
+    };
     publicExports.isFunction = function TK_DataTypesChecks_isFunction(value) {
         return typeof value === "function";
     };

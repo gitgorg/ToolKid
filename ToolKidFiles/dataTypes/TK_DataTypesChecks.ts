@@ -4,6 +4,7 @@ interface TK_DataTypes_file { checks: TK_DataTypesChecks_file }
 interface TK_DataTypesChecks_file {
     isArray: LibraryTools_file["isArray"],
     isBoolean(value: any): boolean,
+    isError(value: any): boolean,
     isFunction(value: any): boolean,
     isInteger(value: any): boolean,
     isMap(value: any): boolean,
@@ -17,6 +18,10 @@ interface TK_DataTypesChecks_file {
 
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
+    };
+
+    publicExports.isError = function TK_DataTypesChecks_isError(value) {
+        return value instanceof Error;
     };
 
     publicExports.isFunction = function TK_DataTypesChecks_isFunction(value) {

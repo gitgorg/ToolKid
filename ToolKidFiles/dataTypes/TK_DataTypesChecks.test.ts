@@ -1,6 +1,6 @@
 (function TK_DataTypesChecks_test() {
     const { test, assertEquality } = ToolKid.debug.test;
-    const { isArray, isBoolean, isFunction, isInteger, isMap, isNumber, isPromise, isString } = ToolKid.dataTypes.checks;
+    const { isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isPromise, isString } = ToolKid.dataTypes.checks;
 
 
 
@@ -51,15 +51,35 @@
     });
 
     test({
+        subject: isError,
+        execute: function errorTests() {
+            assertEquality({
+                "constructed error": {
+                    value: isError(new Error("test")), shouldBe: true
+                }
+            });
+        }
+    }, {
+        subject: isError,
+        execute: function fail_errorTests() {
+            assertEquality({
+                "error constructor": {
+                    value: isError(Error), shouldBe: false
+                }
+            });
+        }
+    });
+
+    test({
         subject: isFunction,
         execute: function functionTests() {
             assertEquality({
                 "regular": {
-                    value: isFunction(function(){}), shouldBe: true
+                    value: isFunction(function () { }), shouldBe: true
                 }, "fat arrow": {
                     value: isFunction(() => true), shouldBe: true
                 }, "constructed": {
-                    value: isFunction(Function("return true;")), shouldBe:true
+                    value: isFunction(Function("return true;")), shouldBe: true
                 }
             });
         }
