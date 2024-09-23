@@ -29,7 +29,7 @@ type ValueAsserter = {
 
 
 
-    const createValueChecker = function TK_DebugTestAssertion_createValueChecker(
+    const createValueChecker = function TD_DebugTestShouldPass_createValueChecker(
         mode: "pass" | "fail",
         value: any
     ) {
@@ -41,6 +41,11 @@ type ValueAsserter = {
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
             throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];
+        }
+
+        const fails = checks.filter(function (entry) { return typeof entry !== "function" });
+        if (fails.length !== 0) {
+            throw ["TK_DebugTestShouldPass_shouldPass - can only check with functions but got:", checks];
         }
 
         return ValueAsserter({
@@ -62,14 +67,14 @@ type ValueAsserter = {
         });
     };
 
-    const testFailure = function K_DebugTestAssertion_testFailure(
+    const testFailure = function TD_DebugTestShouldPass_testFailure(
         value: any,
         check: (value: any) => boolean
     ) {
         return check(value) !== true;
     };
 
-    const testSuccess = function K_DebugTestAssertion_testSuccess(
+    const testSuccess = function TD_DebugTestShouldPass_testSuccess(
         value: any,
         check: (value: any) => boolean
     ) {

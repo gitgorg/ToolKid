@@ -879,8 +879,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
-        positive: "\u001b[32m", //green
-        default: "\u001b[97m", //white
+        positive: "\u001b[32m",
+        default: "\u001b[97m",
         negative: "\u001b[31m" //red
     };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
@@ -1207,7 +1207,7 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
 
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
-    const createValueChecker = function TK_DebugTestAssertion_createValueChecker(mode, value) {
+    const createValueChecker = function TD_DebugTestShouldPass_createValueChecker(mode, value) {
         return (mode === "fail")
             ? testFailure.bind(null, value)
             : testSuccess.bind(null, value);
@@ -1215,6 +1215,10 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
             throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];
+        }
+        const fails = checks.filter(function (entry) { return typeof entry !== "function"; });
+        if (fails.length !== 0) {
+            throw ["TK_DebugTestShouldPass_shouldPass - can only check with functions but got:", checks];
         }
         return ValueAsserter({
             checks,
@@ -1232,10 +1236,10 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
             to: "pass"
         });
     };
-    const testFailure = function K_DebugTestAssertion_testFailure(value, check) {
+    const testFailure = function TD_DebugTestShouldPass_testFailure(value, check) {
         return check(value) !== true;
     };
-    const testSuccess = function K_DebugTestAssertion_testSuccess(value, check) {
+    const testSuccess = function TD_DebugTestShouldPass_testSuccess(value, check) {
         return check(value) === true;
     };
     const ValueAsserter = function TK_DebugTestShouldPass_ValueAsserter(inputs) {
