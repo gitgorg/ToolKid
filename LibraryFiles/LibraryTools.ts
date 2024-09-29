@@ -53,6 +53,7 @@ type LibraryTools_file = {
 
     const publicExports = module.exports = <LibraryTools_file>{};
 
+    // TODO: replacements more structured, maybe backwards compatible
     // const replacements = {
     //     "\\": "\\\\",
     //     ".": "\\.",
