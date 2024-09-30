@@ -1384,6 +1384,7 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
     const Path = require("path");
     const { normalize, resolve: resolvePath } = Path;
     const publicExports = module.exports = {};
+    // TODO: replacements more structured, maybe backwards compatible
     // const replacements = {
     //     "\\": "\\\\",
     //     ".": "\\.",
