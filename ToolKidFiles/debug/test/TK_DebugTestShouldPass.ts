@@ -13,7 +13,7 @@ interface TK_DebugTest_file {
     ): ValueAsserter
 }
 
-type shouldPassAnyInput = ValueAsserter | number | string | Dictionary | any[] | undefined | null
+type shouldPassAnyInput = ValueAsserter | number | string | Dictionary | any[] | undefined | boolean | null
 
 type ValueAsserter = {
     (value: any): boolean,
