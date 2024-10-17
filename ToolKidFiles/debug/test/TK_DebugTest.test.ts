@@ -6,7 +6,7 @@
 
 
 
-    const { test, assertEquality } = ToolKid.debug.test;
+    const { test, assertEquality, saveSummaryState, loadSummaryState } = ToolKid.debug.test;
 
     //setup helping functions
     const createPromise = function () {
@@ -63,6 +63,7 @@
     }).catch(throwError);
 
     //failure with promise
+    const stateID = saveSummaryState();
     const promiseFailure = createPromise();
     testPromise = <Promise<TestResult>>test({
         subject: test,
@@ -78,8 +79,8 @@
                 shouldBe: "Unspecified Error"
             }
         });
-        delete result.errorMessage;
     }).catch(throwError);
+    loadSummaryState(stateID);
 
 
 

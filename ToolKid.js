@@ -36,7 +36,7 @@ const registeredFiles = {};
     };
     publicExports.getTools = function Library_getTools() {
         if (LibraryTools === undefined) {
-            const toolsPath = require("path").resolve(__dirname, "./LibraryTools");
+            const toolsPath = require("path").resolve(__dirname, "./LibraryTools_NodeJS.js");
             LibraryTools = require(toolsPath);
         }
         return LibraryTools;
@@ -75,7 +75,7 @@ const registeredFiles = {};
         }
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting methods is forbidden. tried to overwrite ." + name + ":", section[name], " with:", inputs.helperFunction];
+            throw ["overwriting library methods is forbidden. tried to overwrite ." + inputs.name + "." + name + ": ", section[name], " with: ", inputs.helperFunction];
         }
         addAsReadOnly({
             container: inputs.section,
@@ -593,7 +593,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             result.errorMessage = error;
         }
         result.time = Date.now() - startTime;
-        return result;
+        return Object.freeze(result);
     };
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs) {
         const { result } = inputs;
@@ -621,7 +621,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             reason = "Unspecified Error";
         }
         result.errorMessage = reason;
-        bound.resolver(result);
+        bound.resolver(Object.freeze(result));
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -879,8 +879,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
-        positive: "\u001b[32m",
-        default: "\u001b[97m",
+        positive: "\u001b[32m", //green
+        default: "\u001b[97m", //white
         negative: "\u001b[31m" //red
     };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
@@ -1000,11 +1000,115 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestFull.js"] = module.exports;
 
+(function TK_DebugTestFull_init() {
+    const publicExports = module.exports = {};
+    const TestGroup = function TestGroup() { };
+    publicExports.createTestGroup = function TK_debugTestGroup_createInstance() {
+        const privateData = {
+            callbacks: [],
+            failures: [],
+            pendingResults: new Set(),
+            successes: [],
+            suspects: new Set(),
+            timeStart: Date.now()
+        };
+        const result = new TestGroup();
+        result.getResults = getResults.bind(null, privateData);
+        result.registerResults = registerResults.bind(null, privateData);
+        result.registerSuspects = registerSuspects.bind(null, privateData);
+        return result;
+    };
+    const getAllMethods = function TK_DebugTestResults_getAllMethods(data) {
+        const result = [];
+        if (typeof data === "function") {
+            result[0] = data;
+        }
+        else if (typeof data !== "object" || data === null) {
+            return result;
+        }
+        Object.values(data).forEach(function (value) {
+            result.push(...getAllMethods(value));
+        });
+        return result;
+    };
+    const getResults = function TK_DebugTestResults_getResults(privateData, callback) {
+        const results = {
+            failures: privateData.failures.slice(0),
+            pendingResults: Array.from(privateData.pendingResults),
+            successes: privateData.successes.slice(0),
+            suspects: Array.from(privateData.suspects),
+            timeTotal: Date.now() - privateData.timeStart
+        };
+        if (typeof callback === "function") {
+            privateData.callbacks.push(callback);
+        }
+        if (privateData.pendingResults.size === 0) {
+            privateData.callbacks.forEach(function (cb) {
+                cb(results);
+            });
+            privateData.callbacks = [];
+        }
+        return results;
+    };
+    const handlePromise = function TK_DebugTestResults_summaryHandlePromise(bound, result) {
+        placeResult(bound.privateData, result);
+        const { pendingResults } = bound.privateData;
+        pendingResults.delete(bound.promise);
+        if (pendingResults.size === 0) {
+            getResults(bound.privateData);
+        }
+    };
+    const placeResult = function (privateData, result) {
+        if (result.errorMessage === undefined) {
+            privateData.successes.push(result);
+        }
+        else {
+            privateData.failures.push(result);
+        }
+    };
+    const registerResults = function TK_DebugTestGroup_registerResultsLoop(privateData, ...results) {
+        const length = results.length;
+        let result;
+        for (let i = 0; i < length; i += 1) {
+            result = results[i];
+            if (!(result instanceof Promise)) {
+                placeResult(privateData, result);
+                continue;
+            }
+            privateData.pendingResults.add(result);
+            result.then(handlePromise.bind(null, {
+                privateData,
+                promise: result
+            }));
+        }
+        ;
+    };
+    const registerSuspects = function TK_DebugTestResults_regiserSuspectsLoop(privateData, ...suspects) {
+        const config = suspects[0];
+        if (suspects.length === 1
+            && typeof config === "object"
+            && config.suspect !== undefined) {
+            if (config.mode === "allMethods") {
+                suspects = getAllMethods(config.suspect);
+            }
+        }
+        suspects.forEach(privateData.suspects.add.bind(privateData.suspects));
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DebugTestGroup.js"] = module.exports;
+
 (function TK_DebugTestResults_init() {
+    const groupPath = require("path").resolve(__dirname, "TK_DebugTestGroup.js");
     let timeStart = Date.now();
     let testResults = [];
     let testSuspects = new Set();
     const publicExports = module.exports = {};
+    require(groupPath);
+    let testGroup = ToolKid.debug.test.createTestGroup();
     const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(testResult) {
         const { errorMessage } = testResult;
         if (!(errorMessage instanceof Array)
@@ -1066,6 +1170,7 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
     };
     publicExports.clearSummaryState = function TK_DebugTestResults_clearSummaryState(inputs = {}) {
         timeStart = Date.now();
+        testGroup = ToolKid.debug.test.createTestGroup();
         testResults = [];
         if (inputs.clearSuspects === true) {
             testSuspects = new Set();
@@ -1086,23 +1191,28 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
     };
     let pendingSummaries = [];
     publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
-        const result = {
-            testCount: testResults.length,
-            timeTotal: 0,
+        const caller = (typeof callback === "function")
+            ? function (results) {
+                callback(createSummary(results));
+            }
+            : undefined;
+        return createSummary(testGroup.getResults(caller));
+    };
+    const createSummary = function (results) {
+        const summary = {
+            testCount: results.successes.length + results.failures.length + results.pendingResults.length,
+            timeTotal: results.timeTotal,
+            failures: results.failures,
             successes: new Map(),
-            failures: [],
-            pending: new Set(),
-            missingSuspects: new Set(testSuspects),
-            callback
+            pending: new Set(results.pendingResults),
+            missingSuspects: new Set(results.suspects)
         };
-        testResults.forEach(summaryRegisterResult.bind(null, result));
-        if (result.pending.size === 0) {
-            getSummaryFinal(result);
-        }
-        else {
-            pendingSummaries.push(result);
-        }
-        return result;
+        results.successes.forEach(function (testResult) {
+            summaryRegisterSuccess({
+                list: summary.successes, testResult
+            });
+        });
+        return summary;
     };
     const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(summary) {
         const pos = pendingSummaries.indexOf(summary);
@@ -1126,7 +1236,8 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
         ;
     };
     publicExports.loadSummaryState = function TK_DebugTestResults_loadSummaryState(stateID) {
-        ({ timeStart, testResults, testSuspects } = summaryHistory[stateID]);
+        const state = summaryHistory[stateID];
+        ({ timeStart, testResults, testSuspects, testGroup } = state);
     };
     const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs) {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
@@ -1178,11 +1289,13 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
     publicExports.registerTestResult = function TK_DebugTestResults_registerTestResult(...results) {
         pendingSummaries.forEach(registerResultsDelayed.bind(null, results));
         testResults.push(...results);
+        testGroup.registerResults(...results);
     };
     const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed(results, summary) {
         results.forEach(summaryRegisterResult.bind(null, summary));
     };
     publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {
+        testGroup.registerSuspects(...inputs);
         if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
             inputs = getSuspects(inputs[0]);
         }
@@ -1193,7 +1306,8 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
         const state = {
             timeStart,
             testResults: testResults.slice(0),
-            testSuspects: new Set(testSuspects)
+            testSuspects: new Set(testSuspects),
+            testGroup
         };
         summaryHistory.push(state);
         return summaryHistory.length - 1;
@@ -1379,11 +1493,39 @@ registeredFiles["TK_NodeJSFile.js"] = module.exports;
 registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
 (function LibraryTools_init() {
-    const FS = require("fs");
-    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;
-    const Path = require("path");
-    const { normalize, resolve: resolvePath } = Path;
     const publicExports = module.exports = {};
+    publicExports.createCheckForString = function LibraryTools_createCheckForString(inputs) {
+        const hasIncludes = publicExports.isArray(inputs.include);
+        const hasExcludes = publicExports.isArray(inputs.exclude);
+        if (hasIncludes && hasExcludes) {
+            return publicExports.partial(checkStringConditions, inputs);
+        }
+        else if (hasIncludes) {
+            return publicExports.partial(checkStringInclusion, inputs.include);
+        }
+        else if (hasExcludes) {
+            return publicExports.partial(checkStringExclusion, inputs.exclude);
+        }
+        else {
+            return function LibraryTools_checkNothing() { return true; };
+        }
+    };
+    const checkString = function LibraryTools_checkString(value, expression) {
+        return expression.test(value);
+    };
+    const checkStringConditions = function LibraryTools_checkStringConditions(conditions, value) {
+        const test = publicExports.partial(checkString, value);
+        return conditions.include.find(test) !== undefined
+            && conditions.exclude.find(test) === undefined;
+    };
+    const checkStringExclusion = function checkStringExclusion(exclude, value) {
+        const test = publicExports.partial(checkString, value);
+        return exclude.find(test) === undefined;
+    };
+    const checkStringInclusion = function checkStringInclusion(include, value) {
+        const test = publicExports.partial(checkString, value);
+        return include.find(test) !== undefined;
+    };
     // TODO: replacements more structured, maybe backwards compatible
     // const replacements = {
     //     "\\": "\\\\",
@@ -1404,128 +1546,18 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
     publicExports.isArray = function LibraryTools_isArray(value) {
         return value instanceof Array && value.length !== 0;
     };
-    publicExports.isDirectory = function LibraryTools_isDirectory(path) {
-        return readPathStats(path).isDirectory();
-    };
-    const buildPathChecker = function LibraryTools_buildPathChecker(inputs) {
-        const hasIncludes = publicExports.isArray(inputs.include);
-        const hasExcludes = publicExports.isArray(inputs.exclude);
-        if (hasIncludes && hasExcludes) {
-            return publicExports.partial(pathCheckerBoth, inputs.include, inputs.exclude);
-        }
-        else if (hasIncludes) {
-            return publicExports.partial(pathCheckerIncludes, inputs.include);
-        }
-        else if (hasExcludes) {
-            return publicExports.partial(pathCheckerExcludes, inputs.exclude);
-        }
-        else {
-            return function LibraryTools_pathCheckerNone() { return true; };
-        }
-    };
-    const pathCheckerBoth = function LibraryTools_pathCheckerBoth(include, exclude, path) {
-        const test = publicExports.partial(testPath, path);
-        return exclude.find(test) === undefined && include.find(test) !== undefined;
-    };
-    const pathCheckerIncludes = function pathCheckerIncludes(include, path) {
-        const test = publicExports.partial(testPath, path);
-        return include.find(test) !== undefined;
-    };
-    const pathCheckerExcludes = function pathCheckerExcludes(exclude, path) {
-        const test = publicExports.partial(testPath, path);
-        return exclude.find(test) === undefined;
-    };
-    publicExports.loopFiles = function LibraryTools_loopFiles(inputs) {
-        const pathChecker = buildPathChecker({
-            include: toRegExp(inputs.include || []),
-            exclude: toRegExp(inputs.exclude || []),
-        });
-        const privateData = {
-            isIncluded: pathChecker,
-            execute: inputs.execute
-        };
-        const { path } = inputs;
-        if (path instanceof Array) {
-            path.forEach(publicExports.partial(loopFilesFrom, privateData));
-        }
-        else {
-            loopFilesFrom(privateData, path);
-        }
-    };
-    publicExports.resolvePath = function LibraryTools_resolvePath(...parts) {
-        return Path.resolve(...parts);
-    };
-    const loopFilesFrom = function LibraryTools_loopFilesFrom(privateData, path) {
-        path = resolvePath(path);
-        if (!isUsedPath(path)) {
-            return;
-        }
-        if (publicExports.isDirectory(path)) {
-            loopFilesFromDirectory(privateData, path);
-        }
-        else {
-            loopFilesExecute(privateData, "", path);
-        }
-    };
-    const loopFilesFromDirectory = function LibraryTools_loopFilesFromDirectory(privateData, path) {
-        readDirectory(path).forEach(publicExports.partial(loopFilesExecute, privateData, path));
-    };
-    const loopFilesExecute = function LibraryTools_loopFilesExecute(privateData, root, path) {
-        path = resolvePath(root, path);
-        if (publicExports.isDirectory(path)) {
-            loopFilesFromDirectory(privateData, path);
-            return;
-        }
-        if (privateData.isIncluded(path)) {
-            privateData.execute(path);
-        }
-    };
     publicExports.partial = function LibraryTools_partial(baseFunction, ...inputs) {
         if (inputs.length === 0) {
             throw ["LibraryTools_partial - no inputs to preset for:", baseFunction];
         }
         const result = baseFunction.bind(null, ...inputs);
-        if (result.presetInputs instanceof Array) {
-            result.presetInputs.push(...inputs);
+        if (baseFunction.presetInputs instanceof Array) {
+            result.presetInputs = [...baseFunction.presetInputs, ...inputs];
         }
         else {
             result.presetInputs = inputs;
         }
         return result;
-    };
-    const testPath = function LibraryTools_testPath(path, expression) {
-        return expression.test(path);
-    };
-    const toRegExp = function LibraryTools_toRegExp(expressions) {
-        if (typeof expressions === "string") {
-            expressions = [expressions];
-        }
-        else if (!(expressions instanceof Array)) {
-            return [];
-        }
-        return expressions
-            .map(normalize)
-            .map(publicExports.easyExpression);
-    };
-    const writeDirectory = function LibraryTools_writeDirectory(path) {
-        if (isUsedPath(path)) {
-            return;
-        }
-        const rootPath = Path.dirname(path);
-        if (!isUsedPath(rootPath)) {
-            writeDirectory(rootPath);
-        }
-        try {
-            FS.mkdirSync(path);
-        }
-        catch (err) {
-            console.warn(err);
-        }
-    };
-    publicExports.writeFile = function LibraryTools_writeFile(inputs) {
-        const path = resolvePath(inputs.path);
-        writeDirectory(Path.dirname(path));
-        FS.writeFileSync(inputs.path, inputs.content, { encoding: inputs.encoding });
     };
     Object.freeze(publicExports);
 })();

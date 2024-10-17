@@ -1,9 +1,9 @@
 //combining all ToolKid parts
-type ToolKidBuild_file = {(inputs?:ToolKidConfig): void}
+type ToolKidBuild_file = { (inputs?: ToolKidConfig): void }
 
 declare const ToolKid: ToolKid_file
 
-interface ToolKid_file extends Library {}
+interface ToolKid_file extends Library { }
 
 type ToolKidConfig = {
     rootToolKidFiles: string | string[],
@@ -23,7 +23,7 @@ type ToolKidConfig = {
 
 
 
-    const getAlias = function ToolKidBuild_getAlias (path:string) {
+    const getAlias = function ToolKidBuild_getAlias(path: string) {
         path = Path.basename(path);
         if (Path.extname(path) === "") {
             path += ".js";
@@ -35,7 +35,7 @@ type ToolKidConfig = {
         let combinedLibraryContent = "\"use strict\";\n";
         combinedLibraryContent += "(function ToolKid_init () {\n";
         combinedLibraryContent += "const registeredFiles = {};\n\n\n";
-        combinedLibraryContent += FS.readFileSync(libraryPath,"utf8").slice(14, -7);
+        combinedLibraryContent += FS.readFileSync(libraryPath, "utf8").slice(14, -7);
         combinedLibraryContent += "\n    global.ToolKid = publicExports.createInstance();";
         combinedLibraryContent += "\n})();\n";
         combinedLibraryContent += "registeredFiles[\"Library.js\"] = module.exports;\n\n";
@@ -43,7 +43,7 @@ type ToolKidConfig = {
     };
 
     const collectToolKid = function ToolKidBuild_collectToolKid(
-        config:ToolKidConfig
+        config: ToolKidConfig
     ) {
         module.exports = (<Dictionary>global).ToolKid = Library.createInstance();
         const LibraryTools = Library.getTools();
@@ -60,7 +60,7 @@ type ToolKidConfig = {
             }
         });
         ToolKid.registerFunction({
-            section: "dataTypes", subSection:"checks", functions: {
+            section: "dataTypes", subSection: "checks", functions: {
                 isArray: LibraryTools.isArray
             }
         });
@@ -68,17 +68,17 @@ type ToolKidConfig = {
             path: config.rootToolKidFiles,
             include: config.include,
             exclude: config.exclude,
-            execute: LibraryTools.partial(executeAndRegisterFile,privateData.registeredFiles)
+            execute: LibraryTools.partial(executeAndRegisterFile, privateData.registeredFiles)
         });
         return privateData.registeredFiles;
     };
 
-    const writeLibraryFile = function (inputs:{
-        rootLibraryFiles:string,
-        fileLocations:Dictionary,
-        exportFile?:string
+    const writeLibraryFile = function (inputs: {
+        rootLibraryFiles: string,
+        fileLocations: Dictionary,
+        exportFile?: string
     }) {
-        const libraryPath = Path.resolve(inputs.rootLibraryFiles)+"/Library.js";
+        const libraryPath = Path.resolve(inputs.rootLibraryFiles) + "/Library.js";
 
         const privateData = {
             combinedFile: combinedLibrarySetup(libraryPath),
@@ -87,12 +87,12 @@ type ToolKidConfig = {
         };
 
         Object.entries(privateData.registeredFiles).forEach(
-            appendFile.bind(null,privateData)
+            appendFile.bind(null, privateData)
         );
 
         // TODO: making a more stable and less ugly version for including LibraryTools
-        const toolsPath = Path.resolve(inputs.rootLibraryFiles,"LibraryTools.js");
-        appendFile(privateData,[Path.basename(toolsPath),toolsPath]);
+        const toolsPath = Path.resolve(inputs.rootLibraryFiles, "LibraryTools.js");
+        appendFile(privateData, [Path.basename(toolsPath), toolsPath]);
         privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
             loopFiles:module.exports.loopFiles\n\
         }})\n\n";
@@ -101,18 +101,18 @@ type ToolKidConfig = {
         privateData.combinedFile += "module.exports = ToolKid;\n";
         privateData.combinedFile += "})();";
         Library.getTools().writeFile({
-            path: inputs.exportFile || (__dirname.slice(0,-5) + "ToolKid.js"),
+            path: inputs.exportFile || (__dirname.slice(0, -5) + "ToolKid.js"),
             content: privateData.combinedFile
         });
     };
 
     const executeAndRegisterFile = function (
         registeredFiles: Dictionary,
-        path:string
+        path: string
     ) {
         const alias = getAlias(path);
         if (registeredFiles[alias] !== undefined) {
-            console.warn("duplicate file alias \""+ alias + "\" - second path is:",path, " and registered was:",registeredFiles[alias]);
+            console.warn("duplicate file alias \"" + alias + "\" - second path is:", path, " and registered was:", registeredFiles[alias]);
         }
         registeredFiles[alias] = path;
         return require(path);
@@ -120,7 +120,7 @@ type ToolKidConfig = {
 
     const appendFile = function (
         privateData: Dictionary,
-        aliasAndPath: [alias:string, path:string]
+        aliasAndPath: [alias: string, path: string]
     ) {
         const [aliasOfFile, filePath] = aliasAndPath;
         if (privateData.importedFiles.has(aliasOfFile)) {
@@ -128,7 +128,7 @@ type ToolKidConfig = {
         }
 
         const analysed = analyseFile(filePath);
-        analysed.imports.forEach(function(entry){
+        analysed.imports.forEach(function (entry) {
             const aliasOfDependency = getAlias(entry.file);
             if (!privateData.importedFiles.has(aliasOfDependency)) {
                 const dependencyPath = privateData.registeredFiles[aliasOfDependency];
@@ -142,15 +142,15 @@ type ToolKidConfig = {
         return require(filePath);
     };
 
-    const analyseFile = function (path:string): {
+    const analyseFile = function (path: string): {
         path: string,
         contentReworked: string,
         imports: {
-            position:number,
-            file:string
+            position: number,
+            file: string
         }[]
     } {
-        let content = <string>FS.readFileSync(path,"utf8");
+        let content = <string>FS.readFileSync(path, "utf8");
         let contentClean = content.slice(14);
         let imports = getImports(contentClean);
         imports = imports.filter(function (entry) {
@@ -170,7 +170,7 @@ type ToolKidConfig = {
             const importPosition = entry.position;
             contentReworked += contentClean.slice(position, importPosition);
             let name = getAlias(entry.file);
-            contentReworked += "registeredFiles[\""+name+"\"]";
+            contentReworked += "registeredFiles[\"" + name + "\"]";
             position = importPosition + entry.file.length + 11;
         });
         contentReworked += contentClean.slice(position);
@@ -182,31 +182,7 @@ type ToolKidConfig = {
         return result;
     };
 
-    const signals = {
-        requireStart: "require(\"",
-        requireEnd: "\")"
-    };
-    const getImports = function (content:string) {
-        const parts = content.split(signals.requireStart);
-        if (parts.length === 1) {
-            return [];
-        }
-
-        let position = parts[0].length;
-        const result = <{position:number, file:string}[]>[];
-        for (let i=1; i< parts.length; i+=1) {
-            const part = parts[i];
-            const end = part.indexOf(signals.requireEnd);
-            result.push({
-                position,
-                file: part.slice(0,end)
-            });
-            position += part.length + signals.requireStart.length;
-        }
-        return result;
-    };
-
-    const executeBuild = <ToolKidBuild_file>function ToolKidBuild_executeBuild (config) {
+    const executeBuild = <ToolKidBuild_file>function ToolKidBuild_executeBuild(config) {
         if (typeof ToolKid !== "undefined") {
             return;
         }
@@ -215,22 +191,46 @@ type ToolKidConfig = {
         if (config === undefined) {
             config = readConfig();
         }
-        Library = require(Path.resolve(config.rootLibraryFiles,"Library"));
+
+        Library = require(Path.resolve(config.rootLibraryFiles, "Library"));
         const fileList = collectToolKid(config);
-        (<Dictionary>global).log = (<ToolKid_file>ToolKid).debug.terminal.logImportant;
         writeLibraryFile({
-            rootLibraryFiles:config.rootLibraryFiles,
-            fileLocations:fileList,
+            rootLibraryFiles: config.rootLibraryFiles,
+            fileLocations: fileList,
             exportFile: config.exportFile
         });
         if (config.runTests !== false) {
             setTimeout(
-                runTests.bind(null,config)
-            ,100);
+                runTests.bind(null, config), 100
+            );
         }
     };
 
-    const readConfig = function ToolKidBuild_readConfig () {
+    const signals = {
+        requireStart: "require(\"",
+        requireEnd: "\")"
+    };
+    const getImports = function (content: string) {
+        const parts = content.split(signals.requireStart);
+        if (parts.length === 1) {
+            return [];
+        }
+
+        let position = parts[0].length;
+        const result = <{ position: number, file: string }[]>[];
+        for (let i = 1; i < parts.length; i += 1) {
+            const part = parts[i];
+            const end = part.indexOf(signals.requireEnd);
+            result.push({
+                position,
+                file: part.slice(0, end)
+            });
+            position += part.length + signals.requireStart.length;
+        }
+        return result;
+    };
+
+    const readConfig = function ToolKidBuild_readConfig() {
         let result = <ToolKidConfig>{
             rootToolKidFiles: "../ToolKidFiles",
             rootLibraryFiles: "../LibraryFiles",
@@ -244,7 +244,7 @@ type ToolKidConfig = {
         return result;
     };
 
-    const prepareInputsFullTest = function ToolKidBuild_prepareInputsFullTest (
+    const prepareInputsFullTest = function ToolKidBuild_prepareInputsFullTest(
         config: ToolKidConfig
     ) {
         return {
@@ -257,8 +257,8 @@ type ToolKidConfig = {
         }
     };
 
-    const runTests = function ToolKidBuild_runTests (
-        config:ToolKidConfig
+    const runTests = function ToolKidBuild_runTests(
+        config: ToolKidConfig
     ) {
         console.log(">> testing ToolKid");
         ToolKid.debug.test.registerTestSuspect({
@@ -275,8 +275,8 @@ type ToolKidConfig = {
     };
 
     const executionFile = Path.basename(process.argv[1]);
-    const isExecutedDirectly = executionFile.slice(0,12) === "ToolKidBuild";
-    if (isExecutedDirectly) {
+    const isExecutedViaTerminal = executionFile.slice(0, 12) === "ToolKidBuild";
+    if (isExecutedViaTerminal) {
         executeBuild();
     }
 

@@ -99,7 +99,7 @@ type TestResult = {
             result.errorMessage = error;
         }
         result.time = Date.now() - startTime;
-        return result;
+        return Object.freeze(result);
     };
 
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs: {
@@ -147,7 +147,7 @@ type TestResult = {
             reason = "Unspecified Error"
         }
         result.errorMessage = reason;
-        bound.resolver(result);
+        bound.resolver(Object.freeze(result));
     };
 
     Object.freeze(publicExports);

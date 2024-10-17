@@ -50,6 +50,19 @@
     }));
 
     testResults.push(...test({
+        subject: Debug.clearSummaryState,
+        execute: function basic() {
+            Debug.clearSummaryState();
+            assertEquality({
+                "testCount": {
+                    value: getSummary().testCount,
+                    shouldBe: 0
+                }
+            });
+        }
+    }));
+
+    testResults.push(...test({
         subject: Debug.registerTestResult,
         execute: function basic() {
             const dummyResult = {
@@ -84,7 +97,7 @@
             Debug.registerTestSuspect(a);
             let newSummary = getSummary();
             assertEquality({
-                "missingSuspect": {
+                "1 missing suspect": {
                     value: newSummary.missingSuspects.size,
                     shouldBe: oldSummary.missingSuspects.size + 1
                 }
@@ -95,22 +108,9 @@
             });
             newSummary = getSummary();
             assertEquality({
-                "missingSuspect": {
+                "3 missing suspects": {
                     value: newSummary.missingSuspects.size,
                     shouldBe: oldSummary.missingSuspects.size + 3
-                }
-            });
-        }
-    }));
-
-    testResults.push(...test({
-        subject: Debug.clearSummaryState,
-        execute: function basic() {
-            Debug.clearSummaryState();
-            assertEquality({
-                "testCount": {
-                    value: getSummary().testCount,
-                    shouldBe: 0
                 }
             });
         }

@@ -45,11 +45,18 @@ type TestSummary = {
 
 
 (function TK_DebugTestResults_init() {
+    const groupPath = require("path").resolve(__dirname, "TK_DebugTestGroup.js");
+
+
+
     let timeStart = Date.now();
     let testResults = <(TestResult | Promise<TestResult>)[]>[];
     let testSuspects = <Set<any>>new Set();
 
     const publicExports = module.exports = <TK_DebugTest_file>{};
+
+    require(groupPath);
+    let testGroup = ToolKid.debug.test.createTestGroup();
 
 
 
@@ -117,6 +124,7 @@ type TestSummary = {
 
     publicExports.clearSummaryState = function TK_DebugTestResults_clearSummaryState(inputs = {}) {
         timeStart = Date.now();
+        testGroup = ToolKid.debug.test.createTestGroup();
         testResults = [];
         if (inputs.clearSuspects === true) {
             testSuspects = new Set();
@@ -139,23 +147,31 @@ type TestSummary = {
 
     let pendingSummaries = <TestSummary[]>[];
     publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
-        const result = <TestSummary>{
-            testCount: testResults.length,
-            timeTotal: 0,
-            successes: <Map<any, any[]>>new Map(),
-            failures: [],
-            pending: new Set(),
-            missingSuspects: new Set(testSuspects),
-            callback
+        const caller = (typeof callback === "function")
+            ? function (results:TestGroupResults) {
+                callback(createSummary(results));
+            }
+            : undefined;
+        return createSummary(testGroup.getResults(caller));
+    };
+
+    const createSummary = function (
+        results:TestGroupResults
+    ) {
+        const summary:TestSummary = {
+            testCount: results.successes.length + results.failures.length + results.pendingResults.length,
+            timeTotal: results.timeTotal,
+            failures: results.failures,
+            successes: new Map(),
+            pending: new Set(results.pendingResults),
+            missingSuspects: new Set(results.suspects)
         };
-        testResults.forEach(
-            summaryRegisterResult.bind(null, result));
-        if (result.pending.size === 0) {
-            getSummaryFinal(result);
-        } else {
-            pendingSummaries.push(result);
-        }
-        return result;
+        results.successes.forEach(function (testResult) {
+            summaryRegisterSuccess({
+                list: summary.successes, testResult
+            });
+        });
+        return summary;
     };
 
     const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(
@@ -185,7 +201,8 @@ type TestSummary = {
     };
 
     publicExports.loadSummaryState = function TK_DebugTestResults_loadSummaryState(stateID) {
-        ({ timeStart, testResults, testSuspects } = summaryHistory[stateID]);
+        const state = summaryHistory[stateID];
+        ({ timeStart, testResults, testSuspects, testGroup } = state);
     };
 
     const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs: any) {
@@ -259,6 +276,7 @@ type TestSummary = {
     ) {
         pendingSummaries.forEach(registerResultsDelayed.bind(null, results));
         testResults.push(...results);
+        testGroup.registerResults(...results);
     };
 
     const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed(
@@ -268,6 +286,7 @@ type TestSummary = {
     };
 
     publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {
+        testGroup.registerSuspects(...inputs);
         if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
             inputs = getSuspects(inputs[0]);
         }
@@ -279,7 +298,8 @@ type TestSummary = {
         const state = {
             timeStart,
             testResults: testResults.slice(0),
-            testSuspects: new Set(testSuspects)
+            testSuspects: new Set(testSuspects),
+            testGroup
         };
         summaryHistory.push(state);
         return summaryHistory.length - 1;
