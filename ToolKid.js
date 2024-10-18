@@ -273,6 +273,10 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
         }
     };
     const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(inputs) {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return true;
+        }
         const simpleTestResult = isSimpleAndEqual(inputs);
         if (simpleTestResult === true) {
             return true;
@@ -282,7 +286,6 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
             return [simpleTestResult];
         }
         const toleranceDepth = inputs.toleranceDepth - 1;
-        const { value, shouldBe } = inputs;
         const additionalKeys = new Set(getKeys(value));
         let reader = readProperty.basic;
         if (shouldBe instanceof Map) {
@@ -347,13 +350,11 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
     };
     const isSimpleAndDifferent = function TK_DataTypesChecksEquality_isSimpleAndDifferent(valueA, valueB) {
         return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB);
+            || !isList(valueA) || !isList(valueB)
+            || valueA instanceof Error || valueB instanceof Error;
     };
     const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(inputs) {
         const { value, shouldBe } = inputs;
-        if (isIdentical(value, shouldBe)) {
-            return true;
-        }
         if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
             if (shouldBe(value) === true) {
                 return true;

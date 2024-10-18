@@ -24,14 +24,14 @@ type EqualityDifference = {
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
 
-    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(...inputs:any[]) {
+    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(...inputs: any[]) {
         if (inputs.length === 2) {
             return assertEqualityLoose({
-                path: [], toleranceDepth:1, value:inputs[0], shouldBe:inputs[1]
+                path: [], toleranceDepth: 1, value: inputs[0], shouldBe: inputs[1]
             });
         } else {
             return assertEqualityLoose(Object.assign({
-                path: [], toleranceDepth:1
+                path: [], toleranceDepth: 1
             }, inputs[0]));
         }
     };
@@ -43,6 +43,11 @@ type EqualityDifference = {
         path: any[],
         allowAdditions?: true
     }): true | EqualityDifference[] {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return true;
+        }
+
         const simpleTestResult = isSimpleAndEqual(inputs);
         if (simpleTestResult === true) {
             return true;
@@ -52,7 +57,6 @@ type EqualityDifference = {
         }
 
         const toleranceDepth = inputs.toleranceDepth - 1;
-        const { value, shouldBe } = inputs;
         const additionalKeys = new Set(getKeys(value));
         let reader = readProperty.basic;
         if (shouldBe instanceof Map) {
@@ -126,7 +130,8 @@ type EqualityDifference = {
         valueA: any, valueB: any
     ) {
         return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB);
+            || !isList(valueA) || !isList(valueB)
+            || valueA instanceof Error || valueB instanceof Error;
     };
 
     const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(inputs: {
@@ -135,10 +140,6 @@ type EqualityDifference = {
         toleranceDepth: number
     }): boolean | EqualityDifference {
         const { value, shouldBe } = inputs;
-        if (isIdentical(value, shouldBe)) {
-            return true;
-        }
-
         if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
             if (shouldBe(value) === true) {
                 return true;
