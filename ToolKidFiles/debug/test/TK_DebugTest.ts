@@ -10,7 +10,7 @@ interface TK_DebugTest_file {
         name: string,
         results: TestResultList
     } | undefined,
-    selectResultGroup(
+    SWITCH_RESULT_GROUP(
         name: string
     ): TestResultList,
     test(...configs: {
@@ -89,7 +89,7 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
             : { name, results }
     };
 
-    publicExports.selectResultGroup = function TK_DebugTest_selectTestGroup(name) {
+    publicExports.SWITCH_RESULT_GROUP = function TK_DebugTest_selectTestGroup(name) {
         if (typeof name !== "string" || name.length === 0) {
             throw ["TK_DebugTest_selectTestGroup - invalid name:", name]
         }

@@ -143,7 +143,6 @@
         }
     });
 
-    log(writeFile)
     test({
         subject: writeFile,
         execute: function basic() {

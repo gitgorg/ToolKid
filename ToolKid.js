@@ -273,6 +273,10 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
         }
     };
     const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(inputs) {
+        const { value, shouldBe } = inputs;
+        if (isIdentical(value, shouldBe)) {
+            return true;
+        }
         const simpleTestResult = isSimpleAndEqual(inputs);
         if (simpleTestResult === true) {
             return true;
@@ -282,7 +286,6 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
             return [simpleTestResult];
         }
         const toleranceDepth = inputs.toleranceDepth - 1;
-        const { value, shouldBe } = inputs;
         const additionalKeys = new Set(getKeys(value));
         let reader = readProperty.basic;
         if (shouldBe instanceof Map) {
@@ -347,13 +350,11 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
     };
     const isSimpleAndDifferent = function TK_DataTypesChecksEquality_isSimpleAndDifferent(valueA, valueB) {
         return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB);
+            || !isList(valueA) || !isList(valueB)
+            || valueA instanceof Error || valueB instanceof Error;
     };
     const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(inputs) {
         const { value, shouldBe } = inputs;
-        if (isIdentical(value, shouldBe)) {
-            return true;
-        }
         if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
             if (shouldBe(value) === true) {
                 return true;
@@ -577,7 +578,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             ? undefined
             : { name, results };
     };
-    publicExports.selectResultGroup = function TK_DebugTest_selectTestGroup(name) {
+    publicExports.SWITCH_RESULT_GROUP = function TK_DebugTest_selectTestGroup(name) {
         if (typeof name !== "string" || name.length === 0) {
             throw ["TK_DebugTest_selectTestGroup - invalid name:", name];
         }
@@ -1042,312 +1043,6 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestFull.js"] = module.exports;
 
-(function TK_DebugTestFull_init() {
-    const publicExports = module.exports = {};
-    const TestGroup = function TestGroup() { };
-    publicExports.createTestGroup = function TK_debugTestGroup_createInstance() {
-        const privateData = {
-            callbacks: [],
-            failures: [],
-            pendingResults: new Set(),
-            successes: [],
-            suspects: new Set(),
-            timeStart: Date.now()
-        };
-        const result = new TestGroup();
-        result.getResults = getResults.bind(null, privateData);
-        result.registerResults = registerResults.bind(null, privateData);
-        result.registerSuspects = registerSuspects.bind(null, privateData);
-        return result;
-    };
-    const getAllMethods = function TK_DebugTestResults_getAllMethods(data) {
-        const result = [];
-        if (typeof data === "function") {
-            result[0] = data;
-        }
-        else if (typeof data !== "object" || data === null) {
-            return result;
-        }
-        Object.values(data).forEach(function (value) {
-            result.push(...getAllMethods(value));
-        });
-        return result;
-    };
-    const getResults = function TK_DebugTestResults_getResults(privateData, callback) {
-        const results = {
-            failures: privateData.failures.slice(0),
-            pendingResults: Array.from(privateData.pendingResults),
-            successes: privateData.successes.slice(0),
-            suspects: Array.from(privateData.suspects),
-            timeTotal: Date.now() - privateData.timeStart
-        };
-        if (typeof callback === "function") {
-            privateData.callbacks.push(callback);
-        }
-        if (privateData.pendingResults.size === 0) {
-            privateData.callbacks.forEach(function (cb) {
-                cb(results);
-            });
-            privateData.callbacks = [];
-        }
-        return results;
-    };
-    const handlePromise = function TK_DebugTestResults_summaryHandlePromise(bound, result) {
-        placeResult(bound.privateData, result);
-        const { pendingResults } = bound.privateData;
-        pendingResults.delete(bound.promise);
-        if (pendingResults.size === 0) {
-            getResults(bound.privateData);
-        }
-    };
-    const placeResult = function (privateData, result) {
-        if (result.errorMessage === undefined) {
-            privateData.successes.push(result);
-        }
-        else {
-            privateData.failures.push(result);
-        }
-    };
-    const registerResults = function TK_DebugTestGroup_registerResultsLoop(privateData, ...results) {
-        const length = results.length;
-        let result;
-        for (let i = 0; i < length; i += 1) {
-            result = results[i];
-            if (!(result instanceof Promise)) {
-                placeResult(privateData, result);
-                continue;
-            }
-            privateData.pendingResults.add(result);
-            result.then(handlePromise.bind(null, {
-                privateData,
-                promise: result
-            }));
-        }
-        ;
-    };
-    const registerSuspects = function TK_DebugTestResults_regiserSuspectsLoop(privateData, ...suspects) {
-        const config = suspects[0];
-        if (suspects.length === 1
-            && typeof config === "object"
-            && config.suspect !== undefined) {
-            if (config.mode === "allMethods") {
-                suspects = getAllMethods(config.suspect);
-            }
-        }
-        suspects.forEach(privateData.suspects.add.bind(privateData.suspects));
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
-    }
-})();
-registeredFiles["TK_DebugTestGroup.js"] = module.exports;
-
-(function TK_DebugTestResults_init() {
-    const groupPath = require("path").resolve(__dirname, "TK_DebugTestGroup.js");
-    let timeStart = Date.now();
-    const publicExports = module.exports = {};
-    require(groupPath);
-    const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(testResult) {
-        const { errorMessage } = testResult;
-        if (!(errorMessage instanceof Array)
-            || errorMessage[0] !== "string"
-            || errorMessage[0].slice(-13) !== "expectations:") {
-            return testResult;
-        }
-        const differences = errorMessage.slice(1);
-        let path;
-        const subMessages = differences.map(function (difference) {
-            path = ["value", ...difference.path].join(".");
-            if (difference.type === "different") {
-                return [
-                    path + " should have been:", difference.shouldBe,
-                    "but instead is:", difference.value
-                ];
-            }
-            else if (difference.type === "tooDeep") {
-                return [
-                    path + " is exceeding comparison depth"
-                ];
-            }
-            else if (difference.type === "invalid") {
-                return [
-                    path + " did not pass test:", difference.shouldBe,
-                    "with value:", difference.value
-                ];
-            }
-            else if (difference.type === "unwanted") {
-                return [
-                    "unwanted property " + path + ":", difference.value
-                ];
-            }
-            return difference;
-        });
-        // const difference = <EqualityDifference>message[length - 1];
-        // let part = difference.onlyA;
-        // if (Object.keys(part).length !== 0) { //extensive properties
-        //     subMessages.push(["unwanted properties: ", part]);
-        // }
-        // part = difference.onlyB;
-        // if (Object.keys(part).length !== 0) { //missing properties
-        //     subMessages.push(["missing properties: ", part]);
-        // }
-        // Object.entries(difference.changed).forEach(function (keyAndValues) { //changed properties
-        //     subMessages.push([
-        //         "   property " + keyAndValues[0] + "is :",
-        //         keyAndValues[1][0],
-        //         "   and should have been:",
-        //         keyAndValues[1][1]
-        //     ]);
-        // }, difference.changed);
-        // return Object.assign({}, testResult, {
-        //     errorMessage: [...message.slice(0, -2), "~ details ~", ...subMessages]
-        // });
-        return Object.assign({}, testResult, {
-            errorMessage: [testResult.errorMessage[0], ...subMessages]
-        });
-    };
-    const getAllMethods = function TK_DebugTestResults_getAllMethods(data) {
-        const result = [];
-        if (typeof data === "function") {
-            result[0] = data;
-        }
-        else if (typeof data !== "object" || data === null) {
-            return result;
-        }
-        Object.values(data).forEach(function (value) {
-            result.push(...getAllMethods(value));
-        });
-        return result;
-    };
-    let pendingSummaries = [];
-    publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
-        const resultGroup = ToolKid.debug.test.getResultGroup();
-        const summary = createSummary(resultGroup);
-        if (typeof callback !== "function") {
-            return summary;
-        }
-        if (summary.pending.size === 0) {
-            callback(summary);
-            return summary;
-        }
-        const boundData = {
-            pendingCount: summary.pending.size,
-            callback
-        };
-        summary.pending.forEach(function TK_DebugTestResults_watchPromise(promise) {
-            promise.then(summaryCallback.bind(null, boundData));
-        });
-        return summary;
-    };
-    const summaryCallback = function TK_DebugTestResults_summaryCallback(boundData) {
-        boundData.pendingCount -= 1;
-        if (boundData.pendingCount === 0) {
-            publicExports.getSummary(boundData.callback);
-        }
-    };
-    const createSummary = function (resultGroup) {
-        const resultGroupName = resultGroup.name;
-        const summary = {
-            name: resultGroupName,
-            testCount: 0,
-            timeTotal: 100, //results.timeTotal,
-            failures: [],
-            successes: new Map(),
-            pending: new Set(),
-            missingSuspects: suspects.get(resultGroupName) || new Set()
-        };
-        resultGroup.results.forEach(summaryRegisterResult.bind(null, summary));
-        return summary;
-    };
-    const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(summary) {
-        const pos = pendingSummaries.indexOf(summary);
-        if (pos !== -1) {
-            pendingSummaries.splice(pos, 1);
-        }
-        summary.timeTotal = Date.now() - timeStart;
-        const { callback } = summary;
-        if (typeof callback === "function") {
-            delete summary.callback;
-            callback(summary);
-        }
-    };
-    const getSuspects = function TK_DebugTestResults_getSuspects(inputs) {
-        if (inputs.mode === "allMethods") {
-            return getAllMethods(inputs.suspect);
-        }
-        else {
-            return inputs.suspect;
-        }
-        ;
-    };
-    const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs) {
-        return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
-    };
-    const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise(bound, result) {
-        const { summary } = bound;
-        summary.pending.delete(bound.promise);
-        summary.testCount -= 1;
-        summaryRegisterResult(summary, result);
-        if (summary.pending.size === 0) {
-            getSummaryFinal(summary);
-        }
-    };
-    const summaryRegisterResult = function TK_DebugTest_summaryRegisterResult(summary, testResult) {
-        summary.testCount += 1;
-        if (testResult instanceof Promise) {
-            summary.pending.add(testResult);
-            const handleResolve = summaryHandlePromise.bind(null, {
-                summary,
-                promise: testResult
-            });
-            testResult.then(handleResolve);
-            return;
-        }
-        summary.missingSuspects.delete(testResult.subject);
-        if (testResult.errorMessage === undefined) {
-            summaryRegisterSuccess({
-                list: summary.successes, testResult
-            });
-        }
-        else {
-            summary.failures.push(beautifyDifferences(testResult));
-        }
-    };
-    const summaryRegisterSuccess = function TK_DebugTest_summaryRegisterSuccess(inputs) {
-        const { testResult } = inputs;
-        const data = {
-            name: testResult.name,
-            time: testResult.time
-        };
-        const subjectDetails = inputs.list.get(testResult.subject);
-        if (subjectDetails === undefined) {
-            inputs.list.set(testResult.subject, [data]);
-        }
-        else {
-            subjectDetails.push(data);
-        }
-    };
-    const suspects = new Map();
-    publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspect(...inputs) {
-        const testeGroupName = ToolKid.debug.test.getResultGroup().name;
-        let currentSuspects = suspects.get(testeGroupName);
-        if (currentSuspects === undefined) {
-            currentSuspects = new Set();
-            suspects.set(testeGroupName, currentSuspects);
-        }
-        if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
-            inputs = getSuspects(inputs[0]);
-        }
-        inputs.forEach(currentSuspects.add.bind(currentSuspects));
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
-    }
-})();
-registeredFiles["TK_DebugTestResults.js"] = module.exports;
-
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
     const createValueChecker = function TD_DebugTestShouldPass_createValueChecker(mode, value) {
@@ -1414,6 +1109,209 @@ registeredFiles["TK_DebugTestResults.js"] = module.exports;
     }
 })();
 registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
+
+(function TK_DebugTestSummary_init() {
+    let timeStart = Date.now();
+    const publicExports = module.exports = {};
+    const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(testResult) {
+        const { errorMessage } = testResult;
+        if (!(errorMessage instanceof Array)
+            || errorMessage[0] !== "string"
+            || errorMessage[0].slice(-13) !== "expectations:") {
+            return testResult;
+        }
+        const differences = errorMessage.slice(1);
+        let path;
+        const subMessages = differences.map(function (difference) {
+            path = ["value", ...difference.path].join(".");
+            if (difference.type === "different") {
+                return [
+                    path + " should have been:", difference.shouldBe,
+                    "but instead is:", difference.value
+                ];
+            }
+            else if (difference.type === "tooDeep") {
+                return [
+                    path + " is exceeding comparison depth"
+                ];
+            }
+            else if (difference.type === "invalid") {
+                return [
+                    path + " did not pass test:", difference.shouldBe,
+                    "with value:", difference.value
+                ];
+            }
+            else if (difference.type === "unwanted") {
+                return [
+                    "unwanted property " + path + ":", difference.value
+                ];
+            }
+            return difference;
+        });
+        // const difference = <EqualityDifference>message[length - 1];
+        // let part = difference.onlyA;
+        // if (Object.keys(part).length !== 0) { //extensive properties
+        //     subMessages.push(["unwanted properties: ", part]);
+        // }
+        // part = difference.onlyB;
+        // if (Object.keys(part).length !== 0) { //missing properties
+        //     subMessages.push(["missing properties: ", part]);
+        // }
+        // Object.entries(difference.changed).forEach(function (keyAndValues) { //changed properties
+        //     subMessages.push([
+        //         "   property " + keyAndValues[0] + "is :",
+        //         keyAndValues[1][0],
+        //         "   and should have been:",
+        //         keyAndValues[1][1]
+        //     ]);
+        // }, difference.changed);
+        // return Object.assign({}, testResult, {
+        //     errorMessage: [...message.slice(0, -2), "~ details ~", ...subMessages]
+        // });
+        return Object.assign({}, testResult, {
+            errorMessage: [testResult.errorMessage[0], ...subMessages]
+        });
+    };
+    const getAllMethods = function TK_DebugTestSummary_getAllMethods(data) {
+        const result = [];
+        if (typeof data === "function") {
+            result[0] = data;
+        }
+        else if (typeof data !== "object" || data === null) {
+            return result;
+        }
+        Object.values(data).forEach(function (value) {
+            result.push(...getAllMethods(value));
+        });
+        return result;
+    };
+    let pendingSummaries = [];
+    publicExports.getSummary = function TK_DebugTestSummary_getSummary(callback) {
+        const resultGroup = ToolKid.debug.test.getResultGroup();
+        const summary = createSummary(resultGroup);
+        if (typeof callback !== "function") {
+            return summary;
+        }
+        if (summary.pending.size === 0) {
+            callback(summary);
+            return summary;
+        }
+        const boundData = {
+            pendingCount: summary.pending.size,
+            callback
+        };
+        summary.pending.forEach(function TK_DebugTestSummary_watchPromise(promise) {
+            promise.then(summaryCallback.bind(null, boundData));
+        });
+        return summary;
+    };
+    const summaryCallback = function TK_DebugTestSummary_summaryCallback(boundData) {
+        boundData.pendingCount -= 1;
+        if (boundData.pendingCount === 0) {
+            publicExports.getSummary(boundData.callback);
+        }
+    };
+    const createSummary = function (resultGroup) {
+        const resultGroupName = resultGroup.name;
+        const summary = {
+            name: resultGroupName,
+            testCount: 0,
+            timeTotal: 100, //results.timeTotal,
+            failures: [],
+            successes: new Map(),
+            pending: new Set(),
+            missingSuspects: suspects.get(resultGroupName) || new Set()
+        };
+        resultGroup.results.forEach(summaryRegisterResult.bind(null, summary));
+        return summary;
+    };
+    const getSummaryFinal = function TK_DebugTestSummary_getSummaryFinal(summary) {
+        const pos = pendingSummaries.indexOf(summary);
+        if (pos !== -1) {
+            pendingSummaries.splice(pos, 1);
+        }
+        summary.timeTotal = Date.now() - timeStart;
+        const { callback } = summary;
+        if (typeof callback === "function") {
+            delete summary.callback;
+            callback(summary);
+        }
+    };
+    const getSuspects = function TK_DebugTestSummary_getSuspects(inputs) {
+        if (inputs.mode === "allMethods") {
+            return getAllMethods(inputs.suspect);
+        }
+        else {
+            return inputs.suspect;
+        }
+        ;
+    };
+    const isSuspectConfig = function TK_DebugTestSummary_issuspectConfig(inputs) {
+        return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
+    };
+    const summaryHandlePromise = function TK_DebugTestSummary_summaryHandlePromise(bound, result) {
+        const { summary } = bound;
+        summary.pending.delete(bound.promise);
+        summary.testCount -= 1;
+        summaryRegisterResult(summary, result);
+        if (summary.pending.size === 0) {
+            getSummaryFinal(summary);
+        }
+    };
+    const summaryRegisterResult = function TK_DebugTest_summaryRegisterResult(summary, testResult) {
+        summary.testCount += 1;
+        if (testResult instanceof Promise) {
+            summary.pending.add(testResult);
+            const handleResolve = summaryHandlePromise.bind(null, {
+                summary,
+                promise: testResult
+            });
+            testResult.then(handleResolve);
+            return;
+        }
+        summary.missingSuspects.delete(testResult.subject);
+        if (testResult.errorMessage === undefined) {
+            summaryRegisterSuccess({
+                list: summary.successes, testResult
+            });
+        }
+        else {
+            summary.failures.push(beautifyDifferences(testResult));
+        }
+    };
+    const summaryRegisterSuccess = function TK_DebugTest_summaryRegisterSuccess(inputs) {
+        const { testResult } = inputs;
+        const data = {
+            name: testResult.name,
+            time: testResult.time
+        };
+        const subjectDetails = inputs.list.get(testResult.subject);
+        if (subjectDetails === undefined) {
+            inputs.list.set(testResult.subject, [data]);
+        }
+        else {
+            subjectDetails.push(data);
+        }
+    };
+    const suspects = new Map();
+    publicExports.registerTestSuspect = function TK_DebugTestSummary_registerTestSuspect(...inputs) {
+        const testeGroupName = ToolKid.debug.test.getResultGroup().name;
+        let currentSuspects = suspects.get(testeGroupName);
+        if (currentSuspects === undefined) {
+            currentSuspects = new Set();
+            suspects.set(testeGroupName, currentSuspects);
+        }
+        if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
+            inputs = getSuspects(inputs[0]);
+        }
+        inputs.forEach(currentSuspects.add.bind(currentSuspects));
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 
 (function TK_nodeJSDirectory_init() {
     const { readdirSync: readDirectory, existsSync: isUsedPath } = require("fs");

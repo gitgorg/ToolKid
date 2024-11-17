@@ -6,7 +6,7 @@
 
 
 
-    const { test, assertEquality, getResultGroup, selectResultGroup } = ToolKid.debug.test;
+    const { test, assertEquality, getResultGroup, SWITCH_RESULT_GROUP } = ToolKid.debug.test;
 
     //setup helping functions
     const createPromise = function () {
@@ -46,14 +46,14 @@
 
     //success with promise
     const promiseSuccess = createPromise();
-    let testPromise = <Promise<TestResult>>test({
+    let promisedResult = <Promise<TestResult>>test({
         subject: test,
         execute: function returnGoodPromise() {
             return promiseSuccess;
         }
     })[0];
     promiseSuccess.resolve();
-    testPromise.then(function (result) {
+    promisedResult.then(function (result) {
         assertEquality({
             "promise success result.name": {
                 value: result.name,
@@ -62,32 +62,96 @@
         });
     }).catch(throwError);
 
-    //failure with promise
-    // const stateID = saveSummaryState();
-    const resultGroup = getResultGroup();
-    selectResultGroup("TK_Debug");
-    const promiseFailure = createPromise();
-    testPromise = <Promise<TestResult>>test({
+    const currentResultGroup = getResultGroup();
+    test({
+        subject: getResultGroup,
+        execute: function resultGroupSwitch() {
+            assertEquality({
+                "type of resultGroup.name": {
+                    value: typeof currentResultGroup.name,
+                    shouldBe: "string"
+                },
+                "resultGroup.results is array": {
+                    value: currentResultGroup.results instanceof Array,
+                    shouldBe: true
+                }, "resultGroup has results": {
+                    value: currentResultGroup.results.length === 0,
+                    shouldBe: false
+                }
+            });
+        }
+    });
+
+    SWITCH_RESULT_GROUP("TK_DebugTest");
+
+    test({
+        subject: getResultGroup,
+        execute: function resultGroupSwitch() {
+            const emptyGroup = getResultGroup();
+            assertEquality({
+                "empty resultGroup": {
+                    value: emptyGroup,
+                    shouldBe: {
+                        name: "TK_DebugTest",
+                        results: []
+                    }
+                }
+            });
+        }
+    });
+
+    const failingPromise = createPromise();
+    failingPromise.reject();
+    promisedResult = <Promise<TestResult>>test({
         subject: test,
         execute: function returnBadPromise() {
-            return promiseFailure;
+            return failingPromise;
         }
     })[0];
-    promiseFailure.reject();
-    testPromise.then(function (result) {
-        assertEquality({
-            "promise failure result.errorMessage": {
-                value: result.errorMessage,
-                shouldBe: "Unspecified Error"
-            }
-        });
-    }).catch(throwError);
-    selectResultGroup(resultGroup.name);
-    // loadSummaryState(stateID);
+    
+    SWITCH_RESULT_GROUP(currentResultGroup.name);
+
+    test({
+        subject: SWITCH_RESULT_GROUP,
+        execute: function resultGroupSwitchBack() {
+            assertEquality({
+                "resultGroup": {
+                    value: getResultGroup(),
+                    shouldBe: currentResultGroup
+                }
+            });
+        }
+    });
+
+    const expectingFailure = createPromise();
+    test({
+        subject: test,
+        execute: function handleFailedPromise () {
+            promisedResult.then(function (result) {
+                assertEquality({
+                    "testResult": {
+                        value: result,
+                        shouldBe: {
+                            subject: test,
+                            name: "returnBadPromise",
+                            errorMessage: "Unspecified Error"
+                        },
+                        allowAdditions: true
+                    },
+                    "type of testResult.time": {
+                        value: typeof result.time,
+                        shouldBe: "number"
+                    }
+                });
+                expectingFailure.resolve(result);
+            }).catch(expectingFailure.reject);
+            return expectingFailure;
+        }
+    });
 
 
 
-    //--- invalid tests
+    //--- invalid test configs
 
     //without config
     try {

@@ -31,20 +31,13 @@ type TestSummary = {
 
 
 
-(function TK_DebugTestResults_init() {
-    const groupPath = require("path").resolve(__dirname, "TK_DebugTestGroup.js");
-
-
-
+(function TK_DebugTestSummary_init() {
     let timeStart = Date.now();
 
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-    require(groupPath);
 
-
-
-    const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(
+    const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(
         testResult: TestResult
     ) {
         const { errorMessage } = testResult;
@@ -106,7 +99,7 @@ type TestSummary = {
         });
     };
 
-    const getAllMethods = function TK_DebugTestResults_getAllMethods(data: any) {
+    const getAllMethods = function TK_DebugTestSummary_getAllMethods(data: any) {
         const result = <any[]>[];
         if (typeof data === "function") {
             result[0] = data;
@@ -121,7 +114,7 @@ type TestSummary = {
     };
 
     let pendingSummaries = <TestSummary[]>[];
-    publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
+    publicExports.getSummary = function TK_DebugTestSummary_getSummary(callback) {
         const resultGroup = ToolKid.debug.test.getResultGroup();
         const summary = createSummary(resultGroup);
         if (typeof callback !== "function") {
@@ -137,7 +130,7 @@ type TestSummary = {
             pendingCount: summary.pending.size,
             callback
         };
-        summary.pending.forEach(function TK_DebugTestResults_watchPromise(
+        summary.pending.forEach(function TK_DebugTestSummary_watchPromise(
             promise
         ) {
             promise.then(summaryCallback.bind(null,boundData));
@@ -145,7 +138,7 @@ type TestSummary = {
         return summary;
     };
 
-    const summaryCallback = function TK_DebugTestResults_summaryCallback(
+    const summaryCallback = function TK_DebugTestSummary_summaryCallback(
         boundData:Dictionary
     ) {
         boundData.pendingCount -= 1;
@@ -174,7 +167,7 @@ type TestSummary = {
         return summary;
     };
 
-    const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(
+    const getSummaryFinal = function TK_DebugTestSummary_getSummaryFinal(
         summary: TestSummary
     ) {
         const pos = pendingSummaries.indexOf(summary);
@@ -189,7 +182,7 @@ type TestSummary = {
         }
     };
 
-    const getSuspects = function TK_DebugTestResults_getSuspects(inputs: {
+    const getSuspects = function TK_DebugTestSummary_getSuspects(inputs: {
         suspect: any,
         mode: string
     }) {
@@ -200,11 +193,11 @@ type TestSummary = {
         };
     };
 
-    const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs: any) {
+    const isSuspectConfig = function TK_DebugTestSummary_issuspectConfig(inputs: any) {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
 
-    const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise(
+    const summaryHandlePromise = function TK_DebugTestSummary_summaryHandlePromise(
         bound: {
             summary: TestSummary,
             promise: Promise<TestResult>
@@ -267,7 +260,7 @@ type TestSummary = {
     };
 
     const suspects = new Map();
-    publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspect(...inputs) {
+    publicExports.registerTestSuspect = function TK_DebugTestSummary_registerTestSuspect(...inputs) {
         const testeGroupName = ToolKid.debug.test.getResultGroup().name;
         let currentSuspects = suspects.get(testeGroupName);
         if (currentSuspects === undefined) {
