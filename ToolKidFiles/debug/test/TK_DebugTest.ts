@@ -2,10 +2,21 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
+    getResultGroup(): {
+        name: string,
+        results: TestResultList
+    }
+    getResultGroup(name: string): {
+        name: string,
+        results: TestResultList
+    } | undefined,
+    selectResultGroup(
+        name: string
+    ): TestResultList,
     test(...configs: {
         subject: GenericFunction | string,
         execute(): void | Promise<void>
-    }[]): (TestResult | Promise<TestResult>)[]
+    }[]): TestResultList
 }
 
 type TestResult = {
@@ -14,6 +25,7 @@ type TestResult = {
     time: number,
     errorMessage?: any
 }
+type TestResultList = (TestResult | Promise<TestResult>)[]
 
 
 
@@ -26,6 +38,10 @@ type TestResult = {
 
 
     const publicExports = module.exports = <TK_DebugTest_file>{};
+
+    const resultGroups: Map<string, TestResultList> = new Map([["default", []]]);
+    let currentResultGroupName = "default";
+    let currentResultGroup = <TestResultList>resultGroups.get("default");
 
 
 
@@ -43,8 +59,8 @@ type TestResult = {
         value: any
     ) {
         return typeof value === "object"
-        && value !== null
-        && typeof value.execute === "function";
+            && value !== null
+            && typeof value.execute === "function";
     };
 
     const isValidSubject = function TK_DebugTest_isValidSubject(
@@ -57,18 +73,51 @@ type TestResult = {
         }
     };
 
+    publicExports.getResultGroup = <any>function TK_DebugTest_getResultGroup(
+        name: string
+    ) {
+        if (typeof name !== "string") {
+            return {
+                name: currentResultGroupName,
+                results: currentResultGroup
+            };
+        }
+
+        const results = resultGroups.get(name);
+        return (results === undefined)
+            ? undefined
+            : { name, results }
+    };
+
+    publicExports.selectResultGroup = function TK_DebugTest_selectTestGroup(name) {
+        if (typeof name !== "string" || name.length === 0) {
+            throw ["TK_DebugTest_selectTestGroup - invalid name:", name]
+        }
+
+        const found = resultGroups.get(name);
+        if (found === undefined) {
+            currentResultGroup = [];
+            resultGroups.set(name, currentResultGroup);
+        } else {
+            currentResultGroup = found;
+        }
+        currentResultGroupName = name;
+        return currentResultGroup;
+    };
+
     publicExports.test = function TK_DebugTest_testInterface(...inputs) {
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }
 
-        const testResults = inputs.map(testSingle);
-        ToolKid.debug.test.registerTestResult(...testResults);
+        const testResults = <TestResultList>inputs.map(testSingle.bind(null, currentResultGroup));
+        currentResultGroup.push(...testResults);
+        // ToolKid.debug.test.registerTestResult(...testResults);
         return testResults;
     };
 
     const testSingle = function TK_DebugTest_testSingle(
-        config: TestConfig
+        resultList: TestResultList, config: TestConfig
     ) {
         if (
             !isObjectWithExecute(config)
@@ -77,24 +126,35 @@ type TestResult = {
             throw ["TK_DebugTest_test - invalid config:", config];
         }
 
-        const testResult = createResultBase(config);
-        return testExecute({ config, result:testResult });
+        return testExecute({
+            config,
+            result: createResultBase(config),
+            resultList
+        });
     };
 
     const testExecute = function Test_testExecute(inputs: {
         config: TestConfig,
-        result: TestResult
+        result: TestResult,
+        resultList: TestResultList
     }) {
         const { result } = inputs;
         const startTime = Date.now();
         try {
             const returned = inputs.config.execute();
             if (returned instanceof Promise) {
-                return testWatchPromise({
-                    result, startTime, promise: returned
+                const promise = testWatchPromise({
+                    result,
+                    startTime,
+                    promise: returned,
+                    resultList: inputs.resultList
                 });
+                promise.then(function () {
+                    const index = inputs.resultList.indexOf(promise);
+                    inputs.resultList[index] = result;
+                });
+                return promise;
             }
-
         } catch (error) {
             result.errorMessage = error;
         }
@@ -105,17 +165,19 @@ type TestResult = {
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs: {
         result: TestResult,
         startTime: number,
-        promise: Promise<any>
+        promise: Promise<any>,
+        resultList: TestResultList
     }) {
-        const { result } = inputs;
         let resolver: any;
         const promise = <Promise<TestResult>>new Promise(function (resolve) {
             resolver = resolve;
         });
         const bound = {
+            promise: inputs.promise,
             resolver,
-            result,
-            startTime: inputs.startTime
+            result: inputs.result,
+            startTime: inputs.startTime,
+            resultList: inputs.resultList
         };
         inputs.promise.then(
             testPromiseSuccess.bind(null, bound),
@@ -124,7 +186,8 @@ type TestResult = {
         return promise;
     };
 
-    const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound:{
+    const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound: {
+        promise: Promise<TestResult>,
         result: TestResult,
         startTime: number,
         resolver: GenericFunction
@@ -134,13 +197,13 @@ type TestResult = {
     };
 
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(
-        bound:{
+        bound: {
             result: TestResult,
             startTime: number,
             resolver: GenericFunction
-        }, reason:any
+        }, reason: any
     ) {
-        const {result} = bound;
+        const { result } = bound;
         result.errorMessage = reason;
         result.time = Date.now() - bound.startTime;
         if (reason === undefined) {

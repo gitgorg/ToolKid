@@ -59,11 +59,11 @@ interface TK_DebugTest_file {
     };
 
     const logFailure = function TK_DebugTestFull_logFailure(
-        result: TestResult
+        summary: TestSummary, result: TestResult
     ) {
         console.warn(
             colorText("negative",
-                ">> failed test \"" + result.name + "\" for " + result.subject.name
+                ">> group \"" + summary.name + "\" failed test \"" + result.name + "\" for " + result.subject.name
             ),
             logFailureNice(result.errorMessage).map(shortenValue)
         );
@@ -164,20 +164,19 @@ interface TK_DebugTest_file {
     };
 
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
-        ToolKid.debug.test.clearSummaryState();
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
         const summary = ToolKid.debug.test.getSummary(function (summary) {
             // TODO: real test for .testFull
             summary.missingSuspects.delete(publicExports.testFull);
-            console.log(colorText("positive","\n>> testing done"
+            console.log(colorText("positive", "\n>> testing done"
                 + ((typeof inputs.title === "string")
-                ? " for " + inputs.title
-                : "")
+                    ? " for " + inputs.title
+                    : "")
             ));
             logMissingSuspects(summary);
-            summary.failures.forEach(logFailure);
+            summary.failures.forEach(logFailure.bind(null, summary));
             logFazit(summary);
         });
         if (summary.pending.size !== 0) {

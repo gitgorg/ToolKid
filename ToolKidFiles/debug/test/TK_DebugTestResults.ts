@@ -2,12 +2,6 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
-    // result
-    registerTestResult(
-        ...results: (TestResult | Promise<TestResult>)[]
-    ): void,
-
-    // suspect
     registerTestSuspect(
         ...inputs: any[]
     ): void,
@@ -16,20 +10,13 @@ interface TK_DebugTest_file {
         mode: "allMethods"
     }): void,
 
-    // summary
     getSummary(
         callback?: (summary: TestSummary) => void
-    ): TestSummary,
-    clearSummaryState(inputs?: {
-        clearSuspects?: true
-    }): void,
-    saveSummaryState(): number,
-    loadSummaryState(
-        stateID: number
-    ): void
+    ): TestSummary
 }
 
 type TestSummary = {
+    name: string,
     testCount: number,
     timeTotal: number,
     failures: TestResult[],
@@ -50,20 +37,17 @@ type TestSummary = {
 
 
     let timeStart = Date.now();
-    let testResults = <(TestResult | Promise<TestResult>)[]>[];
-    let testSuspects = <Set<any>>new Set();
 
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     require(groupPath);
-    let testGroup = ToolKid.debug.test.createTestGroup();
 
 
 
     const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(
         testResult: TestResult
     ) {
-        const {errorMessage} = testResult;
+        const { errorMessage } = testResult;
         if (
             !(errorMessage instanceof Array)
             || errorMessage[0] !== "string"
@@ -78,8 +62,8 @@ type TestSummary = {
             path = ["value", ...difference.path].join(".");
             if (difference.type === "different") {
                 return [
-                    path + " should have been:",difference.shouldBe,
-                    "but instead is:",difference.value
+                    path + " should have been:", difference.shouldBe,
+                    "but instead is:", difference.value
                 ];
             } else if (difference.type === "tooDeep") {
                 return [
@@ -87,12 +71,12 @@ type TestSummary = {
                 ];
             } else if (difference.type === "invalid") {
                 return [
-                    path + " did not pass test:",difference.shouldBe,
-                    "with value:",difference.value
+                    path + " did not pass test:", difference.shouldBe,
+                    "with value:", difference.value
                 ];
             } else if (difference.type === "unwanted") {
                 return [
-                    "unwanted property "+path + ":",difference.value
+                    "unwanted property " + path + ":", difference.value
                 ];
             }
             return difference;
@@ -122,15 +106,6 @@ type TestSummary = {
         });
     };
 
-    publicExports.clearSummaryState = function TK_DebugTestResults_clearSummaryState(inputs = {}) {
-        timeStart = Date.now();
-        testGroup = ToolKid.debug.test.createTestGroup();
-        testResults = [];
-        if (inputs.clearSuspects === true) {
-            testSuspects = new Set();
-        }
-    };
-
     const getAllMethods = function TK_DebugTestResults_getAllMethods(data: any) {
         const result = <any[]>[];
         if (typeof data === "function") {
@@ -147,30 +122,55 @@ type TestSummary = {
 
     let pendingSummaries = <TestSummary[]>[];
     publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
-        const caller = (typeof callback === "function")
-            ? function (results:TestGroupResults) {
-                callback(createSummary(results));
-            }
-            : undefined;
-        return createSummary(testGroup.getResults(caller));
+        const resultGroup = ToolKid.debug.test.getResultGroup();
+        const summary = createSummary(resultGroup);
+        if (typeof callback !== "function") {
+            return summary;
+        }
+
+        if (summary.pending.size === 0) {
+            callback(summary);
+            return summary;
+        }
+
+        const boundData = {
+            pendingCount: summary.pending.size,
+            callback
+        };
+        summary.pending.forEach(function TK_DebugTestResults_watchPromise(
+            promise
+        ) {
+            promise.then(summaryCallback.bind(null,boundData));
+        });
+        return summary;
     };
 
-    const createSummary = function (
-        results:TestGroupResults
+    const summaryCallback = function TK_DebugTestResults_summaryCallback(
+        boundData:Dictionary
     ) {
-        const summary:TestSummary = {
-            testCount: results.successes.length + results.failures.length + results.pendingResults.length,
-            timeTotal: results.timeTotal,
-            failures: results.failures,
+        boundData.pendingCount -= 1;
+        if (boundData.pendingCount === 0) {
+            publicExports.getSummary(boundData.callback);
+        }
+    }
+
+    const createSummary = function (resultGroup: {
+        name: string,
+        results: TestResultList
+    }) {
+        const resultGroupName = resultGroup.name;
+        const summary: TestSummary = {
+            name: resultGroupName,
+            testCount: 0,
+            timeTotal: 100, //results.timeTotal,
+            failures: [],
             successes: new Map(),
-            pending: new Set(results.pendingResults),
-            missingSuspects: new Set(results.suspects)
+            pending: new Set(),
+            missingSuspects: suspects.get(resultGroupName) || new Set()
         };
-        results.successes.forEach(function (testResult) {
-            summaryRegisterSuccess({
-                list: summary.successes, testResult
-            });
-        });
+        resultGroup.results.forEach(
+            summaryRegisterResult.bind(null,summary)
+        );
         return summary;
     };
 
@@ -200,11 +200,6 @@ type TestSummary = {
         };
     };
 
-    publicExports.loadSummaryState = function TK_DebugTestResults_loadSummaryState(stateID) {
-        const state = summaryHistory[stateID];
-        ({ timeStart, testResults, testSuspects, testGroup } = state);
-    };
-
     const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs: any) {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
@@ -218,16 +213,18 @@ type TestSummary = {
     ) {
         const { summary } = bound;
         summary.pending.delete(bound.promise);
+        summary.testCount -= 1;
         summaryRegisterResult(summary, result);
         if (summary.pending.size === 0) {
             getSummaryFinal(summary);
         }
     };
 
-    const summaryRegisterResult = function TK_DebugTest_summaryRegisterResults(
+    const summaryRegisterResult = function TK_DebugTest_summaryRegisterResult(
         summary: TestSummary,
         testResult: TestResult | Promise<TestResult>
     ) {
+        summary.testCount += 1;
         if (testResult instanceof Promise) {
             summary.pending.add(testResult);
             const handleResolve = summaryHandlePromise.bind(null, {
@@ -239,16 +236,14 @@ type TestSummary = {
         }
 
         summary.missingSuspects.delete(testResult.subject);
-        if (testResult.errorMessage !== undefined) {
-            summary.failures.push(
-                beautifyDifferences(testResult)
-            );
-            return false;
-        } else {
+        if (testResult.errorMessage === undefined) {
             summaryRegisterSuccess({
                 list: summary.successes, testResult
             });
-            return true;
+        } else {
+            summary.failures.push(
+                beautifyDifferences(testResult)
+            );
         }
     };
 
@@ -259,11 +254,11 @@ type TestSummary = {
         testResult: TestResult
     }) {
         const { testResult } = inputs;
-        const subjectDetails = inputs.list.get(testResult.subject);
         const data = {
             name: testResult.name,
             time: testResult.time
         };
+        const subjectDetails = inputs.list.get(testResult.subject);
         if (subjectDetails === undefined) {
             inputs.list.set(testResult.subject, [data]);
         } else {
@@ -271,41 +266,19 @@ type TestSummary = {
         }
     };
 
-    publicExports.registerTestResult = function TK_DebugTestResults_registerTestResult(
-        ...results
-    ) {
-        pendingSummaries.forEach(registerResultsDelayed.bind(null, results));
-        testResults.push(...results);
-        testGroup.registerResults(...results);
-    };
-
-    const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed(
-        results: any[], summary: TestSummary
-    ) {
-        results.forEach(summaryRegisterResult.bind(null, summary));
-    };
-
-    publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {
-        testGroup.registerSuspects(...inputs);
+    const suspects = new Map();
+    publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspect(...inputs) {
+        const testeGroupName = ToolKid.debug.test.getResultGroup().name;
+        let currentSuspects = suspects.get(testeGroupName);
+        if (currentSuspects === undefined) {
+            currentSuspects = new Set();
+            suspects.set(testeGroupName, currentSuspects);
+        }
         if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
             inputs = getSuspects(inputs[0]);
         }
-        inputs.forEach(testSuspects.add.bind(testSuspects));
+        inputs.forEach(currentSuspects.add.bind(currentSuspects));
     };
-
-    const summaryHistory = <Dictionary[]>[];
-    publicExports.saveSummaryState = function TK_DebugTestResults_saveSummaryState() {
-        const state = {
-            timeStart,
-            testResults: testResults.slice(0),
-            testSuspects: new Set(testSuspects),
-            testGroup
-        };
-        summaryHistory.push(state);
-        return summaryHistory.length - 1;
-    };
-
-
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

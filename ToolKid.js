@@ -542,6 +542,9 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
 
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
+    const resultGroups = new Map([["default", []]]);
+    let currentResultGroupName = "default";
+    let currentResultGroup = resultGroups.get("default");
     const createResultBase = function TK_DebugTest_createResultBase(config) {
         return {
             subject: config.subject,
@@ -562,21 +565,52 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             return typeof subject === "string" && subject.length !== 0;
         }
     };
+    publicExports.getResultGroup = function TK_DebugTest_getResultGroup(name) {
+        if (typeof name !== "string") {
+            return {
+                name: currentResultGroupName,
+                results: currentResultGroup
+            };
+        }
+        const results = resultGroups.get(name);
+        return (results === undefined)
+            ? undefined
+            : { name, results };
+    };
+    publicExports.selectResultGroup = function TK_DebugTest_selectTestGroup(name) {
+        if (typeof name !== "string" || name.length === 0) {
+            throw ["TK_DebugTest_selectTestGroup - invalid name:", name];
+        }
+        const found = resultGroups.get(name);
+        if (found === undefined) {
+            currentResultGroup = [];
+            resultGroups.set(name, currentResultGroup);
+        }
+        else {
+            currentResultGroup = found;
+        }
+        currentResultGroupName = name;
+        return currentResultGroup;
+    };
     publicExports.test = function TK_DebugTest_testInterface(...inputs) {
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }
-        const testResults = inputs.map(testSingle);
-        ToolKid.debug.test.registerTestResult(...testResults);
+        const testResults = inputs.map(testSingle.bind(null, currentResultGroup));
+        currentResultGroup.push(...testResults);
+        // ToolKid.debug.test.registerTestResult(...testResults);
         return testResults;
     };
-    const testSingle = function TK_DebugTest_testSingle(config) {
+    const testSingle = function TK_DebugTest_testSingle(resultList, config) {
         if (!isObjectWithExecute(config)
             || !isValidSubject(config.subject)) {
             throw ["TK_DebugTest_test - invalid config:", config];
         }
-        const testResult = createResultBase(config);
-        return testExecute({ config, result: testResult });
+        return testExecute({
+            config,
+            result: createResultBase(config),
+            resultList
+        });
     };
     const testExecute = function Test_testExecute(inputs) {
         const { result } = inputs;
@@ -584,9 +618,17 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         try {
             const returned = inputs.config.execute();
             if (returned instanceof Promise) {
-                return testWatchPromise({
-                    result, startTime, promise: returned
+                const promise = testWatchPromise({
+                    result,
+                    startTime,
+                    promise: returned,
+                    resultList: inputs.resultList
                 });
+                promise.then(function () {
+                    const index = inputs.resultList.indexOf(promise);
+                    inputs.resultList[index] = result;
+                });
+                return promise;
             }
         }
         catch (error) {
@@ -596,15 +638,16 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         return Object.freeze(result);
     };
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs) {
-        const { result } = inputs;
         let resolver;
         const promise = new Promise(function (resolve) {
             resolver = resolve;
         });
         const bound = {
+            promise: inputs.promise,
             resolver,
-            result,
-            startTime: inputs.startTime
+            result: inputs.result,
+            startTime: inputs.startTime,
+            resultList: inputs.resultList
         };
         inputs.promise.then(testPromiseSuccess.bind(null, bound), testPromiseFailure.bind(null, bound));
         return promise;
@@ -898,8 +941,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(failure) {
         return failure[failure.length - 2] === "difference:";
     };
-    const logFailure = function TK_DebugTestFull_logFailure(result) {
-        console.warn(colorText("negative", ">> failed test \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
+    const logFailure = function TK_DebugTestFull_logFailure(summary, result) {
+        console.warn(colorText("negative", ">> group \"" + summary.name + "\" failed test \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
@@ -974,7 +1017,6 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         return value;
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
-        ToolKid.debug.test.clearSummaryState();
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
@@ -986,7 +1028,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
                     ? " for " + inputs.title
                     : "")));
             logMissingSuspects(summary);
-            summary.failures.forEach(logFailure);
+            summary.failures.forEach(logFailure.bind(null, summary));
             logFazit(summary);
         });
         if (summary.pending.size !== 0) {
@@ -1104,11 +1146,8 @@ registeredFiles["TK_DebugTestGroup.js"] = module.exports;
 (function TK_DebugTestResults_init() {
     const groupPath = require("path").resolve(__dirname, "TK_DebugTestGroup.js");
     let timeStart = Date.now();
-    let testResults = [];
-    let testSuspects = new Set();
     const publicExports = module.exports = {};
     require(groupPath);
-    let testGroup = ToolKid.debug.test.createTestGroup();
     const beautifyDifferences = function TK_DebugTestResults_beautifyDifferences(testResult) {
         const { errorMessage } = testResult;
         if (!(errorMessage instanceof Array)
@@ -1168,14 +1207,6 @@ registeredFiles["TK_DebugTestGroup.js"] = module.exports;
             errorMessage: [testResult.errorMessage[0], ...subMessages]
         });
     };
-    publicExports.clearSummaryState = function TK_DebugTestResults_clearSummaryState(inputs = {}) {
-        timeStart = Date.now();
-        testGroup = ToolKid.debug.test.createTestGroup();
-        testResults = [];
-        if (inputs.clearSuspects === true) {
-            testSuspects = new Set();
-        }
-    };
     const getAllMethods = function TK_DebugTestResults_getAllMethods(data) {
         const result = [];
         if (typeof data === "function") {
@@ -1191,27 +1222,42 @@ registeredFiles["TK_DebugTestGroup.js"] = module.exports;
     };
     let pendingSummaries = [];
     publicExports.getSummary = function TK_DebugTestResults_getSummary(callback) {
-        const caller = (typeof callback === "function")
-            ? function (results) {
-                callback(createSummary(results));
-            }
-            : undefined;
-        return createSummary(testGroup.getResults(caller));
-    };
-    const createSummary = function (results) {
-        const summary = {
-            testCount: results.successes.length + results.failures.length + results.pendingResults.length,
-            timeTotal: results.timeTotal,
-            failures: results.failures,
-            successes: new Map(),
-            pending: new Set(results.pendingResults),
-            missingSuspects: new Set(results.suspects)
+        const resultGroup = ToolKid.debug.test.getResultGroup();
+        const summary = createSummary(resultGroup);
+        if (typeof callback !== "function") {
+            return summary;
+        }
+        if (summary.pending.size === 0) {
+            callback(summary);
+            return summary;
+        }
+        const boundData = {
+            pendingCount: summary.pending.size,
+            callback
         };
-        results.successes.forEach(function (testResult) {
-            summaryRegisterSuccess({
-                list: summary.successes, testResult
-            });
+        summary.pending.forEach(function TK_DebugTestResults_watchPromise(promise) {
+            promise.then(summaryCallback.bind(null, boundData));
         });
+        return summary;
+    };
+    const summaryCallback = function TK_DebugTestResults_summaryCallback(boundData) {
+        boundData.pendingCount -= 1;
+        if (boundData.pendingCount === 0) {
+            publicExports.getSummary(boundData.callback);
+        }
+    };
+    const createSummary = function (resultGroup) {
+        const resultGroupName = resultGroup.name;
+        const summary = {
+            name: resultGroupName,
+            testCount: 0,
+            timeTotal: 100, //results.timeTotal,
+            failures: [],
+            successes: new Map(),
+            pending: new Set(),
+            missingSuspects: suspects.get(resultGroupName) || new Set()
+        };
+        resultGroup.results.forEach(summaryRegisterResult.bind(null, summary));
         return summary;
     };
     const getSummaryFinal = function TK_DebugTestResults_getSummaryFinal(summary) {
@@ -1235,22 +1281,20 @@ registeredFiles["TK_DebugTestGroup.js"] = module.exports;
         }
         ;
     };
-    publicExports.loadSummaryState = function TK_DebugTestResults_loadSummaryState(stateID) {
-        const state = summaryHistory[stateID];
-        ({ timeStart, testResults, testSuspects, testGroup } = state);
-    };
     const isSuspectConfig = function TK_DebugTestResults_issuspectConfig(inputs) {
         return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
     const summaryHandlePromise = function TK_DebugTestResults_summaryHandlePromise(bound, result) {
         const { summary } = bound;
         summary.pending.delete(bound.promise);
+        summary.testCount -= 1;
         summaryRegisterResult(summary, result);
         if (summary.pending.size === 0) {
             getSummaryFinal(summary);
         }
     };
-    const summaryRegisterResult = function TK_DebugTest_summaryRegisterResults(summary, testResult) {
+    const summaryRegisterResult = function TK_DebugTest_summaryRegisterResult(summary, testResult) {
+        summary.testCount += 1;
         if (testResult instanceof Promise) {
             summary.pending.add(testResult);
             const handleResolve = summaryHandlePromise.bind(null, {
@@ -1261,24 +1305,22 @@ registeredFiles["TK_DebugTestGroup.js"] = module.exports;
             return;
         }
         summary.missingSuspects.delete(testResult.subject);
-        if (testResult.errorMessage !== undefined) {
-            summary.failures.push(beautifyDifferences(testResult));
-            return false;
-        }
-        else {
+        if (testResult.errorMessage === undefined) {
             summaryRegisterSuccess({
                 list: summary.successes, testResult
             });
-            return true;
+        }
+        else {
+            summary.failures.push(beautifyDifferences(testResult));
         }
     };
     const summaryRegisterSuccess = function TK_DebugTest_summaryRegisterSuccess(inputs) {
         const { testResult } = inputs;
-        const subjectDetails = inputs.list.get(testResult.subject);
         const data = {
             name: testResult.name,
             time: testResult.time
         };
+        const subjectDetails = inputs.list.get(testResult.subject);
         if (subjectDetails === undefined) {
             inputs.list.set(testResult.subject, [data]);
         }
@@ -1286,31 +1328,18 @@ registeredFiles["TK_DebugTestGroup.js"] = module.exports;
             subjectDetails.push(data);
         }
     };
-    publicExports.registerTestResult = function TK_DebugTestResults_registerTestResult(...results) {
-        pendingSummaries.forEach(registerResultsDelayed.bind(null, results));
-        testResults.push(...results);
-        testGroup.registerResults(...results);
-    };
-    const registerResultsDelayed = function TK_DebugTestResults_registerResultsDelayed(results, summary) {
-        results.forEach(summaryRegisterResult.bind(null, summary));
-    };
-    publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspectLoop(...inputs) {
-        testGroup.registerSuspects(...inputs);
+    const suspects = new Map();
+    publicExports.registerTestSuspect = function TK_DebugTestResults_registerTestSuspect(...inputs) {
+        const testeGroupName = ToolKid.debug.test.getResultGroup().name;
+        let currentSuspects = suspects.get(testeGroupName);
+        if (currentSuspects === undefined) {
+            currentSuspects = new Set();
+            suspects.set(testeGroupName, currentSuspects);
+        }
         if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
             inputs = getSuspects(inputs[0]);
         }
-        inputs.forEach(testSuspects.add.bind(testSuspects));
-    };
-    const summaryHistory = [];
-    publicExports.saveSummaryState = function TK_DebugTestResults_saveSummaryState() {
-        const state = {
-            timeStart,
-            testResults: testResults.slice(0),
-            testSuspects: new Set(testSuspects),
-            testGroup
-        };
-        summaryHistory.push(state);
-        return summaryHistory.length - 1;
+        inputs.forEach(currentSuspects.add.bind(currentSuspects));
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

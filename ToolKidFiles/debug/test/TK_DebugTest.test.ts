@@ -6,7 +6,7 @@
 
 
 
-    const { test, assertEquality, saveSummaryState, loadSummaryState } = ToolKid.debug.test;
+    const { test, assertEquality, getResultGroup, selectResultGroup } = ToolKid.debug.test;
 
     //setup helping functions
     const createPromise = function () {
@@ -63,7 +63,9 @@
     }).catch(throwError);
 
     //failure with promise
-    const stateID = saveSummaryState();
+    // const stateID = saveSummaryState();
+    const resultGroup = getResultGroup();
+    selectResultGroup("TK_Debug");
     const promiseFailure = createPromise();
     testPromise = <Promise<TestResult>>test({
         subject: test,
@@ -80,7 +82,8 @@
             }
         });
     }).catch(throwError);
-    loadSummaryState(stateID);
+    selectResultGroup(resultGroup.name);
+    // loadSummaryState(stateID);
 
 
 
