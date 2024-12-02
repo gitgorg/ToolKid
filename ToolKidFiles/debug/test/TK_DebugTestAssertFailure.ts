@@ -4,9 +4,11 @@ interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     assertFailure(...inputs: {
         name: string,
-        execute: Promise<any> | {(
-            ...inputs: any[]
-        ): any | Promise<any>},
+        execute: Promise<any> | {
+            (
+                ...inputs: any[]
+            ): any | Promise<any>
+        },
         withInputs?: any | any[],
         shouldThrow?: any | ErrorConstructor,
         toleranceDepth?: number
@@ -16,7 +18,7 @@ interface TK_DebugTest_file {
 
 
 (function TK_DebugTestAssertFailure_init() {
-    const {areEqual} = ToolKid.dataTypes.checks;
+    const { areEqual } = ToolKid.dataTypes.checks;
 
     const publicExports = module.exports = <TK_DebugTest_file>{};
 

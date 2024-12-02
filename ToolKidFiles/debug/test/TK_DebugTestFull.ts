@@ -7,7 +7,7 @@ interface TK_DebugTest_file {
         include?: string | string[],
         exclude?: string | string[],
         title?: string
-        //suspect?: any | any[]
+        suspects?: any | any[]
     }): void
 }
 
@@ -63,7 +63,7 @@ interface TK_DebugTest_file {
     ) {
         console.warn(
             colorText("negative",
-                ">> group \"" + summary.name + "\" failed test \"" + result.name + "\" for " + result.subject.name
+                "\n>> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name
             ),
             logFailureNice(result.errorMessage).map(shortenValue)
         );
@@ -100,7 +100,7 @@ interface TK_DebugTest_file {
         };
         const message =
             colorText((counts.failures === 0) ? "positive" : "negative",
-                ">> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
+                "\n>> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
             )
             + " / "
             + colorText("positive",
@@ -114,7 +114,7 @@ interface TK_DebugTest_file {
             + colorText("positive",
                 summary.timeTotal + " milliseconds"
             );
-        console.warn(message);
+        console.log(message);
     };
 
     const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary: TestSummary) {
@@ -164,23 +164,24 @@ interface TK_DebugTest_file {
     };
 
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
+        if (typeof inputs.title === "string") {
+            ToolKid.debug.test.switchResultGroup(inputs.title);
+        }
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
-        const summary = ToolKid.debug.test.getSummary(function (summary) {
-            // TODO: real test for .testFull
-            summary.missingSuspects.delete(publicExports.testFull);
-            console.log(colorText("positive", "\n>> testing done"
-                + ((typeof inputs.title === "string")
-                    ? " for " + inputs.title
-                    : "")
-            ));
-            logMissingSuspects(summary);
-            summary.failures.forEach(logFailure.bind(null, summary));
-            logFazit(summary);
+        const summary = ToolKid.debug.test.getSummary({
+            suspects: inputs.suspects,
+            callback:function (summary) {
+                // TODO: real test for .testFull
+                summary.missingSuspects.delete(publicExports.testFull);
+                logMissingSuspects(summary);
+                summary.failures.forEach(logFailure.bind(null, summary));
+                logFazit(summary);
+            }
         });
         if (summary.pending.size !== 0) {
-            console.log(">> " + summary.pending.size + " tests pending");
+            console.log("\n>> " + summary.name + " >> " + summary.pending.size + " tests pending");
         }
     };
 

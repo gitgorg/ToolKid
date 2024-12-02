@@ -32,7 +32,7 @@ interface TK_DebugTest_file {
         }
         const returned = ToolKid.dataTypes.checks.areEqual(settings);
         if (returned !== true) {
-            throw ["~ " + nameAndValue[0] + " ~ value did not meet expectations:",...returned];
+            throw ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
         }
     };
 

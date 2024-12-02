@@ -6,7 +6,7 @@
 
 
 
-    const { test, assertEquality, getResultGroup, SWITCH_RESULT_GROUP } = ToolKid.debug.test;
+    const { test, assertEquality, getResultGroup, switchResultGroup } = ToolKid.debug.test;
 
     //setup helping functions
     const createPromise = function () {
@@ -82,7 +82,7 @@
         }
     });
 
-    SWITCH_RESULT_GROUP("TK_DebugTest");
+    switchResultGroup("TK_DebugTest");
 
     test({
         subject: getResultGroup,
@@ -108,11 +108,11 @@
             return failingPromise;
         }
     })[0];
-    
-    SWITCH_RESULT_GROUP(currentResultGroup.name);
+
+    switchResultGroup(currentResultGroup.name);
 
     test({
-        subject: SWITCH_RESULT_GROUP,
+        subject: switchResultGroup,
         execute: function resultGroupSwitchBack() {
             assertEquality({
                 "resultGroup": {
@@ -126,7 +126,7 @@
     const expectingFailure = createPromise();
     test({
         subject: test,
-        execute: function handleFailedPromise () {
+        execute: function handleFailedPromise() {
             promisedResult.then(function (result) {
                 assertEquality({
                     "testResult": {

@@ -3,7 +3,7 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     condition(
-        timeLimit?:number
+        timeLimit?: number
     ): Condition,
     condition(inputs: {
         timeLimit: number,
@@ -80,7 +80,7 @@ type Condition = Promise<any> & {
         return result;
     };
 
-    const conditionInputs = function TK_DebugTestCondition_conditionInputs (inputs:any) {
+    const conditionInputs = function TK_DebugTestCondition_conditionInputs(inputs: any) {
         if (typeof inputs === "number") {
             return {
                 timeLimit: inputs,
@@ -91,7 +91,7 @@ type Condition = Promise<any> & {
         if (inputs.overTimeMessage === undefined) {
             inputs.overTimeMessage = "timeout";
         }
-        return <{timeLimit:number, overtimeMessage: string}>inputs;
+        return <{ timeLimit: number, overtimeMessage: string }>inputs;
     };
 
     const watchPromiseDuration = function TK_DEBUG_TestAssertion_watchPromiseDuration(inputs: {

@@ -2,17 +2,12 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
-    registerTestSuspect(
-        ...inputs: any[]
-    ): void,
-    registerTestSuspect(inputs: {
-        suspect: any | any[],
-        mode: "allMethods"
-    }): void,
-
-    getSummary(
-        callback?: (summary: TestSummary) => void
-    ): TestSummary
+    getSummary(inputs?:{
+        suspects?: any[],
+        callback?(
+            summary: TestSummary
+        ): void
+    }): TestSummary
 }
 
 type TestSummary = {
@@ -114,9 +109,27 @@ type TestSummary = {
     };
 
     let pendingSummaries = <TestSummary[]>[];
-    publicExports.getSummary = function TK_DebugTestSummary_getSummary(callback) {
-        const resultGroup = ToolKid.debug.test.getResultGroup();
-        const summary = createSummary(resultGroup);
+    publicExports.getSummary = function TK_DebugTestSummary_getSummary(inputs={}) {
+        const {callback} = inputs;
+        let missingSuspects = new Set();
+        if (inputs.suspects !== undefined) {
+            let {suspects} = inputs;
+            if (!(suspects instanceof Array)) {
+                suspects = [suspects];
+            }
+            suspects.forEach(function(suspect:any) {
+                const methods = getAllMethods(suspect);
+                if (methods.length === 0) {
+                    missingSuspects.add(suspect);
+                } else {
+                    methods.forEach(missingSuspects.add.bind(missingSuspects));
+                }
+            });
+        }
+        const summary = createSummary(Object.assign({},
+            ToolKid.debug.test.getResultGroup(),
+            {missingSuspects}
+        ));
         if (typeof callback !== "function") {
             return summary;
         }
@@ -127,31 +140,32 @@ type TestSummary = {
         }
 
         const boundData = {
-            pendingCount: summary.pending.size,
-            callback
+            inputs,
+            pendingCount: summary.pending.size
         };
         summary.pending.forEach(function TK_DebugTestSummary_watchPromise(
             promise
         ) {
-            promise.then(summaryCallback.bind(null,boundData));
+            promise.then(summaryCallback.bind(null, boundData));
         });
         return summary;
     };
 
     const summaryCallback = function TK_DebugTestSummary_summaryCallback(
-        boundData:Dictionary
+        boundData: Dictionary
     ) {
         boundData.pendingCount -= 1;
         if (boundData.pendingCount === 0) {
-            publicExports.getSummary(boundData.callback);
+            publicExports.getSummary(boundData.inputs);
         }
     }
 
-    const createSummary = function (resultGroup: {
+    const createSummary = function (inputs: {
         name: string,
-        results: TestResultList
+        results: TestResultList,
+        missingSuspects: Set<any>
     }) {
-        const resultGroupName = resultGroup.name;
+        const resultGroupName = inputs.name;
         const summary: TestSummary = {
             name: resultGroupName,
             testCount: 0,
@@ -159,10 +173,10 @@ type TestSummary = {
             failures: [],
             successes: new Map(),
             pending: new Set(),
-            missingSuspects: suspects.get(resultGroupName) || new Set()
+            missingSuspects: inputs.missingSuspects
         };
-        resultGroup.results.forEach(
-            summaryRegisterResult.bind(null,summary)
+        inputs.results.forEach(
+            summaryRegisterResult.bind(null, summary)
         );
         return summary;
     };
@@ -180,21 +194,6 @@ type TestSummary = {
             delete summary.callback;
             callback(summary);
         }
-    };
-
-    const getSuspects = function TK_DebugTestSummary_getSuspects(inputs: {
-        suspect: any,
-        mode: string
-    }) {
-        if (inputs.mode === "allMethods") {
-            return getAllMethods(inputs.suspect);
-        } else {
-            return inputs.suspect
-        };
-    };
-
-    const isSuspectConfig = function TK_DebugTestSummary_issuspectConfig(inputs: any) {
-        return typeof inputs === "object" && inputs.suspect !== undefined && typeof inputs.mode === "string";
     };
 
     const summaryHandlePromise = function TK_DebugTestSummary_summaryHandlePromise(
@@ -257,20 +256,6 @@ type TestSummary = {
         } else {
             subjectDetails.push(data);
         }
-    };
-
-    const suspects = new Map();
-    publicExports.registerTestSuspect = function TK_DebugTestSummary_registerTestSuspect(...inputs) {
-        const testeGroupName = ToolKid.debug.test.getResultGroup().name;
-        let currentSuspects = suspects.get(testeGroupName);
-        if (currentSuspects === undefined) {
-            currentSuspects = new Set();
-            suspects.set(testeGroupName, currentSuspects);
-        }
-        if (inputs.length === 1 && isSuspectConfig(inputs[0])) {
-            inputs = getSuspects(inputs[0]);
-        }
-        inputs.forEach(currentSuspects.add.bind(currentSuspects));
     };
 
     Object.freeze(publicExports);

@@ -25,7 +25,7 @@
 
 
 
-    const isBigger5 = function (value:any) {
+    const isBigger5 = function (value: any) {
         return value > 5
     };
     test({
@@ -60,7 +60,7 @@
         subject: shouldPass,
         execute: function fail_shouldPassMulti() {
             assertFailure({
-                name:"fail_shouldPassMulti",
+                name: "fail_shouldPassMulti",
                 execute: assertEquality,
                 withInputs: {
                     "fail_shouldPassMulti": {
@@ -113,11 +113,11 @@
                 }, "shouldPassAnyMatchSecond": {
                     value: "text",
                     shouldBe: shouldPassAny(isNumber, isString)
-                },  "shouldPassAnyStaticValue": {
+                }, "shouldPassAnyStaticValue": {
                     value: 20,
-                    shouldBe: shouldPassAny(10,20,30)
+                    shouldBe: shouldPassAny(10, 20, 30)
                 }, "shouldPassAnyMixedStaticValue": {
-                    value: shouldPassAny(0,isString)("0"),
+                    value: shouldPassAny(0, isString)("0"),
                     shouldBe: true
                 }
             });
@@ -130,15 +130,15 @@
                     value: shouldPassAny(isNumber, isString)(true),
                     shouldBe: false
                 }, "fail_shouldPassAnyWrongStaticValue": {
-                    value: shouldPassAny(10,20,30)(0),
+                    value: shouldPassAny(10, 20, 30)(0),
                     shouldBe: false
                 }, "fail_shouldPassAnyMixedStaticValue": {
-                    value: shouldPassAny(isString,undefined,NaN)(null),
+                    value: shouldPassAny(isString, undefined, NaN)(null),
                     shouldBe: false
                 }
             });
             assertFailure({
-                name:"fail_shouldPassAnyToFewChecks",
+                name: "fail_shouldPassAnyToFewChecks",
                 execute: shouldPassAny,
                 withInputs: isNumber
             });

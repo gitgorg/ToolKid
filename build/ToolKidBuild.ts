@@ -248,12 +248,13 @@ type ToolKidConfig = {
         config: ToolKidConfig
     ) {
         return {
+            title: "ToolKid",
             path: (typeof config.rootToolKidFiles === "string")
                 ? [config.rootToolKidFiles, config.rootLibraryFiles]
                 : [...config.rootToolKidFiles, config.rootLibraryFiles],
             include: ["*.test.js"],
             exclude: config.exclude.slice(1),
-            title: "ToolKid"
+            suspects: [ToolKid, Library.getTools()]
         }
     };
 
@@ -261,14 +262,6 @@ type ToolKidConfig = {
         config: ToolKidConfig
     ) {
         console.log(">> testing ToolKid");
-        ToolKid.debug.test.registerTestSuspect({
-            suspect: ToolKid,
-            mode: "allMethods"
-        });
-        ToolKid.debug.test.registerTestSuspect({
-            suspect: Library.getTools(),
-            mode: "allMethods"
-        });
         ToolKid.debug.test.testFull(
             prepareInputsFullTest(config)
         );
