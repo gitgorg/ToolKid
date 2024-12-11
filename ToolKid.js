@@ -880,8 +880,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
-        positive: "\u001b[32m", //green
-        default: "\u001b[97m", //white
+        positive: "\u001b[32m",
+        default: "\u001b[97m",
         negative: "\u001b[31m" //red
     };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
@@ -1534,6 +1534,10 @@ registeredFiles["LibraryTools.js"] = module.exports;
 
 ToolKid.registerFunction({section:"nodeJS", functions: {
             loopFiles:module.exports.loopFiles
+        }})
+
+ToolKid.registerFunction({section:"DataTypes", subSection:"checks", functions: {
+            isArray:module.exports.isArray
         }})
 
 global.log = ToolKid.debug.terminal.logImportant;
