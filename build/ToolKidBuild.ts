@@ -97,7 +97,7 @@ type ToolKidConfig = {
         privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
             loopFiles:module.exports.loopFiles\n\
         }})\n\n";
-        privateData.combinedFile += "ToolKid.registerFunction({section:\"DataTypes\", subSection:\"checks\", functions: {\n\
+        privateData.combinedFile += "ToolKid.registerFunction({section:\"dataTypes\", subSection:\"checks\", functions: {\n\
             isArray:module.exports.isArray\n\
         }})\n\n";
 

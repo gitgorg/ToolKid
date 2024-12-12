@@ -1536,7 +1536,7 @@ ToolKid.registerFunction({section:"nodeJS", functions: {
             loopFiles:module.exports.loopFiles
         }})
 
-ToolKid.registerFunction({section:"DataTypes", subSection:"checks", functions: {
+ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
             isArray:module.exports.isArray
         }})
 
