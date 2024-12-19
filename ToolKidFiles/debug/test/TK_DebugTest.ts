@@ -4,7 +4,7 @@ interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     test(...configs: {
         subject: GenericFunction | string,
-        execute(): void | Promise<void>
+        execute(): any | Promise<any>
     }[]): (TestResult | Promise<TestResult>)[]
 }
 
