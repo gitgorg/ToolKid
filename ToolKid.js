@@ -1532,6 +1532,10 @@ ToolKid.registerFunction({section:"nodeJS", functions: {
             loopFiles:module.exports.loopFiles
         }})
 
+ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
+            isArray:module.exports.isArray
+        }})
+
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
 })();

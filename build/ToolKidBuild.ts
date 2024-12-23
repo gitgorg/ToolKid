@@ -65,6 +65,7 @@ type ToolKidConfig = {
                 isArray: LibraryTools.isArray
             }
         });
+
         LibraryTools.loopFiles({
             path: config.rootToolKidFiles,
             include: config.include,
@@ -96,6 +97,9 @@ type ToolKidConfig = {
         appendFile(privateData, [Path.basename(toolsPath), toolsPath]);
         privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
             loopFiles:module.exports.loopFiles\n\
+        }})\n\n";
+        privateData.combinedFile += "ToolKid.registerFunction({section:\"dataTypes\", subSection:\"checks\", functions: {\n\
+            isArray:module.exports.isArray\n\
         }})\n\n";
 
         privateData.combinedFile += "global.log = ToolKid.debug.terminal.logImportant;\n";

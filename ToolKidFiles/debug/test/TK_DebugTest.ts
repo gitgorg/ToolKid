@@ -15,8 +15,8 @@ interface TK_DebugTest_file {
     ): TestResultList,
     test(...configs: {
         subject: GenericFunction | string,
-        execute(): void | Promise<void>
-    }[]): TestResultList
+        execute(): any | Promise<any>
+    }[]): (TestResult | Promise<TestResult>)[]
 }
 
 type TestResult = {
