@@ -2,7 +2,7 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
-    getSummary(inputs?:{
+    getSummary(inputs?: {
         suspects?: any[],
         callback?(
             summary: TestSummary
@@ -13,7 +13,6 @@ interface TK_DebugTest_file {
 type TestSummary = {
     name: string,
     testCount: number,
-    timeTotal: number,
     failures: TestResult[],
     successes: Map<any, {
         name: string,
@@ -21,14 +20,13 @@ type TestSummary = {
     }[]>,
     pending: Set<Promise<TestResult>>,
     missingSuspects: Set<any>,
+    testedSuspects: Set<any>,
     callback?: (summary: TestSummary) => void
 }
 
 
 
 (function TK_DebugTestSummary_init() {
-    let timeStart = Date.now();
-
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
 
@@ -94,41 +92,43 @@ type TestSummary = {
         });
     };
 
-    const getAllMethods = function TK_DebugTestSummary_getAllMethods(data: any) {
+    const getAllMethods = function TK_DebugTestSummary_getAllMethods(suspect: any) {
         const result = <any[]>[];
-        if (typeof data === "function") {
-            result[0] = data;
-        } else if (typeof data !== "object" || data === null) {
+        if (typeof suspect === "function") {
+            result[0] = suspect;
+        } else if (typeof suspect !== "object" || suspect === null) {
             return result;
         }
 
-        Object.values(data).forEach(function (value) {
+        Object.values(suspect).forEach(function (value) {
             result.push(...getAllMethods(value));
         });
         return result;
     };
 
+    const registerSuspect = function TK_DebugTestSummary_registerSuspect(
+        suspectList: Set<any>, suspect: any
+    ) {
+        const methods = getAllMethods(suspect);
+        if (methods.length === 0) {
+            suspectList.add(suspect);
+        } else {
+            methods.forEach(suspectList.add.bind(suspectList));
+        }
+    };
+
     let pendingSummaries = <TestSummary[]>[];
-    publicExports.getSummary = function TK_DebugTestSummary_getSummary(inputs={}) {
-        const {callback} = inputs;
+    publicExports.getSummary = function TK_DebugTestSummary_getSummary(
+        inputs = {}
+    ) {
+        const { suspects, callback } = inputs;
         let missingSuspects = new Set();
-        if (inputs.suspects !== undefined) {
-            let {suspects} = inputs;
-            if (!(suspects instanceof Array)) {
-                suspects = [suspects];
-            }
-            suspects.forEach(function(suspect:any) {
-                const methods = getAllMethods(suspect);
-                if (methods.length === 0) {
-                    missingSuspects.add(suspect);
-                } else {
-                    methods.forEach(missingSuspects.add.bind(missingSuspects));
-                }
-            });
+        if (suspects !== undefined) {
+            suspects.forEach(registerSuspect.bind(null, missingSuspects));
         }
         const summary = createSummary(Object.assign({},
             ToolKid.debug.test.getResultGroup(),
-            {missingSuspects}
+            { missingSuspects }
         ));
         if (typeof callback !== "function") {
             return summary;
@@ -169,11 +169,11 @@ type TestSummary = {
         const summary: TestSummary = {
             name: resultGroupName,
             testCount: 0,
-            timeTotal: 100, //results.timeTotal,
             failures: [],
             successes: new Map(),
             pending: new Set(),
-            missingSuspects: inputs.missingSuspects
+            missingSuspects: inputs.missingSuspects,
+            testedSuspects: new Set()
         };
         inputs.results.forEach(
             summaryRegisterResult.bind(null, summary)
@@ -188,7 +188,6 @@ type TestSummary = {
         if (pos !== -1) {
             pendingSummaries.splice(pos, 1);
         }
-        summary.timeTotal = Date.now() - timeStart;
         const { callback } = summary;
         if (typeof callback === "function") {
             delete summary.callback;
@@ -227,7 +226,7 @@ type TestSummary = {
             return;
         }
 
-        summary.missingSuspects.delete(testResult.subject);
+        removeSuspect(summary, testResult.subject)
         if (testResult.errorMessage === undefined) {
             summaryRegisterSuccess({
                 list: summary.successes, testResult
@@ -236,6 +235,33 @@ type TestSummary = {
             summary.failures.push(
                 beautifyDifferences(testResult)
             );
+        }
+    };
+
+    // TODO: find the duplicate for TK_nodeJS_writeFile and remove this
+    const removeSuspect = function TK_DebugTestSummary_removeSuspect(
+        summary: TestSummary, subject: any
+    ) {
+        if (summary.testedSuspects.has(subject)) {
+            return;
+        }
+
+        summary.testedSuspects.add(subject);
+        const { missingSuspects } = summary;
+        if (
+            missingSuspects.delete(subject) === false
+            && typeof subject === "function"
+        ) {
+            const { name } = subject;
+            missingSuspects.forEach(function TK_DebugTestSummary_removeSuspectFind(suspect) {
+                if (
+                    typeof suspect === "function"
+                    && suspect.name === name
+                    && suspect.toString() === subject.toString()
+                ) {
+                    summary.missingSuspects.delete(suspect);
+                }
+            })
         }
     };
 

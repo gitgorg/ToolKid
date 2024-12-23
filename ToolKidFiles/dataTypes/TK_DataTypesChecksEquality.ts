@@ -5,7 +5,7 @@ interface TK_DataTypesChecks_file {
     areEqual(
         value: any,
         shouldBe: any
-    ): true | EqualityDifference[],
+    ): true | EqualityDifference[]
     areEqual(inputs: {
         value: any,
         shouldBe: any,
@@ -24,68 +24,125 @@ type EqualityDifference = {
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
 
-    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(...inputs: any[]) {
-        if (inputs.length === 2) {
-            return assertEqualityLoose({
-                path: [], toleranceDepth: 1, value: inputs[0], shouldBe: inputs[1]
-            });
+    publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(inputs) {
+        if (arguments.length === 2) {
+            return assertEqualityLoose(
+                [], arguments[0], arguments[1],
+                1, false
+            );
         } else {
-            return assertEqualityLoose(Object.assign({
-                path: [], toleranceDepth: 1
-            }, inputs[0]));
+            return assertEqualityLoose(
+                [], inputs.value, inputs.shouldBe,
+                (typeof inputs.toleranceDepth === "number") ? inputs.toleranceDepth: 1,
+                inputs.allowAdditions === true
+            );
         }
     };
 
-    const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(inputs: {
-        value: any,
-        shouldBe: any,
-        toleranceDepth: number,
-        path: any[],
-        allowAdditions?: true
-    }): true | EqualityDifference[] {
-        const { value, shouldBe } = inputs;
+    const differentiators = {
+        set: function TK_DataTypesChecksEquality_diffSet(
+            path: any[], value: Set<any>, shouldBe: Set<any>
+        ) {
+            if (!(shouldBe instanceof Set)) {
+                return [<EqualityDifference>{
+                    type: "different", value, shouldBe, path
+                }];
+            }
+
+            const differences = <EqualityDifference[]>[];
+            shouldBe.forEach(function (entry) {
+                if (!value.has(entry)) {
+                    differences.push({
+                        type: "different",
+                        value: undefined,
+                        shouldBe: entry,
+                        path: [...path, entry]
+                    });
+                }
+            });
+            value.forEach(function (entry) {
+                if (!shouldBe.has(entry)) {
+                    differences.push({
+                        type: "unwanted",
+                        value: entry,
+                        path: [...path, entry]
+                    });
+                }
+            });
+            return differences.length === 0
+                ? true : differences;
+        }
+    };
+
+    const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(
+        path: any[], value: any, shouldBe: any,
+        toleranceDepth: number, allowAdditions: boolean
+    ): true | EqualityDifference[] {
         if (isIdentical(value, shouldBe)) {
             return true;
+        } else if (
+            typeof shouldBe === "function"
+            && shouldBe.valueChecks instanceof Array
+        ) {
+            if (shouldBe(value) === true) {
+                return true;
+            } else {
+                return [{ path, type: "invalid", value, shouldBe }];
+            }
+        } else if (toleranceDepth === 0) {
+            return [{ path, type: "tooDeep", value, shouldBe }];
         }
 
-        const simpleTestResult = isSimpleAndEqual(inputs);
+        const simpleTestResult = isSimpleAndEqual(value, shouldBe, toleranceDepth);
         if (simpleTestResult === true) {
             return true;
         } else if (simpleTestResult !== false) {
-            simpleTestResult.path = inputs.path;
+            simpleTestResult.path = path;
             return [simpleTestResult];
         }
 
-        const toleranceDepth = inputs.toleranceDepth - 1;
-        const additionalKeys = new Set(getKeys(value));
+        toleranceDepth -= 1;
+        if (value instanceof Set) {
+            return differentiators.set(path, value, shouldBe);
+        }
+
         let reader = readProperty.basic;
         if (shouldBe instanceof Map) {
             reader = readProperty.Map;
         } else if (shouldBe instanceof Set) {
             reader = readProperty.Set;
         }
+        return equalLoop(
+            path, value, shouldBe,
+            toleranceDepth, allowAdditions,
+            reader
+        );
+    };
+
+    const equalLoop = function (
+        path: any[], value: any, shouldBe: any,
+        toleranceDepth: number, allowAdditions: boolean,
+        reader: { (container: any, key: any): any }
+    ) {
+        const additionalKeys = new Set(getKeys(value));
         let differences = <EqualityDifference[]>[];
         let returned: true | EqualityDifference[];
         getKeys(shouldBe).forEach(function (key) {
             additionalKeys.delete(key);
-            returned = assertEqualityLoose(Object.assign(
-                {}, inputs, {
-                path: inputs.path.concat(key),
-                value: reader(value, key),
-                shouldBe: reader(shouldBe, key),
-                toleranceDepth
-            }
-            ));
+            returned = assertEqualityLoose(
+                path.concat(key), reader(value, key), reader(shouldBe, key),
+                toleranceDepth, allowAdditions
+            );
             if (returned !== true) {
                 differences.push(...returned);
             }
         });
-        if (additionalKeys.size !== 0 && inputs.allowAdditions !== true) {
+        if (additionalKeys.size !== 0 && allowAdditions === false) {
             additionalKeys.forEach(function (key) {
                 returned = reader(value, key);
                 if (returned !== undefined) {
                     differences.push({
-                        path: inputs.path.concat(key),
+                        path: path.concat(key),
                         type: "unwanted",
                         value: returned
                     });
@@ -134,26 +191,14 @@ type EqualityDifference = {
             || valueA instanceof Error || valueB instanceof Error;
     };
 
-    const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(inputs: {
+    const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(
         value: any,
         shouldBe: any,
         toleranceDepth: number
-    }): boolean | EqualityDifference {
-        const { value, shouldBe } = inputs;
-        if (typeof shouldBe === "function" && shouldBe.valueChecks instanceof Array) {
-            if (shouldBe(value) === true) {
-                return true;
-            } else {
-                return <EqualityDifference>{ type: "invalid", value, shouldBe };
-            }
-        };
-
+    ): boolean | EqualityDifference {
         if (isSimpleAndDifferent(value, shouldBe)) {
             return <EqualityDifference>{ type: "different", value, shouldBe };
-        } else if (inputs.toleranceDepth === 0) {
-            return <EqualityDifference>{ type: "tooDeep", value };
         }
-
         return false;
     };
 
@@ -162,12 +207,9 @@ type EqualityDifference = {
             return container[key];
         },
         Set: function (container: Set<any>, key: any) {
-            return container.has(key);
+            return container.has(key) ? key : undefined;
         },
-        Map: function (
-            container: Map<any, any>,
-            key: any
-        ) {
+        Map: function (container: Map<any, any>, key: any) {
             return container.get(key);
         }
     };

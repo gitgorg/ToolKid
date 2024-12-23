@@ -140,7 +140,7 @@
                 name: "equal but not identical objects",
                 execute: assertEquality,
                 withInputs: {
-                    "object": {
+                    "different objects": {
                         value: {},
                         shouldBe: {},
                         toleranceDepth: 0
@@ -150,7 +150,7 @@
                 name: "equal but not identical arrays",
                 execute: assertEquality,
                 withInputs: {
-                    "object": {
+                    "different arrays": {
                         value: [1],
                         shouldBe: [1],
                         toleranceDepth: 0

@@ -28,11 +28,12 @@
                         name: anyString,
                         failures: shouldPass((value) => value instanceof Array),
                         missingSuspects: anySet,
+                        testedSuspects: anySet,
                         pending: anySet,
                         successes: shouldPass((value) => value instanceof Map),
-                        testCount: anyNumber,
-                        timeTotal: anyNumber
-                    }
+                        testCount: anyNumber
+                    },
+                    toleranceDepth: 3
                 }
             });
         }
@@ -71,10 +72,10 @@
                     shouldBe: {
                         name: "TK_DebugTestSummary",
                         testCount: 0,
-                        timeTotal: anyNumber,
                         failures: [],
                         successes: new Map(),
-                        pending: [],
+                        testedSuspects: new Set(),
+                        pending: new Set(),
                         missingSuspects: new Set()
                     },
                     toleranceDepth: 3

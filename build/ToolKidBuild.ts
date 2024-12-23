@@ -56,7 +56,8 @@ type ToolKidConfig = {
             section: "nodeJS", functions: {
                 isDirectory: LibraryTools.isDirectory,
                 loopFiles: LibraryTools.loopFiles,
-                resolvePath: LibraryTools.resolvePath
+                resolvePath: LibraryTools.resolvePath,
+                writeFile: LibraryTools.writeFile
             }
         });
         ToolKid.registerFunction({

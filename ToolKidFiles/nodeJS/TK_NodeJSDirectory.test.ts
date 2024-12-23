@@ -10,7 +10,7 @@
         subject: readDirectory,
         execute: function basic() {
             assertEquality({
-                "directory with mixed files":{
+                "directory with mixed files1":{
                     value: readDirectory(paths.directoryMixedContents),
                     shouldBe: [
                         "T_empty","T_empty.txt","T_file.json","T_pathList.test.js"
@@ -70,11 +70,12 @@
             };
             const checker = shouldPass(isDirectoryStats);
             assertEquality({
-                "directory with mixed files":{
+                "directory with mixed files2":{
                     value: list,
                     shouldBe: [
                         checker, checker, checker, checker
-                    ]
+                    ],
+                    toleranceDepth: 2
                 }
             });
         }

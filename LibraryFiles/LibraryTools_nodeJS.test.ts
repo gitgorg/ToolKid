@@ -3,7 +3,6 @@
     const { test, assertEquality, assertFailure, shouldPass } = ToolKid.debug.test;
     const { deleteFile, readFile } = ToolKid.nodeJS;
 
-
     test({
         subject: deleteFile,
         execute: function setup() {

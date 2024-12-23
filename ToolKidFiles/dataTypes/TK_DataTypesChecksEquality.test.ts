@@ -33,7 +33,7 @@
         }
     }, {
         subject: areEqual,
-        execute: function differentValues() {
+        execute: function failure_differentValues() {
             const differences = areEqual({
                 value: {
                     different: 100,
@@ -49,11 +49,11 @@
                 "differentValues": {
                     value: differences,
                     shouldBe: [
-                        { path: ["different"], type: "different", value: 100, shouldBe: "100" },
-                        { path: ["missing"], type: "different", value: undefined, shouldBe: true },
+                        { path: ["different"], type: "tooDeep", value: 100, shouldBe: "100" },
+                        { path: ["missing"], type: "tooDeep", value: undefined, shouldBe: true },
                         { path: ["exceeding"], type: "unwanted", value: true }
                     ],
-                    toleranceDepth: 3
+                    toleranceDepth: 4
                 },
                 "Error & empty Object": {
                     value: areEqual(testError, {}),
@@ -61,6 +61,27 @@
                         { path: [], type: "different", value: testError, shouldBe: {} }
                     ],
                     toleranceDepth: 3
+                }
+            });
+
+            assertEquality({
+                "too small set": {
+                    value: areEqual({
+                        value: new Set([1, 2, 3]),
+                        shouldBe: new Set([1, 2, 3, 4]),
+                        toleranceDepth: 3
+                    }),
+                    shouldBe: [{ type: "different", value: undefined, shouldBe: 4, path: [4] }],
+                    toleranceDepth: 4
+                },
+                "too big set": {
+                    value: areEqual({
+                        value: new Set([1, 2, 3, 4]),
+                        shouldBe: new Set([1, 2, 3]),
+                        toleranceDepth: 3
+                    }),
+                    shouldBe: [{type:"unwanted", value:4, path:[4]}],
+                    toleranceDepth: 4
                 }
             });
         }
@@ -75,8 +96,8 @@
                 "depthDefault(1)": {
                     value: differences,
                     shouldBe: [
-                        { path: [1], type: "tooDeep", value: [2] },
-                        { path: [2], type: "tooDeep", value: [[3]] }
+                        { path: [1], type: "tooDeep", value: [2], shouldBe:[2] },
+                        { path: [2], type: "tooDeep", value: [[3]], shouldBe:[[3]] }
                     ],
                     toleranceDepth: 4
                 }
@@ -90,9 +111,9 @@
                 "depth2": {
                     value: differences,
                     shouldBe: [
-                        { path: [2, 0], type: "tooDeep", value: [3] }
+                        { path: [2, 0], type: "tooDeep", value: [3], shouldBe: [3] }
                     ],
-                    toleranceDepth: 3
+                    toleranceDepth: 4
                 }
             });
         }

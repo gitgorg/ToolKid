@@ -93,7 +93,10 @@ interface TK_DebugTest_file {
         ];
     };
 
-    const logFazit = function TK_DebugTestFull_logFazit(summary: TestSummary) {
+    const logFazit = function TK_DebugTestFull_logFazit(inputs: {
+        summary: TestSummary, timeInitial: number, timeFinal: number
+    }) {
+        const { summary } = inputs;
         const counts = {
             failures: summary.failures.length,
             suspects: summary.missingSuspects.size
@@ -112,7 +115,7 @@ interface TK_DebugTest_file {
             )
             + " / "
             + colorText("positive",
-                summary.timeTotal + " milliseconds"
+                "sync " + inputs.timeInitial + " ms + async " + inputs.timeFinal + " ms"
             );
         console.log(message);
     };
@@ -122,7 +125,7 @@ interface TK_DebugTest_file {
         if (missingSuspects.size !== 0) {
             console.error(
                 colorText("negative",
-                    ">> the following suspects have not been tested:"),
+                    "\n>> " + summary.name + " >> the following suspects have not been tested:"),
                 Array.from(missingSuspects)
             );
         }
@@ -167,21 +170,25 @@ interface TK_DebugTest_file {
         if (typeof inputs.title === "string") {
             ToolKid.debug.test.switchResultGroup(inputs.title);
         }
+        let timeStart = Date.now();
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
+        const timeInitial = Date.now() - timeStart;
+        timeStart = Date.now();
         const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
-            callback:function (summary) {
+            callback: function (summary) {
                 // TODO: real test for .testFull
                 summary.missingSuspects.delete(publicExports.testFull);
+                const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
                 summary.failures.forEach(logFailure.bind(null, summary));
-                logFazit(summary);
+                logFazit({ summary, timeInitial, timeFinal });
             }
         });
         if (summary.pending.size !== 0) {
-            console.log("\n>> " + summary.name + " >> " + summary.pending.size + " tests pending");
+            console.log("\n>> " + summary.name + " >> " + summary.testCount + " tests done in " + timeInitial + " ms / " + summary.pending.size + " tests pending");
         }
     };
 

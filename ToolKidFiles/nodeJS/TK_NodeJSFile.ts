@@ -17,7 +17,8 @@ interface TK_nodeJS_file {
     }): {
         encoding: "directory" | string,
         content: any
-    } | undefined
+    } | undefined,
+    writeFile: LibraryTools_file["writeFile"]
 }
 
 
