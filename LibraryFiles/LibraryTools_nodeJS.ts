@@ -54,7 +54,7 @@ interface LibraryTools_file {
     };
 
     publicExports.loopFiles = function LibraryTools_nodeJS_loopFiles(inputs) {
-        const pathCheck = publicExports.createCheckForString({
+        const pathCheck = publicExports.createStringCheck({
             include: listPaths(inputs.include).map(easyExpression),
             exclude: listPaths(inputs.exclude).map(easyExpression),
         });

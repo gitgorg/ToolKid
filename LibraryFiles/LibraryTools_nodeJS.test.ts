@@ -1,5 +1,5 @@
 (function LibraryBuilder_test() {
-    const { easyExpression, loopFiles, partial, writeFile } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
+    const { createStringCheck, easyExpression, loopFiles, partial, writeFile } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
     const { test, assertEquality, assertFailure, shouldPass } = ToolKid.debug.test;
     const { deleteFile, readFile } = ToolKid.nodeJS;
 
@@ -21,6 +21,43 @@
         "a/d/c.ts",
         "a/b"
     ];
+
+    test({
+        subject: createStringCheck,
+        execute: function filteringStrings() {
+            assertEquality({
+                "only .ts": {
+                    value: paths.filter(createStringCheck({
+                        include: [easyExpression("*.ts")]
+                    })),
+                    shouldBe: [
+                        "a/b/c.ts",
+                        "a/d/c.ts"
+                    ]
+                },
+                "no .ts": {
+                    value: paths.filter(createStringCheck({
+                        exclude: [easyExpression("*.ts")]
+                    })),
+                    shouldBe: [
+                        "a/b/c.js",
+                        "a/b/c.test.js",
+                        "a/b/c/d",
+                        "a/b"
+                    ]
+                },
+                "only .js without .test": {
+                    value: paths.filter(createStringCheck({
+                        include: [easyExpression("*.js")],
+                        exclude: [easyExpression("*.test.js")]
+                    })),
+                    shouldBe: [
+                        "a/b/c.js"
+                    ]
+                }
+            });
+        }
+    });
 
     test({
         subject: easyExpression,

@@ -1,9 +1,9 @@
 //supporting functions for custom Library building
 interface LibraryTools_file {
-    createCheckForString(inputs: {
-        include: RegExp[],
-        exclude: RegExp[]
-    }): { (value: string): boolean } | void,
+    createStringCheck(inputs: {
+        include?: RegExp[],
+        exclude?: RegExp[]
+    }): { (value: string): boolean },
     easyExpression(
         simpleExpression: string
     ): RegExp,
@@ -22,7 +22,7 @@ interface LibraryTools_file {
 (function LibraryTools_init() {
     const publicExports = module.exports = <LibraryTools_file>{};
 
-    publicExports.createCheckForString = function LibraryTools_createCheckForString(inputs): any {
+    publicExports.createStringCheck = function LibraryTools_createStringCheck(inputs): any {
         const hasIncludes = publicExports.isArray(inputs.include);
         const hasExcludes = publicExports.isArray(inputs.exclude);
         if (hasIncludes && hasExcludes) {

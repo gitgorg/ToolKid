@@ -1459,7 +1459,7 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
 (function LibraryTools_init() {
     const publicExports = module.exports = {};
-    publicExports.createCheckForString = function LibraryTools_createCheckForString(inputs) {
+    publicExports.createStringCheck = function LibraryTools_createStringCheck(inputs) {
         const hasIncludes = publicExports.isArray(inputs.include);
         const hasExcludes = publicExports.isArray(inputs.exclude);
         if (hasIncludes && hasExcludes) {
