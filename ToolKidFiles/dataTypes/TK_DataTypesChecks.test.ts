@@ -1,8 +1,88 @@
 (function TK_DataTypesChecks_test() {
-    const { test, assertEquality } = ToolKid.debug.test;
-    const { isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isPromise, isString } = ToolKid.dataTypes.checks;
+    const { test, assertEquality, assertFailure } = ToolKid.debug.test;
+    const { getDataType, handleDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isPromise, isString } = ToolKid.dataTypes.checks;
 
 
+
+    test({
+        subject: getDataType,
+        execute: function allThemTypes() {
+            assertEquality({
+                "array": {
+                    value: getDataType([true, "b", 3]), shouldBe: "array"
+                },
+                "bigint": {
+                    value: getDataType(BigInt(9007199254740991)), shouldBe: "bigint"
+                },
+                "boolean": {
+                    value: getDataType(false), shouldBe: "boolean"
+                },
+                "function": {
+                    value: getDataType(function () { }), shouldBe: "function"
+                },
+                "NaN": {
+                    value: getDataType(NaN), shouldBe: "undefined"
+                },
+                "null": {
+                    value: getDataType(null), shouldBe: "undefined"
+                },
+                "number": {
+                    value: getDataType(10), shouldBe: "number"
+                },
+                "object": {
+                    value: getDataType({}), shouldBe: "object"
+                },
+                "set": {
+                    value: getDataType(new Set()), shouldBe: "object"
+                },
+                "string": {
+                    value: getDataType(""), shouldBe: "string"
+                },
+                "symbol": {
+                    value: getDataType(Symbol()), shouldBe: "symbol"
+                },
+                "undefined": {
+                    //@ts-ignore
+                    value: getDataType(), shouldBe: "undefined"
+                },
+            });
+        }
+    });
+
+    test({
+        subject: handleDataType,
+        execute: function basic() {
+            const typeHandlers = <DataTypeHandlers>{
+                boolean: (value:any) => !value
+            };
+            assertEquality({
+                "known type": {
+                    value: handleDataType(typeHandlers,true), shouldBe: false
+                },
+                "unknown type": {
+                    value: handleDataType(typeHandlers,10), shouldBe: undefined
+                },
+            });
+            typeHandlers.any = function (value:any) {return value;};
+            assertEquality({
+                "fallback type": {
+                    value: handleDataType(typeHandlers,10), shouldBe: 10
+                },
+            });
+        }
+    },{
+        subject: handleDataType,
+        execute: function failure() {
+            assertFailure({
+                name: "missing inputs",
+                execute: handleDataType
+            },{
+                name: "invalid DataTypeTandlers",
+                execute: handleDataType,
+                withInputs: "hello"
+            });
+        }
+    });
 
     test({
         subject: isArray,

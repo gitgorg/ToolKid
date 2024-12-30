@@ -227,6 +227,43 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
+    publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
+        return dataTypeConverters[typeof value](value);
+    };
+    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(typeHandlers, value) {
+        if (typeof typeHandlers !== "object") {
+            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeHandlers passed:", typeHandlers];
+        }
+        const type = publicExports.getDataType(value);
+        if (typeHandlers[type] !== undefined) {
+            return typeHandlers[type](value);
+        }
+        else if (typeHandlers.any !== undefined) {
+            return typeHandlers.any(value);
+        }
+    };
+    const dataTypeConverters = {
+        bigint: function RS_h_checks_isEmptyBigint() { return "bigint"; },
+        boolean: function RS_h_checks_isEmptyBoolean() { return "boolean"; },
+        function: function RS_h_checks_isEmptyFunction() { return "function"; },
+        number: function RS_h_checks_isEmptyNumber(data) {
+            return Number.isNaN(data) ? "undefined" : "number";
+        },
+        object: function RS_h_checks_isEmptyObject(data) {
+            if (data === null) {
+                return "undefined";
+            }
+            else if (data instanceof Array) {
+                return "array";
+            }
+            else {
+                return "object";
+            }
+        },
+        string: function RS_h_checks_isEmptyString() { return "string"; },
+        symbol: function RS_h_checks_isEmptySymbol() { return "symbol"; },
+        undefined: function RS_h_checks_isEmptyUndefined() { return "undefined"; }
+    };
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
     };
