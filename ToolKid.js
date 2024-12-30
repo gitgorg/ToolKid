@@ -3,24 +3,24 @@
 const registeredFiles = {};
 
 
-(function Library_init() {
+(function LibraryCore_init() {
     let LibraryTools;
     const publicExports = module.exports = {};
-    const addAsReadOnly = function Library_addAsReadOnly(inputs) {
+    const addAsReadOnly = function LibraryCore_addAsReadOnly(inputs) {
         Object.defineProperty(inputs.container, inputs.name, {
             enumerable: true,
             value: inputs.property,
             writable: false
         });
     };
-    const addAsReadOnlyHidden = function Library_addAsReadOnlyHidden(inputs) {
+    const addAsReadOnlyHidden = function LibraryCore_addAsReadOnlyHidden(inputs) {
         Object.defineProperty(inputs.container, inputs.name, {
             enumerable: false,
             value: inputs.property,
             writable: false
         });
     };
-    publicExports.createInstance = function Library_createInstance() {
+    publicExports.createInstance = function LibraryCore_createInstance() {
         const result = {};
         const registerWithContext = registerFunction.bind(null, result);
         addAsReadOnlyHidden({
@@ -30,21 +30,21 @@ const registeredFiles = {};
         });
         return result;
     };
-    const isValidInput = function Library_isValidInput(inputs) {
+    const isValidInput = function LibraryCore_isValidInput(inputs) {
         return (typeof inputs.name !== "string"
             || typeof inputs.helperFunction !== "function");
     };
-    publicExports.getTools = function Library_getTools() {
+    publicExports.getTools = function LibraryCore_getTools() {
         if (LibraryTools === undefined) {
             const toolsPath = require("path").resolve(__dirname, "./LibraryTools_NodeJS.js");
             LibraryTools = require(toolsPath);
         }
         return LibraryTools;
     };
-    const printRegisterError = function Library_printRegisterError(inputs) {
-        console.error(["Library_registerHelperToSection - invalid inputs:", inputs]);
+    const printRegisterError = function LibraryCore_printRegisterError(inputs) {
+        console.error(["LibraryCore_registerHelperToSection - invalid inputs:", inputs]);
     };
-    const registerFunction = function Library_registerFunction(library, inputs) {
+    const registerFunction = function LibraryCore_registerFunction(library, inputs) {
         let section = registerSection({
             container: library,
             name: inputs.section
@@ -60,7 +60,7 @@ const registeredFiles = {};
             helpers: inputs.functions
         });
     };
-    const registerHelperToSectionLoop = function Library_registerHelperToSectionLoop(inputs) {
+    const registerHelperToSectionLoop = function LibraryCore_registerHelperToSectionLoop(inputs) {
         const { section, helpers } = inputs;
         for (let name in helpers) {
             registerHelperToSection({
@@ -68,7 +68,7 @@ const registeredFiles = {};
             });
         }
     };
-    const registerHelperToSection = function Library_registerHelperToSection(inputs) {
+    const registerHelperToSection = function LibraryCore_registerHelperToSection(inputs) {
         if (isValidInput(inputs)) {
             printRegisterError(inputs);
             return;
@@ -83,7 +83,7 @@ const registeredFiles = {};
             property: inputs.helperFunction
         });
     };
-    const registerSection = function Library_registerSection(inputs) {
+    const registerSection = function LibraryCore_registerSection(inputs) {
         let section = inputs.container[inputs.name];
         if (section !== undefined) {
             return section;
@@ -98,7 +98,7 @@ const registeredFiles = {};
     };
     global.ToolKid = publicExports.createInstance();
 })();
-registeredFiles["Library.js"] = module.exports;
+registeredFiles["LibraryCore.js"] = module.exports;
 
 (function TK_ConnectionHTTPinit() {
     const publicExports = module.exports = {};
@@ -1497,15 +1497,15 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
     //     ".": "\\.",
     //     "\*": ".+"
     // };
-    publicExports.easyExpression = function LibraryTools_easyExpression(expression) {
+    publicExports.createSimpleRegxp = function LibraryTools_createSimpleRegxp(expression) {
         expression = expression.replaceAll("\\", "\\\\");
         expression = expression.replaceAll(".", "\\.");
         expression = expression.replaceAll("\*", ".+");
-        //expression = expression.replace(replaceRegex, easyExpressionReplacer);
+        //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
         return new RegExp("^" + expression + "$");
     };
     // var replaceRegex = new RegExp('[' + Object.keys(replacements).join('') + ']', 'ig');
-    // const easyExpressionReplacer = function (old:string) {
+    // const createSimpleRegxpReplacer = function (old:string) {
     //     return replacements[<".">old];
     // };
     publicExports.isArray = function LibraryTools_isArray(value) {

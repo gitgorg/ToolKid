@@ -4,7 +4,7 @@ interface LibraryTools_file {
         include?: RegExp[],
         exclude?: RegExp[]
     }): { (value: string): boolean },
-    easyExpression(
+    createSimpleRegxp(
         simpleExpression: string
     ): RegExp,
     isArray(
@@ -73,18 +73,18 @@ interface LibraryTools_file {
     //     ".": "\\.",
     //     "\*": ".+"
     // };
-    publicExports.easyExpression = function LibraryTools_easyExpression(
+    publicExports.createSimpleRegxp = function LibraryTools_createSimpleRegxp(
         expression
     ) {
         expression = expression.replaceAll("\\", "\\\\");
         expression = expression.replaceAll(".", "\\.");
         expression = expression.replaceAll("\*", ".+");
-        //expression = expression.replace(replaceRegex, easyExpressionReplacer);
+        //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
         return new RegExp("^" + expression + "$");
     };
 
     // var replaceRegex = new RegExp('[' + Object.keys(replacements).join('') + ']', 'ig');
-    // const easyExpressionReplacer = function (old:string) {
+    // const createSimpleRegxpReplacer = function (old:string) {
     //     return replacements[<".">old];
     // };
 

@@ -11,6 +11,9 @@ interface LibraryTools_file {
         include?: string | string[],
         exclude?: string | string[]
     }): void,
+    readFileName(
+        path: string
+    ): string,
     resolvePath(
         ...parts: string[]
     ): string,
@@ -41,7 +44,7 @@ interface LibraryTools_file {
         Path.resolve(__dirname, "LibraryTools.js")
     );
 
-    const { easyExpression } = LibraryTools;
+    const { createSimpleRegxp } = LibraryTools;
     const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;
     const { normalize, resolve: resolvePath } = Path;
 
@@ -53,10 +56,22 @@ interface LibraryTools_file {
         return readPathStats(path).isDirectory();
     };
 
+    const listPaths = function LibraryTools_nodeJS_listPaths(
+        expressions: string | string[] | any
+    ): string[] {
+        if (typeof expressions === "string") {
+            expressions = [expressions];
+        } else if (!(expressions instanceof Array)) {
+            return [];
+        }
+
+        return expressions.map(normalize);
+    };
+
     publicExports.loopFiles = function LibraryTools_nodeJS_loopFiles(inputs) {
         const pathCheck = publicExports.createStringCheck({
-            include: listPaths(inputs.include).map(easyExpression),
-            exclude: listPaths(inputs.exclude).map(easyExpression),
+            include: listPaths(inputs.include).map(createSimpleRegxp),
+            exclude: listPaths(inputs.exclude).map(createSimpleRegxp),
         });
         const privateData = <PrivateData>{
             isIncluded: pathCheck,
@@ -68,10 +83,6 @@ interface LibraryTools_file {
         } else {
             loopFilesFrom(privateData, path);
         }
-    };
-
-    publicExports.resolvePath = function LibraryTools_nodeJS_resolvePath(...parts) {
-        return Path.resolve(...parts);
     };
 
     const loopFilesFrom = function LibraryTools_nodeJS_loopFilesFrom(
@@ -111,16 +122,15 @@ interface LibraryTools_file {
         }
     };
 
-    const listPaths = function LibraryTools_nodeJS_listPaths(
-        expressions: string | string[] | any
-    ): string[] {
-        if (typeof expressions === "string") {
-            expressions = [expressions];
-        } else if (!(expressions instanceof Array)) {
-            return [];
+    publicExports.readFileName = function LibraryTools_nodeJS_readFileName(path) {
+        if (typeof path !== "string" || path === "") {
+            throw ["LibraryTools_nodeJS_readFileName - invalid path argument:", path];
         }
+        return Path.basename(path);
+    };
 
-        return expressions.map(normalize);
+    publicExports.resolvePath = function LibraryTools_nodeJS_resolvePath(...parts) {
+        return Path.resolve(...parts);
     };
 
     const writeDirectory = function LibraryTools_nodeJS_writeDirectory(path: string) {

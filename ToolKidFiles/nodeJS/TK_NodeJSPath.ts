@@ -5,6 +5,7 @@ interface TK_nodeJS_file {
     isUsedPath(
         path: string
     ): boolean,
+    readFileName: LibraryTools_file["readFileName"],
     resolvePath: LibraryTools_file["resolvePath"]
 }
 

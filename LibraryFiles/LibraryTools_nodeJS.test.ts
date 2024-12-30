@@ -1,5 +1,5 @@
 (function LibraryBuilder_test() {
-    const { createStringCheck, easyExpression, loopFiles, partial, writeFile } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
+    const { createStringCheck, createSimpleRegxp, loopFiles, partial, writeFile } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
     const { test, assertEquality, assertFailure, shouldPass } = ToolKid.debug.test;
     const { deleteFile, readFile } = ToolKid.nodeJS;
 
@@ -28,7 +28,7 @@
             assertEquality({
                 "only .ts": {
                     value: paths.filter(createStringCheck({
-                        include: [easyExpression("*.ts")]
+                        include: [createSimpleRegxp("*.ts")]
                     })),
                     shouldBe: [
                         "a/b/c.ts",
@@ -37,7 +37,7 @@
                 },
                 "no .ts": {
                     value: paths.filter(createStringCheck({
-                        exclude: [easyExpression("*.ts")]
+                        exclude: [createSimpleRegxp("*.ts")]
                     })),
                     shouldBe: [
                         "a/b/c.js",
@@ -48,8 +48,8 @@
                 },
                 "only .js without .test": {
                     value: paths.filter(createStringCheck({
-                        include: [easyExpression("*.js")],
-                        exclude: [easyExpression("*.test.js")]
+                        include: [createSimpleRegxp("*.js")],
+                        exclude: [createSimpleRegxp("*.test.js")]
                     })),
                     shouldBe: [
                         "a/b/c.js"
@@ -60,12 +60,12 @@
     });
 
     test({
-        subject: easyExpression,
+        subject: createSimpleRegxp,
         execute: function filteringPaths() {
             const filterPathsEasy = function LibraryTools_test_filterPathsEasy(
                 easyString: string
             ) {
-                const expression = easyExpression(easyString);
+                const expression = createSimpleRegxp(easyString);
                 return paths.filter(
                     expression.test.bind(expression)
                 );
@@ -118,7 +118,7 @@
                 "siblingFiles": {
                     value: found,
                     shouldBe: [
-                        Path.resolve(fileDirectory, "Library.js"),
+                        Path.resolve(fileDirectory, "LibraryCore.js"),
                         Path.resolve(fileDirectory, "LibraryTools.js"),
                         Path.resolve(fileDirectory, "LibraryTools_nodeJS.js"),
                         Path.resolve(fileDirectory, "LibraryTools_nodeJS.test.js")
