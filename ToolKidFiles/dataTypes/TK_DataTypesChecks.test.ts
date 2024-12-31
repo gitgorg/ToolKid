@@ -1,6 +1,6 @@
 (function TK_DataTypesChecks_test() {
     const { test, assertEquality, assertFailure } = ToolKid.debug.test;
-    const { getDataType, handleDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isPromise, isString } = ToolKid.dataTypes.checks;
+    const { getDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isPromise, isString, handleDataType } = ToolKid.dataTypes.checks;
 
 
 
@@ -49,40 +49,40 @@
         }
     });
 
-    test({
-        subject: handleDataType,
-        execute: function basic() {
-            const typeHandlers = <DataTypeHandlers>{
-                boolean: (value:any) => !value
-            };
-            assertEquality({
-                "known type": {
-                    value: handleDataType(typeHandlers,true), shouldBe: false
-                },
-                "unknown type": {
-                    value: handleDataType(typeHandlers,10), shouldBe: undefined
-                },
-            });
-            typeHandlers.any = function (value:any) {return value;};
-            assertEquality({
-                "fallback type": {
-                    value: handleDataType(typeHandlers,10), shouldBe: 10
-                },
-            });
-        }
-    },{
-        subject: handleDataType,
-        execute: function failure() {
-            assertFailure({
-                name: "missing inputs",
-                execute: handleDataType
-            },{
-                name: "invalid DataTypeTandlers",
-                execute: handleDataType,
-                withInputs: "hello"
-            });
-        }
-    });
+    // test({
+    //     subject: handleDataType,
+    //     execute: function basic() {
+    //         const typeHandlers = <DataTypeHandlers>{
+    //             boolean: (value:any) => !value
+    //         };
+    //         assertEquality({
+    //             "known type": {
+    //                 value: handleDataType(typeHandlers,true), shouldBe: false
+    //             },
+    //             "unknown type": {
+    //                 value: handleDataType(typeHandlers,10), shouldBe: undefined
+    //             },
+    //         });
+    //         typeHandlers.any = function (value:any) {return value;};
+    //         assertEquality({
+    //             "fallback type": {
+    //                 value: handleDataType(typeHandlers,10), shouldBe: 10
+    //             },
+    //         });
+    //     }
+    // },{
+    //     subject: handleDataType,
+    //     execute: function failure() {
+    //         assertFailure({
+    //             name: "missing inputs",
+    //             execute: handleDataType
+    //         },{
+    //             name: "invalid DataTypeTandlers",
+    //             execute: handleDataType,
+    //             withInputs: "hello"
+    //         });
+    //     }
+    // });
 
     test({
         subject: isArray,

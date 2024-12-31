@@ -230,18 +230,6 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
     publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
         return dataTypeConverters[typeof value](value);
     };
-    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(typeHandlers, value) {
-        if (typeof typeHandlers !== "object") {
-            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeHandlers passed:", typeHandlers];
-        }
-        const type = publicExports.getDataType(value);
-        if (typeHandlers[type] !== undefined) {
-            return typeHandlers[type](value);
-        }
-        else if (typeHandlers.any !== undefined) {
-            return typeHandlers.any(value);
-        }
-    };
     const dataTypeConverters = {
         bigint: function RS_h_checks_isEmptyBigint() { return "bigint"; },
         boolean: function RS_h_checks_isEmptyBoolean() { return "boolean"; },
@@ -264,6 +252,20 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
         symbol: function RS_h_checks_isEmptySymbol() { return "symbol"; },
         undefined: function RS_h_checks_isEmptyUndefined() { return "undefined"; }
     };
+    if (typeof Element === "function") {
+        const standard = dataTypeConverters.object;
+        dataTypeConverters.object = function RS_h_checks_isEmptyObjectDOM(data) {
+            if (data instanceof Element) {
+                return "HTML";
+            }
+            else if (data instanceof DOMTokenList) {
+                return "HTMLClassList";
+            }
+            else {
+                return standard(data);
+            }
+        };
+    }
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
     };
@@ -287,6 +289,25 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
     };
     publicExports.isString = function TK_DataTypesChecks_isString(value) {
         return typeof value === "string" && value !== "";
+    };
+    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(inputs) {
+        const { typeHandlers } = inputs;
+        if (typeof typeHandlers !== "object") {
+            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeHandlers passed:", typeHandlers];
+        }
+        const { value } = inputs;
+        const type = publicExports.getDataType(value);
+        const handler = typeHandlers[type];
+        if (handler === false) {
+            return;
+        }
+        const withInputs = inputs.withInputs || [value];
+        if (typeof handler === "function") {
+            return handler(...withInputs);
+        }
+        else if (typeof typeHandlers.any === "function") {
+            return typeHandlers.any(...withInputs);
+        }
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
