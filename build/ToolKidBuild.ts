@@ -25,7 +25,7 @@ type ToolKidConfig = {
 
 
 
-    const executeBuild = <ToolKidBuild_file>function ToolKidBuild_executeBuild(config) {
+    module.exports = <ToolKidBuild_file>function ToolKidBuild_executeBuild(config) {
         if (typeof ToolKid !== "undefined") {
             return;
         }
@@ -278,11 +278,13 @@ type ToolKidConfig = {
         );
     };
 
+
+
+    Object.freeze(module.exports);
+
     const executionFile = Path.basename(process.argv[1]);
     const isExecutedViaTerminal = executionFile.slice(0, 12) === "ToolKidBuild";
     if (isExecutedViaTerminal) {
-        executeBuild();
+        module.exports();
     }
-
-    module.exports = executeBuild;
 })();
