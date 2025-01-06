@@ -1593,7 +1593,8 @@ ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
 (function LibraryTools_nodeJS_init() {
     const FS = require("fs");
     const Path = require("path");
-    const LibraryTools = (Path.basename(__dirname) === "LibraryFiles")
+    const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
+    const LibraryTools = isCalledFromLibrary
         ? require(Path.resolve(__dirname, "./LibraryTools.js"))
         //@ts-ignore
         : registeredFiles["LibraryTools.js"];
