@@ -1027,7 +1027,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         return failure[failure.length - 2] === "difference:";
     };
     const logFailure = function TK_DebugTestFull_logFailure(summary, result) {
-        console.warn(colorText("negative", "\n>> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
+        console.warn("\n" +
+            colorText("negative", ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
@@ -1055,7 +1056,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
             failures: summary.failures.length,
             suspects: summary.missingSuspects.size
         };
-        const message = colorText((counts.failures === 0) ? "positive" : "negative", "\n>> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s"))
+        const message = "\n" +
+            colorText((counts.failures === 0) ? "positive" : "negative", ">> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s"))
             + " / "
             + colorText("positive", summary.testCount + " test groups")
             + " / "
@@ -1067,7 +1069,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary) {
         const { missingSuspects } = summary;
         if (missingSuspects.size !== 0) {
-            console.error(colorText("negative", "\n>> " + summary.name + " >> the following suspects have not been tested:"), Array.from(missingSuspects));
+            console.error("\n" +
+                colorText("negative", ">> " + summary.name + " >> the following suspects have not been tested:"), Array.from(missingSuspects));
         }
     };
     const masks = {

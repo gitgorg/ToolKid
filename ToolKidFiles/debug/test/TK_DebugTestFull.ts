@@ -61,9 +61,9 @@ interface TK_DebugTest_file {
     const logFailure = function TK_DebugTestFull_logFailure(
         summary: TestSummary, result: TestResult
     ) {
-        console.warn(
+        console.warn("\n" +
             colorText("negative",
-                "\n>> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name
+                ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name
             ),
             logFailureNice(result.errorMessage).map(shortenValue)
         );
@@ -101,9 +101,9 @@ interface TK_DebugTest_file {
             failures: summary.failures.length,
             suspects: summary.missingSuspects.size
         };
-        const message =
+        const message = "\n" +
             colorText((counts.failures === 0) ? "positive" : "negative",
-                "\n>> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
+                ">> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
             )
             + " / "
             + colorText("positive",
@@ -123,9 +123,9 @@ interface TK_DebugTest_file {
     const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary: TestSummary) {
         const { missingSuspects } = summary;
         if (missingSuspects.size !== 0) {
-            console.error(
+            console.error("\n" +
                 colorText("negative",
-                    "\n>> " + summary.name + " >> the following suspects have not been tested:"),
+                    ">> " + summary.name + " >> the following suspects have not been tested:"),
                 Array.from(missingSuspects)
             );
         }
