@@ -49,40 +49,53 @@
         }
     });
 
-    // test({
-    //     subject: handleDataType,
-    //     execute: function basic() {
-    //         const typeHandlers = <DataTypeHandlers>{
-    //             boolean: (value:any) => !value
-    //         };
-    //         assertEquality({
-    //             "known type": {
-    //                 value: handleDataType(typeHandlers,true), shouldBe: false
-    //             },
-    //             "unknown type": {
-    //                 value: handleDataType(typeHandlers,10), shouldBe: undefined
-    //             },
-    //         });
-    //         typeHandlers.any = function (value:any) {return value;};
-    //         assertEquality({
-    //             "fallback type": {
-    //                 value: handleDataType(typeHandlers,10), shouldBe: 10
-    //             },
-    //         });
-    //     }
-    // },{
-    //     subject: handleDataType,
-    //     execute: function failure() {
-    //         assertFailure({
-    //             name: "missing inputs",
-    //             execute: handleDataType
-    //         },{
-    //             name: "invalid DataTypeTandlers",
-    //             execute: handleDataType,
-    //             withInputs: "hello"
-    //         });
-    //     }
-    // });
+    test({
+        subject: handleDataType,
+        execute: function regularUseCase() {
+            const typeHandlers = <DataTypeHandlers>{
+                boolean: (value: any) => !value
+            };
+            assertEquality({
+                "known type": {
+                    value: handleDataType({
+                        typeHandlers,
+                        value: true
+                    }), shouldBe: false
+                },
+                "unknown type": {
+                    value: handleDataType({
+                        typeHandlers,
+                        value: 10
+                    }), shouldBe: undefined
+                },
+            });
+            typeHandlers.any = function (value: any) { return value; };
+            assertEquality({
+                "fallback type": {
+                    value: handleDataType({
+                        typeHandlers,
+                        value: 10
+                    }), shouldBe: 10
+                },
+            });
+        }
+    }, {
+        subject: handleDataType,
+        execute: function failure() {
+            assertFailure({
+                name: "missing inputs",
+                execute: handleDataType
+            }, {
+                name: "wrong input type",
+                execute: handleDataType,
+                withInputs: true
+            }, {
+                name: "missing typeHandlers",
+                execute: handleDataType,
+                withInputs: { value: true }
+            });
+        }
+    });
 
     test({
         subject: isArray,

@@ -9,7 +9,7 @@ interface TK_DataTypesChecks_file {
         value: any,
         withInputs?: any[]
     }): any,
-    
+
     isArray: LibraryTools_file["isArray"],
     isBoolean(value: any): boolean,
     isError(value: any): boolean,
