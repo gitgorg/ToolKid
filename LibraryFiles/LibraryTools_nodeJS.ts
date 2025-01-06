@@ -40,9 +40,13 @@ interface LibraryTools_file {
 
     const FS = require("fs");
     const Path = require("path");
-    const LibraryTools = <LibraryTools_file>require(
-        Path.resolve(__dirname, "LibraryTools.js")
-    );
+    const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
+    const LibraryTools = isCalledFromLibrary
+        ?<LibraryTools_file>require(
+            Path.resolve(__dirname, "./LibraryTools.js")
+        )
+        //@ts-ignore
+        : registeredFiles["LibraryTools.js"];
 
     const { createSimpleRegxp } = LibraryTools;
     const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;

@@ -75,7 +75,7 @@ interface GenericFunction {(
 
     publicExports.getTools = function LibraryCore_getTools () {
         if (LibraryTools === undefined) {
-            const toolsPath = require("path").resolve(__dirname, "./LibraryTools_NodeJS.js");
+            const toolsPath = require("path").resolve(__dirname, "./LibraryTools_nodeJS.js");
             LibraryTools = require(toolsPath);
         }
         return LibraryTools;

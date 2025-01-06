@@ -135,14 +135,16 @@ type ToolKidConfig = {
         );
 
         // TODO: making a more stable and less ugly version for including LibraryTools
-        const toolsPath = resolvePath(rootLibraryFiles, "LibraryTools.js");
-        appendFile(privateData, [Path.basename(toolsPath), toolsPath]);
-        privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
-            loopFiles:module.exports.loopFiles\n\
-        }})\n\n";
+        let path = resolvePath(rootLibraryFiles, "LibraryTools.js");
+        appendFile(privateData, [Path.basename(path), path]);
         privateData.combinedFile += "ToolKid.registerFunction({section:\"dataTypes\", subSection:\"checks\", functions: {\n\
             isArray:module.exports.isArray\n\
-        }})\n\n";
+        }});\n\n";
+        path = resolvePath(rootLibraryFiles, "LibraryTools_nodeJS.js");
+        appendFile(privateData, [Path.basename(path), path]);
+        privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
+            loopFiles:module.exports.loopFiles\n\
+        }});\n\n";
 
         privateData.combinedFile += "global.log = ToolKid.debug.terminal.logImportant;\n";
         privateData.combinedFile += "module.exports = ToolKid;\n";
