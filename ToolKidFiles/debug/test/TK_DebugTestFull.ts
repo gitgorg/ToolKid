@@ -21,9 +21,7 @@ interface TK_DebugTest_file {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     const colors = {
-        positive: "\u001b[32m", //green
-        default: "\u001b[97m", //white
-        negative: "\u001b[31m" //red
+        positive: "\u001b[32m", default: "\u001b[97m", negative: "\u001b[31m"
     };
 
 
