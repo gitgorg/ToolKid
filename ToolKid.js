@@ -1009,7 +1009,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const colors = {
         positive: "\u001b[32m",
         default: "\u001b[97m",
-        negative: "\u001b[31m" //red
+        negative: "\u001b[31m",
     };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
         return colors[color] + text + colors.default;
