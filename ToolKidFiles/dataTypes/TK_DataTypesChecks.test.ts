@@ -55,7 +55,7 @@
     test({
         subject: handleDataType,
         execute: function regularUseCase() {
-            const typeHandlers = <DataTypeHandlers>{
+            const typeHandlers = <DataTypeParsers>{
                 boolean: (value: any) => !value
             };
             assertEquality({
