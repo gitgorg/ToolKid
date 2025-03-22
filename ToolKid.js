@@ -334,7 +334,7 @@ registeredFiles["TK_DataTypesArray.js"] = module.exports;
     publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(inputs) {
         const { typeHandlers } = inputs;
         if (typeof typeHandlers !== "object") {
-            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeHandlers passed:", typeHandlers];
+            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeParsers passed:", typeHandlers];
         }
         const { value } = inputs;
         const type = publicExports.getDataType(value);
@@ -536,7 +536,7 @@ registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
                 result.reject(data);
             }
         };
-        promises.forEach(function (promise, position) {
+        promises.forEach(function TK_DataTypesPromise_combinePromisesWatch(promise, position) {
             promise.then(handleSucces.bind(null, position), handleFailure);
         });
         return result.promise;
@@ -765,7 +765,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
     };
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs) {
         let resolver;
-        const promise = new Promise(function (resolve) {
+        const promise = new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
             resolver = resolve;
         });
         const bound = {

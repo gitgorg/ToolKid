@@ -4,9 +4,11 @@ interface TK_DataTypes_file { checks: TK_DataTypesChecks_file }
 
 interface TK_DataTypesChecks_file {
     getDataType(value: any): DataType,
-    handleDataType(inputs:{
-        typeHandlers: DataTypeHandlers,
+    // TODO: rename to parseByDataType or somethin alike
+    handleDataType(inputs: {
         value: any,
+        typeHandlers: DataTypeParsers,
+
         withInputs?: any[]
     }): any,
 
@@ -23,21 +25,20 @@ interface TK_DataTypesChecks_file {
 
 type DataType = "array" | "bigint" | "boolean" | "function" | "number" | "object" | "string" | "symbol" | "undefined" | "HTML" | "HTMLClassList";
 
-type DataTypeHandlers = {
-    any?(...inputs:any[]): any,
+type DataTypeParsers = {
+    any?(...inputs: any[]): any,
+    array?: { (...inputs: any[]): any } | false,
+    bigint?: { (...inputs: any[]): any } | false,
+    boolean?: { (...inputs: any[]): any } | false,
+    function?: { (...inputs: any[]): any } | false,
+    number?: { (...inputs: any[]): any } | false,
+    object?: { (...inputs: any[]): any } | false,
+    string?: { (...inputs: any[]): any } | false,
+    symbol?: { (...inputs: any[]): any } | false,
+    undefined?: { (...inputs: any[]): any } | false,
 
-    array?: {(...inputs:any[]): any} | false,
-    bigint?: {(...inputs:any[]): any} | false,
-    boolean?: {(...inputs:any[]): any} | false,
-    function?: {(...inputs:any[]): any} | false,
-    number?: {(...inputs:any[]): any} | false,
-    object?: {(...inputs:any[]): any} | false,
-    string?: {(...inputs:any[]): any} | false,
-    symbol?: {(...inputs:any[]): any} | false,
-    undefined?: {(...inputs:any[]): any} | false,
-
-    HTML?: {(...inputs:any[]): any} | false,
-    HTMLClassList?: {(...inputs:any[]): any} | false,
+    HTML?: { (...inputs: any[]): any } | false,
+    HTMLClassList?: { (...inputs: any[]): any } | false,
 }
 
 
@@ -116,12 +117,12 @@ type DataTypeHandlers = {
     };
 
     publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(inputs) {
-        const {typeHandlers} = inputs;
+        const { typeHandlers } = inputs;
         if (typeof typeHandlers !== "object") {
-            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeHandlers passed:", typeHandlers];
+            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeParsers passed:", typeHandlers];
         }
 
-        const {value} = inputs;
+        const { value } = inputs;
         const type = publicExports.getDataType(value);
         const handler = typeHandlers[type];
         if (handler === false) {
