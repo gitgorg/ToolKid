@@ -149,7 +149,7 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
                     promise: returned,
                     resultList: inputs.resultList
                 });
-                promise.then(function () {
+                promise.then(function Test_testExecute_handlePromise() {
                     const index = inputs.resultList.indexOf(promise);
                     inputs.resultList[index] = result;
                 });
@@ -169,7 +169,7 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
         resultList: TestResultList
     }) {
         let resolver: any;
-        const promise = <Promise<TestResult>>new Promise(function (resolve) {
+        const promise = <Promise<TestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
             resolver = resolve;
         });
         const bound = {

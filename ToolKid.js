@@ -225,6 +225,47 @@ registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
 })();
 registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 
+(function TK_DataTypesArray_init() {
+    const publicExports = module.exports = {};
+    publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
+        const privateData = Object.assign({
+            batchSize: 10,
+            callback: function () { },
+            maxBlockDuration: 100,
+            stopSignal: {},
+            startIndex: 0,
+        }, inputs, {
+            dataPosition: 0,
+        });
+        if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
+            throw ["TK_DataTypesArray_iterateBatch - .startIndex should be a number:", inputs];
+        }
+        privateData.boundIterator = iterateBatchLoop.bind(null, privateData);
+        iterateBatchLoop(privateData);
+    };
+    const iterateBatchLoop = function db_TLSTools_iterateBatchLoop(inputs) {
+        const { data, parser, stopSignal } = inputs;
+        const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
+        for (let i = inputs.startIndex; i < indexEnd; i += 1) {
+            if (parser(data[i], i) === stopSignal) {
+                inputs.callback(i);
+                return;
+            }
+        }
+        if (indexEnd === data.length) {
+            inputs.callback(indexEnd - 1);
+            return;
+        }
+        inputs.startIndex = indexEnd;
+        setTimeout(inputs.boundIterator, 0);
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "dataTypes", subSection: "array", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DataTypesArray.js"] = module.exports;
+
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
     publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
@@ -476,21 +517,21 @@ registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
 
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
-    publicExports.combine = function TK_DataTypesPromise_combine(...promises) {
+    publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
         if (promises.length === 0) {
             return Promise.resolve();
         }
         let missing = promises.length;
         const datas = new Array(promises.length);
         const result = publicExports.createPromise();
-        const handleSucces = function TK_DataTypesPromise_combineSuccess(position, data) {
+        const handleSucces = function TK_DataTypesPromise_combinePromisesSuccess(position, data) {
             datas[position] = data;
             missing -= 1;
             if (missing === 0) {
                 result.resolve(datas);
             }
         };
-        const handleFailure = function TK_DataTypesPromise_combineFailure(data) {
+        const handleFailure = function TK_DataTypesPromise_combinePromisesFailure(data) {
             if (result.state === "pending") {
                 result.reject(data);
             }
@@ -709,7 +750,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
                     promise: returned,
                     resultList: inputs.resultList
                 });
-                promise.then(function () {
+                promise.then(function Test_testExecute_handlePromise() {
                     const index = inputs.resultList.indexOf(promise);
                     inputs.resultList[index] = result;
                 });
@@ -923,7 +964,13 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         }
         const returned = ToolKid.dataTypes.checks.areEqual(settings);
         if (returned !== true) {
-            throw ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
+            const errorMessage = ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
+            if (typeof settings.catchFailure === "function") {
+                settings.catchFailure(errorMessage);
+            }
+            else {
+                throw errorMessage;
+            }
         }
     };
     Object.freeze(publicExports);

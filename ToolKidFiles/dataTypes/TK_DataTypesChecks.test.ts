@@ -11,6 +11,9 @@
                 "array": {
                     value: getDataType([true, "b", 3]), shouldBe: "array"
                 },
+                "array empty": {
+                    value: getDataType([]), shouldBe: "array"
+                },
                 "bigint": {
                     value: getDataType(BigInt(9007199254740991)), shouldBe: "bigint"
                 },

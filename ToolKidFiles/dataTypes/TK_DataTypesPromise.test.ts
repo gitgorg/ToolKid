@@ -1,6 +1,6 @@
 (function TK_DataTypesPromise_test() {
     const { assertEquality, assertFailure, shouldPass, test } = ToolKid.debug.test;
-    const { combine, createPromise } = ToolKid.dataTypes.promise;
+    const { combinePromises, createPromise } = ToolKid.dataTypes.promise;
 
 
 
@@ -47,11 +47,11 @@
     });
 
     test({
-        subject: combine,
+        subject: combinePromises,
         execute: async function bothPositive() {
             assertEquality({
                 "both positive": {
-                    value: await combine(
+                    value: await combinePromises(
                         Promise.resolve("a"), Promise.resolve("b")
                     ),
                     shouldBe: ["a", "b"]
@@ -59,20 +59,20 @@
             });
         }
     }, {
-        subject: combine,
+        subject: combinePromises,
         execute: async function fail_positiveNegative() {
             await assertFailure({
                 name: "positive and negative",
-                execute: combine(Promise.resolve("c"), Promise.reject("d")),
+                execute: combinePromises(Promise.resolve("c"), Promise.reject("d")),
                 shouldThrow: "d"
             });
         }
     }, {
-        subject: combine,
+        subject: combinePromises,
         execute: async function fail_bothNetative() {
             await assertFailure({
                 name: "both negative",
-                execute: combine(Promise.reject("e"), Promise.reject("f")),
+                execute: combinePromises(Promise.reject("e"), Promise.reject("f")),
                 shouldThrow: "e"
             });
         }

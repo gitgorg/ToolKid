@@ -6,8 +6,14 @@ interface TK_DebugTest_file {
         [name: string]: {
             value: any,
             shouldBe: any,
+
+            allowAdditions?: true,
+            catchFailure?: {
+                (
+                    errorMessage: [description: string, ...details: any[]]
+                ): void
+            },
             toleranceDepth?: number,
-            allowAdditions?: true
         }
     }): void
 }
@@ -32,7 +38,12 @@ interface TK_DebugTest_file {
         }
         const returned = ToolKid.dataTypes.checks.areEqual(settings);
         if (returned !== true) {
-            throw ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
+            const errorMessage = ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
+            if (typeof settings.catchFailure === "function") {
+                settings.catchFailure(errorMessage);
+            } else {
+                throw errorMessage;
+            }
         }
     };
 

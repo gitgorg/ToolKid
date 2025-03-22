@@ -2,7 +2,7 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { promise: TK_DataTypesPromise_file }
 interface TK_DataTypesPromise_file {
-    combine(
+    combinePromises(
         ...promises: Promise<any>[]
     ): Promise<any[]>,
     createPromise(): CustomPromise
@@ -21,7 +21,7 @@ type CustomPromise = {
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = <TK_DataTypesPromise_file>{};
 
-    publicExports.combine = function TK_DataTypesPromise_combine(...promises) {
+    publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
         if (promises.length === 0) {
             return Promise.resolve();
         }
@@ -29,19 +29,19 @@ type CustomPromise = {
         let missing = promises.length;
         const datas = new Array(promises.length);
         const result = publicExports.createPromise();
-        const handleSucces = function TK_DataTypesPromise_combineSuccess(position: number, data: any) {
+        const handleSucces = function TK_DataTypesPromise_combinePromisesSuccess(position: number, data: any) {
             datas[position] = data;
             missing -= 1;
             if (missing === 0) {
                 result.resolve(datas);
             }
         };
-        const handleFailure = function TK_DataTypesPromise_combineFailure(data: any) {
+        const handleFailure = function TK_DataTypesPromise_combinePromisesFailure(data: any) {
             if (result.state === "pending") {
                 result.reject(data);
             }
         };
-        promises.forEach(function (promise, position) {
+        promises.forEach(function TK_DataTypesPromise_combinePromisesWatch(promise, position) {
             promise.then(handleSucces.bind(null, position), handleFailure);
         });
         return result.promise;
@@ -76,7 +76,7 @@ type CustomPromise = {
         const { promiseData } = bound;
         if (promiseData.state !== "pending") {
             console.error([
-                "TK_DataTypesPromise_createPromiseReject - promise allready "+promiseData.state+" with:",
+                "TK_DataTypesPromise_createPromiseReject - promise allready " + promiseData.state + " with:",
                 promiseData.data,
                 " then tried " + bound.state + " with:",
                 data
