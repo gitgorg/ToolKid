@@ -63,7 +63,7 @@ interface TK_DebugTest_file {
             colorText("negative",
                 ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name
             ),
-            logFailureNice(result.errorMessage).map(shortenValue)
+            ...logFailureNice(result.errorMessage).map(shortenValue)
         );
     };
 
@@ -176,7 +176,7 @@ interface TK_DebugTest_file {
         timeStart = Date.now();
         const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
-            callback: function (summary) {
+            callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
                 // TODO: real test for .testFull
                 summary.missingSuspects.delete(publicExports.testFull);
                 const timeFinal = Date.now() - timeStart;

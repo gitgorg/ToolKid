@@ -24,13 +24,17 @@ interface TK_DebugTest_file {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
+        const errors = <any[]>[];
         inputs.forEach(function TK_DebugTestAssertion_testForEquealityPerInput(inputs: Dictionary) {
-            Object.entries(inputs).forEach(assertEqualityPerName);
+            Object.entries(inputs).forEach(assertEqualityPerName.bind(null,errors));
         });
+        if (errors.length !== 0) {
+            throw errors;
+        }
     };
 
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(
-        nameAndValue: [testName: string, config: any]
+        errors:any[], nameAndValue: [testName: string, config: any]
     ) {
         const settings = Object.assign({}, nameAndValue[1]);
         if (typeof settings.toleranceDepth !== "number") {
@@ -42,7 +46,7 @@ interface TK_DebugTest_file {
             if (typeof settings.catchFailure === "function") {
                 settings.catchFailure(errorMessage);
             } else {
-                throw errorMessage;
+                errors.push(errorMessage);
             }
         }
     };

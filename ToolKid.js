@@ -953,11 +953,15 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
 (function TK_DebugTestAssertion_init() {
     const publicExports = module.exports = {};
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
+        const errors = [];
         inputs.forEach(function TK_DebugTestAssertion_testForEquealityPerInput(inputs) {
-            Object.entries(inputs).forEach(assertEqualityPerName);
+            Object.entries(inputs).forEach(assertEqualityPerName.bind(null, errors));
         });
+        if (errors.length !== 0) {
+            throw errors;
+        }
     };
-    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(nameAndValue) {
+    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndValue) {
         const settings = Object.assign({}, nameAndValue[1]);
         if (typeof settings.toleranceDepth !== "number") {
             settings.toleranceDepth = 1;
@@ -969,7 +973,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
                 settings.catchFailure(errorMessage);
             }
             else {
-                throw errorMessage;
+                errors.push(errorMessage);
             }
         }
     };
@@ -1073,7 +1077,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     const logFailure = function TK_DebugTestFull_logFailure(summary, result) {
         console.warn("\n" +
-            colorText("negative", ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name), logFailureNice(result.errorMessage).map(shortenValue));
+            colorText("negative", ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name), ...logFailureNice(result.errorMessage).map(shortenValue));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
@@ -1162,7 +1166,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         timeStart = Date.now();
         const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
-            callback: function (summary) {
+            callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
                 // TODO: real test for .testFull
                 summary.missingSuspects.delete(publicExports.testFull);
                 const timeFinal = Date.now() - timeStart;
