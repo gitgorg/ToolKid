@@ -232,7 +232,7 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
             batchSize: 10,
             callback: function () { },
             maxBlockDuration: 100,
-            stopSignal: {},
+            stopSignal: {}, //unique data pointer to fail the test by default
             startIndex: 0,
         }, inputs, {
             dataPosition: 0,
