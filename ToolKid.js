@@ -515,6 +515,47 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
 
+(function TK_DataTypesNumber_init() {
+    const publicExports = module.exports = {};
+    publicExports.addUnderscores = function TK_DataTypesNuber_addUnderscores(value) {
+        if (typeof value === "string") {
+            if (isNaN(value)) {
+                return "";
+            }
+            value = parseFloat(value);
+            if (isNaN(value)) {
+                return "";
+            }
+        }
+        else if (typeof value !== "number" || Number.isNaN(value)) {
+            return "";
+        }
+        let result = "";
+        if (value < 0) {
+            result = "-";
+            value *= -1;
+        }
+        ;
+        const base = String(value);
+        const scoreCount = Math.floor((base.length - 1) / 3);
+        if (scoreCount === 0) {
+            return result + base;
+        }
+        let offset = Math.round(base.length % 3) || 3;
+        result += base.slice(0, offset);
+        for (let i = 0; i < scoreCount; i += 1) {
+            result += "_" + base.slice(offset, offset + 3);
+            offset += 3;
+        }
+        return result;
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "dataTypes", subSection: "number", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DataTypesNumber.js"] = module.exports;
+
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
