@@ -536,15 +536,15 @@ registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
             value *= -1;
         }
         ;
-        const base = String(value);
-        const scoreCount = Math.floor((base.length - 1) / 3);
+        const textBase = String(value);
+        const scoreCount = Math.floor((textBase.length - 1) / 3);
         if (scoreCount === 0) {
-            return result + base;
+            return result + textBase;
         }
-        let offset = Math.round(base.length % 3) || 3;
-        result += base.slice(0, offset);
+        let offset = Math.round(textBase.length % 3) || 3;
+        result += textBase.slice(0, offset);
         for (let i = 0; i < scoreCount; i += 1) {
-            result += "_" + base.slice(offset, offset + 3);
+            result += "_" + textBase.slice(offset, offset + 3);
             offset += 3;
         }
         return result;
