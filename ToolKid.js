@@ -1041,13 +1041,13 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
         if (inputs === undefined) {
             return conditionCreate();
         }
-        inputs = conditionInputs(inputs);
+        if (typeof inputs === "number") {
+            inputs = { timeToResolve: inputs };
+        }
         const result = conditionCreate();
-        watchPromiseDuration({
-            timeLimit: inputs.timeLimit,
-            overTimeMessage: inputs.overTimeMessage,
-            promise: result
-        });
+        if (typeof inputs.timeToResolve === "number" || typeof inputs.timeToReject === "number") {
+            watchPromiseDuration(inputs, result);
+        }
         if (typeof inputs.registerWithName === "string") {
             registeredConditions.set(inputs.registerWithName, result);
         }
@@ -1057,37 +1057,44 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
         let resolve, reject;
         const result = new Promise(function createPromise_setup(resolveFunction, rejectFunction) {
             resolve = function TK_DebugTestCondition_PromiseResolve(value) {
+                result.timePassed = Date.now() - startTime;
                 result.done = true;
+                if (arguments.length === 0) {
+                    value = result.timePassed;
+                }
                 resolveFunction(value);
             };
             reject = function TK_DebugTestCondition_PromiseReject(reason) {
+                result.timePassed = Date.now() - startTime;
                 result.done = true;
+                if (arguments.length === 0) {
+                    reason = result.timePassed;
+                }
                 rejectFunction(reason);
             };
         });
         result.resolve = resolve;
         result.reject = reject;
         result.done = false;
+        result.timePassed = 0;
+        const startTime = Date.now();
         return result;
     };
-    const conditionInputs = function TK_DebugTestCondition_conditionInputs(inputs) {
-        if (typeof inputs === "number") {
-            return {
-                timeLimit: inputs,
-                overTimeMessage: "timeout"
-            };
+    const watchPromiseDuration = function TK_DebugTestCondition_watchPromiseDuration(inputs, promise) {
+        if (typeof inputs.timeToResolve === "number") {
+            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
+                if (promise.done !== true) {
+                    promise.resolve(inputs.overTimeMessage || "timeout");
+                }
+            }, inputs.timeToResolve);
         }
-        if (inputs.overTimeMessage === undefined) {
-            inputs.overTimeMessage = "timeout";
+        else {
+            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
+                if (promise.done !== true) {
+                    promise.reject(inputs.overTimeMessage || "timeout");
+                }
+            }, inputs.timeToReject);
         }
-        return inputs;
-    };
-    const watchPromiseDuration = function TK_DEBUG_TestAssertion_watchPromiseDuration(inputs) {
-        setTimeout(function TK_DEBUG_TestAssertion_watchPromiseDurationCheck() {
-            if (inputs.promise.done !== true) {
-                inputs.promise.reject(inputs.overTimeMessage);
-            }
-        }, inputs.timeLimit);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

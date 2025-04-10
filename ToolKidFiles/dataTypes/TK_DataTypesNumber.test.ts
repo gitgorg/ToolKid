@@ -26,7 +26,7 @@
                 },
             });
         }
-    },{
+    }, {
         subject: addUnderscores,
         execute: function changedIntegers() {
             assertEquality({
@@ -52,7 +52,7 @@
                 },
             });
         }
-    },{
+    }, {
         subject: addUnderscores,
         execute: function strings() {
             assertEquality({
@@ -62,7 +62,7 @@
                 },
             });
         }
-    },{
+    }, {
         subject: addUnderscores,
         execute: function nonNumbers() {
             assertEquality({

@@ -3,12 +3,17 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     condition(
-        timeLimit?: number
+        timeToResolve?: number
     ): Condition,
     condition(inputs: {
-        timeLimit: number,
+        timeToResolve: number,
         overTimeMessage?: any,
-        registerWithName?: string
+        registerWithName?: string,
+    }): Condition,
+    condition(inputs: {
+        timeToReject: number,
+        overTimeMessage?: any,
+        registerWithName?: string,
     }): Condition,
     condition(
         name: string
@@ -22,7 +27,8 @@ type Condition = Promise<any> & {
     reject(
         reason?: any
     ): void,
-    done: boolean
+    done: boolean,
+    timePassed: number
 }
 
 
@@ -47,13 +53,13 @@ type Condition = Promise<any> & {
             return conditionCreate();
         }
 
-        inputs = conditionInputs(inputs);
+        if (typeof inputs === "number") {
+            inputs = { timeToResolve: inputs };
+        }
         const result = conditionCreate();
-        watchPromiseDuration({
-            timeLimit: inputs.timeLimit,
-            overTimeMessage: inputs.overTimeMessage,
-            promise: result
-        });
+        if (typeof (<any>inputs).timeToResolve === "number" || typeof (<any>inputs).timeToReject === "number") {
+            watchPromiseDuration(<any>inputs, result);
+        }
         if (typeof inputs.registerWithName === "string") {
             registeredConditions.set(inputs.registerWithName, result);
         }
@@ -65,11 +71,19 @@ type Condition = Promise<any> & {
         const result = <Condition>new Promise(
             function createPromise_setup(resolveFunction, rejectFunction) {
                 resolve = function TK_DebugTestCondition_PromiseResolve(value: any) {
+                    (<any>result).timePassed = Date.now() - startTime;
                     result.done = true;
+                    if (arguments.length === 0) {
+                        value = (<any>result).timePassed;
+                    }
                     resolveFunction(value);
                 };
                 reject = function TK_DebugTestCondition_PromiseReject(reason: any) {
+                    (<any>result).timePassed = Date.now() - startTime;
                     result.done = true;
+                    if (arguments.length === 0) {
+                        reason = (<any>result).timePassed;
+                    }
                     rejectFunction(reason);
                 }
             }
@@ -77,33 +91,29 @@ type Condition = Promise<any> & {
         result.resolve = resolve;
         result.reject = reject;
         result.done = false;
+        result.timePassed = 0;
+        const startTime = Date.now();
         return result;
     };
 
-    const conditionInputs = function TK_DebugTestCondition_conditionInputs(inputs: any) {
-        if (typeof inputs === "number") {
-            return {
-                timeLimit: inputs,
-                overTimeMessage: "timeout"
-            };
-        }
-
-        if (inputs.overTimeMessage === undefined) {
-            inputs.overTimeMessage = "timeout";
-        }
-        return <{ timeLimit: number, overtimeMessage: string }>inputs;
-    };
-
-    const watchPromiseDuration = function TK_DEBUG_TestAssertion_watchPromiseDuration(inputs: {
-        timeLimit: number,
+    const watchPromiseDuration = function TK_DebugTestCondition_watchPromiseDuration(inputs: {
+        timeToResolve?: number,
+        timeToReject?: number,
         overTimeMessage: string,
-        promise: Condition
-    }) {
-        setTimeout(function TK_DEBUG_TestAssertion_watchPromiseDurationCheck() {
-            if (inputs.promise.done !== true) {
-                inputs.promise.reject(inputs.overTimeMessage);
-            }
-        }, inputs.timeLimit);
+    }, promise: Condition) {
+        if (typeof inputs.timeToResolve === "number") {
+            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
+                if (promise.done !== true) {
+                    promise.resolve(inputs.overTimeMessage || "timeout");
+                }
+            }, inputs.timeToResolve);
+        } else {
+            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
+                if (promise.done !== true) {
+                    promise.reject(inputs.overTimeMessage || "timeout");
+                }
+            }, inputs.timeToReject);
+        }
     };
 
     Object.freeze(publicExports);

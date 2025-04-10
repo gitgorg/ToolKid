@@ -5,6 +5,9 @@
     const isFunction = function (value: any) {
         return typeof value === "function";
     };
+    const isNumber = function (value: any) {
+        return typeof value === "number" && !Number.isNaN(value);
+    }
     const isPromise = function (value: any) {
         return value instanceof Promise;
     };
@@ -13,17 +16,21 @@
 
     const referenceCondition = condition();
     test({
-        subject: condition,
+        subject: referenceCondition.resolve,
         execute: async function createAndResolve() {
             const promise = condition();
             assertEquality({
-                "promise": {
+                "should be Promise": {
                     value: promise,
                     shouldBe: shouldPass(isPromise)
                 },
                 "promise.done": {
                     value: promise.done,
                     shouldBe: false
+                },
+                "promise.timePassed": {
+                    value: promise.timePassed,
+                    shouldBe: 0
                 },
                 "promise.resolve": {
                     value: promise.resolve,
@@ -34,17 +41,16 @@
                     shouldBe: shouldPass(isFunction)
                 }
             });
-        }
-    }, {
-        subject: referenceCondition.resolve,
-        execute: async function createAndResolve() {
-            const promise = condition();
             promise.resolve(200);
             assertEquality({
                 "promise.done": {
                     value: promise.done,
                     shouldBe: true
                 },
+                // "promise.timePassed": {
+                //     value: promise.timePassed,
+                //     shouldBe: 0
+                // },
                 "resolved to": {
                     value: await promise,
                     shouldBe: 200
@@ -78,19 +84,19 @@
             });
 
             let promise = condition({
-                timeLimit: 1000,
-                registerWithName: "debug.test.condition1"
+                timeToReject: 1000,
+                registerWithName: "debug.test.condition1",
             });
             setTimeout(promise.resolve, 100);
             assertEquality({
                 "successfull registered condition": {
                     value: await condition("debug.test.condition1"),
-                    shouldBe: undefined
+                    shouldBe: shouldPass(isNumber),
                 }
             });
 
             promise = condition({
-                timeLimit: 0,
+                timeToReject: 0,
                 registerWithName: "debug.test.condition2"
             });
             await assertFailure({
@@ -100,7 +106,7 @@
             });
 
             promise = condition({
-                timeLimit: 1000,
+                timeToReject: 1000,
                 registerWithName: "debug.test.condition3"
             });
             promise.reject("testCondition3 failure");
@@ -113,7 +119,7 @@
             assertEquality({
                 "remember previous valid condition": {
                     value: await condition("debug.test.condition1"),
-                    shouldBe: undefined
+                    shouldBe: shouldPass(isNumber)
                 }
             });
         }
