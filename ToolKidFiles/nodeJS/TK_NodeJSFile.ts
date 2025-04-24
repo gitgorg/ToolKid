@@ -32,7 +32,8 @@ interface TK_nodeJS_file {
         appendFileSync: extendFile,
         existsSync: isUsedPath,
         readFileSync: readFile,
-        unlink: deleteFile
+        rmSync: deleteFolder,
+        unlinkSync: deleteFile
     } = require("fs");
     const { resolve: resolvePath } = require("path");
 
@@ -44,27 +45,23 @@ interface TK_nodeJS_file {
         if (typeof inputs === "string") {
             inputs = { path: inputs };
         }
-        deleteFile(inputs.path, deleteFileHandler.bind(null, inputs));
-    };
+        if (!isUsedPath(inputs.path)) {
+            return;
+        }
 
-    const deleteFileHandler = function TK_nodeJSFile_deleteFileHandler(
-        boundInputs: {
-            ignoreMissingFile?: true
-        },
-        error: Error
-    ) {
-        if (error !== null) {
-            if (
-                (<Dictionary>error).code !== "ENOENT"
-                || boundInputs.ignoreMissingFile !== true
-            ) {
-                throw error;
-            }
+        if (ToolKid.nodeJS.isDirectory(inputs.path)) {
+            deleteFolder(inputs.path, { recursive: true });
+        } else {
+            deleteFile(inputs.path);
         }
     };
 
     publicExports.extendFile = function TK_nodeJSFile_extendFile(inputs) {
-        extendFile(inputs.path, inputs.content);
+        if (isUsedPath(inputs.path)) {
+            extendFile(inputs.path, inputs.content);
+        } else {
+            ToolKid.nodeJS.writeFile(inputs);
+        }
     };
 
     publicExports.readFile = function TK_nodeJSFile_read(inputs) {

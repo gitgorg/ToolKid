@@ -1556,25 +1556,30 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
 
 (function TK_nodeJSFile_init() {
-    const { appendFileSync: extendFile, existsSync: isUsedPath, readFileSync: readFile, unlink: deleteFile } = require("fs");
+    const { appendFileSync: extendFile, existsSync: isUsedPath, readFileSync: readFile, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const { resolve: resolvePath } = require("path");
     const publicExports = module.exports = {};
     publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
         if (typeof inputs === "string") {
             inputs = { path: inputs };
         }
-        deleteFile(inputs.path, deleteFileHandler.bind(null, inputs));
-    };
-    const deleteFileHandler = function TK_nodeJSFile_deleteFileHandler(boundInputs, error) {
-        if (error !== null) {
-            if (error.code !== "ENOENT"
-                || boundInputs.ignoreMissingFile !== true) {
-                throw error;
-            }
+        if (!isUsedPath(inputs.path)) {
+            return;
+        }
+        if (ToolKid.nodeJS.isDirectory(inputs.path)) {
+            deleteFolder(inputs.path, { recursive: true });
+        }
+        else {
+            deleteFile(inputs.path);
         }
     };
     publicExports.extendFile = function TK_nodeJSFile_extendFile(inputs) {
-        extendFile(inputs.path, inputs.content);
+        if (isUsedPath(inputs.path)) {
+            extendFile(inputs.path, inputs.content);
+        }
+        else {
+            ToolKid.nodeJS.writeFile(inputs);
+        }
     };
     publicExports.readFile = function TK_nodeJSFile_read(inputs) {
         let { path, checkExistance, encoding } = inputs;

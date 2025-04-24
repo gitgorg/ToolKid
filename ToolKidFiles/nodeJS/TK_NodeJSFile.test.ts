@@ -1,5 +1,5 @@
 (function TK_nodeJSFile_test() {
-    const paths = <T_pathList_test>require(ToolKid.nodeJS.resolvePath(__dirname,"./T_fileDirectory/T_pathList.test.js"));
+    const paths = <T_pathList_test>require(ToolKid.nodeJS.resolvePath(__dirname, "./T_fileDirectory/T_pathList.test.js"));
 
     const { assertFailure, assertEquality, test } = ToolKid.debug.test;
     const { deleteFile, extendFile, readFile, resolvePath, writeFile } = ToolKid.nodeJS;
@@ -45,7 +45,7 @@
                     }
                 }
             });
-            deleteFile( "./TKTest.extendFile.txt");
+            deleteFile("./TKTest.extendFile.txt");
         }
     }, {
         subject: extendFile,
@@ -73,7 +73,35 @@
                     }
                 }
             });
-            deleteFile( "./TKTest.extendFileNew.txt");
+            deleteFile("./TKTest.extendFileNew.txt");
+        }
+    }, {
+        subject: extendFile,
+        execute: function newFolderFileExtension() {
+            deleteFile({
+                path: "./testFolder",
+                ignoreMissingFile: true
+            });
+            assertEquality({
+                "file not there yet": {
+                    value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
+                    shouldBe: undefined
+                }
+            });
+            extendFile({
+                path: "./testFolder/TKTest.extendFileFolder.txt",
+                content: "3"
+            });
+            assertEquality({
+                "file changed": {
+                    value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
+                    shouldBe: {
+                        encoding: "utf8",
+                        content: "3"
+                    }
+                }
+            });
+            deleteFile("./testFolder");
         }
     }, {
         subject: readFile,
@@ -81,32 +109,32 @@
             const fileResponse = <Dictionary>readFile({ path: paths.file });
 
             assertEquality({
-                "regular file response":{
+                "regular file response": {
                     value: fileResponse,
                     shouldBe: {
                         encoding: "utf8",
                         content: fileResponse.content
                     }
                 },
-                "response.content parsed as JSON":{
+                "response.content parsed as JSON": {
                     value: JSON.parse(fileResponse.content),
                     shouldBe: {
                         "text": "hello",
                         "number": 1
                     }
                 },
-                "empty file response":{
+                "empty file response": {
                     value: readFile({ path: paths.fileEmpty }),
                     shouldBe: {
                         encoding: "utf8",
                         content: ""
                     }
                 },
-                "non-existing file response":{
+                "non-existing file response": {
                     value: readFile({ path: paths.fileNonExisting }),
                     shouldBe: undefined
                 },
-                "non-esisting directory response":{
+                "non-esisting directory response": {
                     value: readFile({ path: paths.directoryNonExisting }),
                     shouldBe: undefined
                 }
