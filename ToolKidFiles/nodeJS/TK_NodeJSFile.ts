@@ -6,7 +6,11 @@ interface TK_nodeJS_file {
     ): void
     deleteFile(inputs: {
         path: string,
-        ignoreMissingFile?: true
+        ignoreMissingFile?: true,
+    }): void,
+    extendFile(inputs: {
+        path: string,
+        content: any,
     }): void,
     loopFiles: LibraryTools_file["loopFiles"],
     readFile(inputs: {
@@ -25,6 +29,7 @@ interface TK_nodeJS_file {
 
 (function TK_nodeJSFile_init() {
     const {
+        appendFileSync: extendFile,
         existsSync: isUsedPath,
         readFileSync: readFile,
         unlink: deleteFile
@@ -56,6 +61,10 @@ interface TK_nodeJS_file {
                 throw error;
             }
         }
+    };
+
+    publicExports.extendFile = function TK_nodeJSFile_extendFile(inputs) {
+        extendFile(inputs.path, inputs.content);
     };
 
     publicExports.readFile = function TK_nodeJSFile_read(inputs) {

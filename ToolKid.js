@@ -1556,7 +1556,7 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
 
 (function TK_nodeJSFile_init() {
-    const { existsSync: isUsedPath, readFileSync: readFile, unlink: deleteFile } = require("fs");
+    const { appendFileSync: extendFile, existsSync: isUsedPath, readFileSync: readFile, unlink: deleteFile } = require("fs");
     const { resolve: resolvePath } = require("path");
     const publicExports = module.exports = {};
     publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
@@ -1572,6 +1572,9 @@ registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
                 throw error;
             }
         }
+    };
+    publicExports.extendFile = function TK_nodeJSFile_extendFile(inputs) {
+        extendFile(inputs.path, inputs.content);
     };
     publicExports.readFile = function TK_nodeJSFile_read(inputs) {
         let { path, checkExistance, encoding } = inputs;
