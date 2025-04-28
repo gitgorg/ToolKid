@@ -138,12 +138,13 @@ type ToolKidConfig = {
         let path = resolvePath(rootLibraryFiles, "LibraryTools.js");
         appendFile(privateData, [Path.basename(path), path]);
         privateData.combinedFile += "ToolKid.registerFunction({section:\"dataTypes\", subSection:\"checks\", functions: {\n\
-            isArray:module.exports.isArray\n\
+            isArray:module.exports.isArray,\n\
         }});\n\n";
         path = resolvePath(rootLibraryFiles, "LibraryTools_nodeJS.js");
         appendFile(privateData, [Path.basename(path), path]);
         privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
-            loopFiles:module.exports.loopFiles\n\
+            loopFiles:module.exports.loopFiles,\n\
+            writeFile:module.exports.writeFile,\n\
         }});\n\n";
 
         privateData.combinedFile += "global.log = ToolKid.debug.terminal.logImportant;\n";

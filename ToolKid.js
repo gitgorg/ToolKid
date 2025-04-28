@@ -1695,7 +1695,7 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 registeredFiles["LibraryTools.js"] = module.exports;
 
 ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
-            isArray:module.exports.isArray
+            isArray:module.exports.isArray,
         }});
 
 (function LibraryTools_nodeJS_init() {
@@ -1798,7 +1798,8 @@ ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
 registeredFiles["LibraryTools_nodeJS.js"] = module.exports;
 
 ToolKid.registerFunction({section:"nodeJS", functions: {
-            loopFiles:module.exports.loopFiles
+            loopFiles:module.exports.loopFiles,
+            writeFile:module.exports.writeFile,
         }});
 
 global.log = ToolKid.debug.terminal.logImportant;
