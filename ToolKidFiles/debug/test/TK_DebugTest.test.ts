@@ -46,7 +46,7 @@
 
     //success with promise
     const promiseSuccess = createPromise();
-    let promisedResult = <Promise<TestResult>>test({
+    let promisedResult = <Promise<TKTestResult>>test({
         subject: test,
         execute: function returnGoodPromise() {
             return promiseSuccess;
@@ -102,7 +102,7 @@
 
     const failingPromise = createPromise();
     failingPromise.reject();
-    promisedResult = <Promise<TestResult>>test({
+    promisedResult = <Promise<TKTestResult>>test({
         subject: test,
         execute: function returnBadPromise() {
             return failingPromise;

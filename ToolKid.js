@@ -671,6 +671,31 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
             inputs.unfinishedString = undefined;
         }
     };
+    let disableCount = 0;
+    let originalLog;
+    publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
+        if (amount === false) {
+            if (disableCount !== 0) {
+                disableCount = 0;
+                console.warn = originalLog;
+            }
+            return;
+        }
+        if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+            throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
+        }
+        if (disableCount === 0) {
+            originalLog = console.warn;
+            console.warn = disableLogsTick;
+        }
+        disableCount += amount;
+    };
+    const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
+        disableCount -= 1;
+        if (disableCount === 0) {
+            console.warn = originalLog;
+        }
+    };
     publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
         const code = colorsServer[name];
         if (code === undefined) {
@@ -765,7 +790,6 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         }
         const testResults = inputs.map(testSingle.bind(null, currentResultGroup));
         currentResultGroup.push(...testResults);
-        // ToolKid.debug.test.registerTestResult(...testResults);
         return testResults;
     };
     const testSingle = function TK_DebugTest_testSingle(resultList, config) {
@@ -775,34 +799,41 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         }
         return testExecute({
             config,
-            result: createResultBase(config),
+            testResult: createResultBase(config),
             resultList
         });
     };
     const testExecute = function Test_testExecute(inputs) {
-        const { result } = inputs;
+        const { testResult } = inputs;
         const startTime = Date.now();
+        const scope = {};
         try {
-            const returned = inputs.config.execute();
+            const returned = inputs.config.execute(scope);
             if (returned instanceof Promise) {
                 const promise = testWatchPromise({
-                    result,
+                    testResult,
                     startTime,
                     promise: returned,
                     resultList: inputs.resultList
                 });
                 promise.then(function Test_testExecute_handlePromise() {
+                    if (typeof inputs.config.callback === "function") {
+                        inputs.config.callback({ scope, testResult });
+                    }
                     const index = inputs.resultList.indexOf(promise);
-                    inputs.resultList[index] = result;
+                    inputs.resultList[index] = testResult;
                 });
                 return promise;
             }
         }
         catch (error) {
-            result.errorMessage = error;
+            testResult.errorMessage = error;
         }
-        result.time = Date.now() - startTime;
-        return Object.freeze(result);
+        testResult.time = Date.now() - startTime;
+        if (typeof inputs.config.callback === "function") {
+            inputs.config.callback({ scope, testResult });
+        }
+        return Object.freeze(testResult);
     };
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs) {
         let resolver;
@@ -812,7 +843,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         const bound = {
             promise: inputs.promise,
             resolver,
-            result: inputs.result,
+            result: inputs.testResult,
             startTime: inputs.startTime,
             resultList: inputs.resultList
         };
@@ -1147,21 +1178,29 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
             })
         ];
     };
-    const logFazit = function TK_DebugTestFull_logFazit(inputs) {
+    const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs) {
         const { summary } = inputs;
         const counts = {
             failures: summary.failures.length,
             suspects: summary.missingSuspects.size
         };
-        const message = "\n" +
+        return "\n" +
             colorText((counts.failures === 0) ? "positive" : "negative", ">> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s"))
             + " / "
             + colorText("positive", summary.testCount + " test groups")
             + " / "
-            + colorText((counts.suspects === 0) ? "positive" : "negative", counts.suspects + " untested suspects")
+            + colorText("positive", "sync " + inputs.timeInitial + " ms");
+    };
+    const summarizeFazit = function TK_DebugTestFull_summarizeFazit(inputs) {
+        const { summary } = inputs;
+        const counts = {
+            failures: summary.failures.length,
+            suspects: summary.missingSuspects.size
+        };
+        return summarizeFazitSync(inputs) +
+            colorText("positive", " + async " + inputs.timeFinal + " ms")
             + " / "
-            + colorText("positive", "sync " + inputs.timeInitial + " ms + async " + inputs.timeFinal + " ms");
-        console.log(message);
+            + colorText((counts.suspects === 0) ? "positive" : "negative", counts.suspects + " untested suspects");
     };
     const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary) {
         const { missingSuspects } = summary;
@@ -1220,11 +1259,12 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
                 const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
                 summary.failures.forEach(logFailure.bind(null, summary));
-                logFazit({ summary, timeInitial, timeFinal });
+                console.log(summarizeFazit({ summary, timeInitial, timeFinal }));
             }
         });
         if (summary.pending.size !== 0) {
-            console.log("\n>> " + summary.name + " >> " + summary.testCount + " tests done in " + timeInitial + " ms / " + summary.pending.size + " tests pending");
+            console.log(summarizeFazitSync({ summary, timeInitial })
+                + " ... waiting for at least " + summary.pending.size + " more tests");
         }
     };
     Object.freeze(publicExports);

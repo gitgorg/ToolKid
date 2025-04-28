@@ -57,7 +57,7 @@ interface TK_DebugTest_file {
     };
 
     const logFailure = function TK_DebugTestFull_logFailure(
-        summary: TestSummary, result: TestResult
+        summary: TestSummary, result: TKTestResult
     ) {
         console.warn("\n" +
             colorText("negative",
@@ -91,15 +91,16 @@ interface TK_DebugTest_file {
         ];
     };
 
-    const logFazit = function TK_DebugTestFull_logFazit(inputs: {
-        summary: TestSummary, timeInitial: number, timeFinal: number
+    const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs: {
+        summary: TestSummary,
+        timeInitial: number
     }) {
         const { summary } = inputs;
         const counts = {
             failures: summary.failures.length,
             suspects: summary.missingSuspects.size
         };
-        const message = "\n" +
+        return "\n" +
             colorText((counts.failures === 0) ? "positive" : "negative",
                 ">> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
             )
@@ -108,14 +109,29 @@ interface TK_DebugTest_file {
                 summary.testCount + " test groups"
             )
             + " / "
-            + colorText((counts.suspects === 0) ? "positive" : "negative",
-                counts.suspects + " untested suspects"
+            + colorText("positive",
+                "sync " + inputs.timeInitial + " ms"
+            );
+    };
+
+    const summarizeFazit = function TK_DebugTestFull_summarizeFazit(inputs: {
+        summary: TestSummary,
+        timeInitial: number,
+        timeFinal: number
+    }) {
+        const { summary } = inputs;
+        const counts = {
+            failures: summary.failures.length,
+            suspects: summary.missingSuspects.size
+        };
+        return summarizeFazitSync(inputs) +
+            colorText("positive",
+                " + async " + inputs.timeFinal + " ms"
             )
             + " / "
-            + colorText("positive",
-                "sync " + inputs.timeInitial + " ms + async " + inputs.timeFinal + " ms"
+            + colorText((counts.suspects === 0) ? "positive" : "negative",
+                counts.suspects + " untested suspects"
             );
-        console.log(message);
     };
 
     const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary: TestSummary) {
@@ -182,11 +198,14 @@ interface TK_DebugTest_file {
                 const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
                 summary.failures.forEach(logFailure.bind(null, summary));
-                logFazit({ summary, timeInitial, timeFinal });
+                console.log(summarizeFazit({ summary, timeInitial, timeFinal }));
             }
         });
         if (summary.pending.size !== 0) {
-            console.log("\n>> " + summary.name + " >> " + summary.testCount + " tests done in " + timeInitial + " ms / " + summary.pending.size + " tests pending");
+            console.log(
+                summarizeFazitSync({ summary, timeInitial })
+                + " ... waiting for at least " + summary.pending.size + " more tests"
+            );
         }
     };
 

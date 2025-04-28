@@ -4,51 +4,53 @@ interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     getResultGroup(): {
         name: string,
-        results: TestResultList
+        results: TKTestResultList
     }
     getResultGroup(name: string): {
         name: string,
-        results: TestResultList
+        results: TKTestResultList
     } | undefined,
     switchResultGroup(
         name: string
-    ): TestResultList,
-    test(...configs: {
-        subject: GenericFunction | string,
-        execute(): any | Promise<any>
-    }[]): (TestResult | Promise<TestResult>)[]
+    ): TKTestResultList,
+    test(
+        ...configs: TKTestConfig[]
+    ): TKTestResultList
 }
 
-type TestResult = {
+type TKTestConfig = {
+    subject: GenericFunction | string,
+    execute(
+        scope: Dictionary
+    ): any | Promise<any>,
+    callback?(inputs: {
+        scope: Dictionary,
+        testResult: TKTestResult
+    }): void
+}
+type TKTestResult = {
     subject: any,
     name: string,
     time: number,
     errorMessage?: any
 }
-type TestResultList = (TestResult | Promise<TestResult>)[]
+type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
 
 
 
 (function TK_DebugTest_init() {
-    type TestConfig = {
-        subject: GenericFunction | string,
-        execute(): void | Promise<void>
-    }
-
-
-
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-    const resultGroups: Map<string, TestResultList> = new Map([["default", []]]);
+    const resultGroups: Map<string, TKTestResultList> = new Map([["default", []]]);
     let currentResultGroupName = "default";
-    let currentResultGroup = <TestResultList>resultGroups.get("default");
+    let currentResultGroup = <TKTestResultList>resultGroups.get("default");
 
 
 
     const createResultBase = function TK_DebugTest_createResultBase(
-        config: TestConfig,
+        config: TKTestConfig,
     ) {
-        return <TestResult>{
+        return <TKTestResult>{
             subject: config.subject,
             name: config.execute.name,
             time: 0
@@ -110,14 +112,14 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
             throw ["TK_DebugTest_test - no config received"];
         }
 
-        const testResults = <TestResultList>inputs.map(testSingle.bind(null, currentResultGroup));
+        const testResults = <TKTestResultList>inputs.map(testSingle.bind(null, currentResultGroup));
         currentResultGroup.push(...testResults);
-        // ToolKid.debug.test.registerTestResult(...testResults);
         return testResults;
     };
 
     const testSingle = function TK_DebugTest_testSingle(
-        resultList: TestResultList, config: TestConfig
+        resultList: TKTestResultList,
+        config: TKTestConfig,
     ) {
         if (
             !isObjectWithExecute(config)
@@ -128,54 +130,64 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
 
         return testExecute({
             config,
-            result: createResultBase(config),
+            testResult: createResultBase(config),
             resultList
         });
     };
 
+    // TODO: unit tests for callback function
+
     const testExecute = function Test_testExecute(inputs: {
-        config: TestConfig,
-        result: TestResult,
-        resultList: TestResultList
+        config: TKTestConfig,
+        testResult: TKTestResult,
+        resultList: TKTestResultList
     }) {
-        const { result } = inputs;
+        const { testResult } = inputs;
         const startTime = Date.now();
+        const scope = {};
         try {
-            const returned = inputs.config.execute();
+            const returned = inputs.config.execute(scope);
             if (returned instanceof Promise) {
                 const promise = testWatchPromise({
-                    result,
+                    testResult,
                     startTime,
                     promise: returned,
                     resultList: inputs.resultList
                 });
                 promise.then(function Test_testExecute_handlePromise() {
+                    if (typeof inputs.config.callback === "function") {
+                        inputs.config.callback({ scope, testResult });
+                    }
                     const index = inputs.resultList.indexOf(promise);
-                    inputs.resultList[index] = result;
+                    inputs.resultList[index] = testResult;
                 });
                 return promise;
             }
+
         } catch (error) {
-            result.errorMessage = error;
+            testResult.errorMessage = error;
         }
-        result.time = Date.now() - startTime;
-        return Object.freeze(result);
+        testResult.time = Date.now() - startTime;
+        if (typeof inputs.config.callback === "function") {
+            inputs.config.callback({ scope, testResult });
+        }
+        return Object.freeze(testResult);
     };
 
     const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs: {
-        result: TestResult,
+        testResult: TKTestResult,
         startTime: number,
         promise: Promise<any>,
-        resultList: TestResultList
+        resultList: TKTestResultList
     }) {
         let resolver: any;
-        const promise = <Promise<TestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
+        const promise = <Promise<TKTestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
             resolver = resolve;
         });
         const bound = {
             promise: inputs.promise,
             resolver,
-            result: inputs.result,
+            result: inputs.testResult,
             startTime: inputs.startTime,
             resultList: inputs.resultList
         };
@@ -187,8 +199,8 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
     };
 
     const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound: {
-        promise: Promise<TestResult>,
-        result: TestResult,
+        promise: Promise<TKTestResult>,
+        result: TKTestResult,
         startTime: number,
         resolver: GenericFunction
     }) {
@@ -198,7 +210,7 @@ type TestResultList = (TestResult | Promise<TestResult>)[]
 
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(
         bound: {
-            result: TestResult,
+            result: TKTestResult,
             startTime: number,
             resolver: GenericFunction
         }, reason: any

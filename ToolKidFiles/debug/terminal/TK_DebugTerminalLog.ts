@@ -10,6 +10,12 @@ interface TK_DebugTerminalLog_file {
         colorName: TerminalColor,
     ): string,
 
+    disableLogs(
+        amount: number
+    ): void,
+    disableLogs(
+        disableState: false
+    ): void,
     logBasic(
         ...inputs: any[]
     ): void,
@@ -21,7 +27,7 @@ interface TK_DebugTerminalLog_file {
     ): void,
     logError(
         ...inputs: any[]
-    ): void
+    ): void,
 }
 
 type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" | "red" | "white"
@@ -89,6 +95,35 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         if (typeof inputs.unfinishedString === "string") {
             inputs.result.push(inputs.unfinishedString + colorsServer.white);
             inputs.unfinishedString = undefined;
+        }
+    };
+
+    let disableCount = 0;
+    let originalLog: TK_DebugTerminalLog_file["logBasic"];
+    publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
+        if (amount === false) {
+            if (disableCount !== 0) {
+                disableCount = 0;
+                console.warn = originalLog;
+            }
+            return;
+        }
+
+        if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+            throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
+        }
+
+        if (disableCount === 0) {
+            originalLog = console.warn;
+            console.warn = disableLogsTick;
+        }
+        disableCount += amount;
+    };
+
+    const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
+        disableCount -= 1;
+        if (disableCount === 0) {
+            console.warn = originalLog;
         }
     };
 

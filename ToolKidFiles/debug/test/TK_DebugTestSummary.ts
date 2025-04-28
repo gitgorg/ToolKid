@@ -13,12 +13,12 @@ interface TK_DebugTest_file {
 type TestSummary = {
     name: string,
     testCount: number,
-    failures: TestResult[],
+    failures: TKTestResult[],
     successes: Map<any, {
         name: string,
         time: number
     }[]>,
-    pending: Set<Promise<TestResult>>,
+    pending: Set<Promise<TKTestResult>>,
     missingSuspects: Set<any>,
     testedSuspects: Set<any>,
     callback?: (summary: TestSummary) => void
@@ -31,7 +31,7 @@ type TestSummary = {
 
 
     const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(
-        testResult: TestResult
+        testResult: TKTestResult
     ) {
         const { errorMessage } = testResult;
         if (
@@ -162,7 +162,7 @@ type TestSummary = {
 
     const createSummary = function (inputs: {
         name: string,
-        results: TestResultList,
+        results: TKTestResultList,
         missingSuspects: Set<any>
     }) {
         const resultGroupName = inputs.name;
@@ -198,9 +198,9 @@ type TestSummary = {
     const summaryHandlePromise = function TK_DebugTestSummary_summaryHandlePromise(
         bound: {
             summary: TestSummary,
-            promise: Promise<TestResult>
+            promise: Promise<TKTestResult>
         },
-        result: TestResult
+        result: TKTestResult
     ) {
         const { summary } = bound;
         summary.pending.delete(bound.promise);
@@ -213,7 +213,7 @@ type TestSummary = {
 
     const summaryRegisterResult = function TK_DebugTest_summaryRegisterResult(
         summary: TestSummary,
-        testResult: TestResult | Promise<TestResult>
+        testResult: TKTestResult | Promise<TKTestResult>
     ) {
         summary.testCount += 1;
         if (testResult instanceof Promise) {
@@ -267,9 +267,9 @@ type TestSummary = {
 
     const summaryRegisterSuccess = function TK_DebugTest_summaryRegisterSuccess(inputs: {
         list: Map<any, {
-            name: TestResult["name"], time: TestResult["time"]
+            name: TKTestResult["name"], time: TKTestResult["time"]
         }[]>,
-        testResult: TestResult
+        testResult: TKTestResult
     }) {
         const { testResult } = inputs;
         const data = {
