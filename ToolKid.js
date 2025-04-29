@@ -787,7 +787,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             ? undefined
             : { name, results };
     };
-    publicExports.setResultGroupFailureHandler = function TK_DebugTest_setResultGroupFailureHandler(handler) {
+    publicExports.setFailureHandler = function TK_DebugTest_setFailureHandler(handler) {
         currentResultGroup.failureHandler = handler;
     };
     publicExports.switchResultGroup = function TK_DebugTest_selectTestGroup(name) {
@@ -838,7 +838,8 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
                     testResult,
                     startTime,
                     promise: returned,
-                    resultGroup: inputs.resultGroup
+                    resultGroup: inputs.resultGroup,
+                    source: ToolKid.debug.callstack.readCallstack({ position: 6 })[0],
                 });
                 promise.then(function Test_testExecute_handlePromise() {
                     if (typeof inputs.config.callback === "function") {
@@ -870,29 +871,27 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         const promise = new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
             resolver = resolve;
         });
-        const bound = {
-            promise: inputs.promise,
-            resolver,
-            result: inputs.testResult,
-            startTime: inputs.startTime,
-            resultGroup: inputs.resultGroup
-        };
-        inputs.promise.then(testPromiseSuccess.bind(null, bound), testPromiseFailure.bind(null, bound));
+        inputs.resolver = resolver;
+        inputs.promise.then(testPromiseSuccess.bind(null, inputs), testPromiseFailure.bind(null, inputs));
         return promise;
     };
     const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound) {
-        bound.result.time = Date.now() - bound.startTime;
-        bound.resolver(bound.result);
+        bound.testResult.time = Date.now() - bound.startTime;
+        bound.resolver(bound.testResult);
     };
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
-        const { result } = bound;
-        result.errorMessage = reason;
-        result.time = Date.now() - bound.startTime;
+        const { testResult } = bound;
+        testResult.errorMessage = reason;
+        testResult.time = Date.now() - bound.startTime;
         if (reason === undefined) {
             reason = "Unspecified Error";
         }
-        result.errorMessage = reason;
-        bound.resolver(Object.freeze(result));
+        testResult.errorMessage = reason;
+        testResult.errorSource = bound.source;
+        if (bound.resultGroup.failureHandler !== undefined) {
+            bound.resultGroup.failureHandler(testResult);
+        }
+        bound.resolver(Object.freeze(testResult));
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -1184,9 +1183,9 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(failure) {
         return failure[failure.length - 2] === "difference:";
     };
-    const logFailure = function TK_DebugTestFull_logFailure(summary, result) {
+    const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
         console.warn("\n" +
-            colorText("negative", ">> " + summary.name
+            colorText("negative", ">> " + summaryName
                 + " >> " + result.errorSource
                 + " >> " + result.subject.name
                 + " >> \"" + result.name + "\"\n"), ...logFailureNice(result.errorMessage).map(shortenValue));
@@ -1275,23 +1274,24 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         return value;
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
+        const TKTest = ToolKid.debug.test;
         if (typeof inputs.title === "string") {
-            ToolKid.debug.test.switchResultGroup(inputs.title);
+            TKTest.switchResultGroup(inputs.title);
         }
         let timeStart = Date.now();
+        TKTest.setFailureHandler(logFailure.bind(null, TKTest.getResultGroup().name));
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
-        const summary = ToolKid.debug.test.getSummary({
+        const summary = TKTest.getSummary({
             suspects: inputs.suspects,
             callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
                 // TODO: real test for .testFull
                 summary.missingSuspects.delete(publicExports.testFull);
                 const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
-                summary.failures.forEach(logFailure.bind(null, summary));
                 console.log(summarizeFazit({ summary, timeInitial, timeFinal }));
             }
         });

@@ -57,11 +57,11 @@ interface TK_DebugTest_file {
     };
 
     const logFailure = function TK_DebugTestFull_logFailure(
-        summary: TestSummary, result: TKTestResult
+        summaryName: string, result: TKTestResult
     ) {
         console.warn("\n" +
             colorText("negative",
-                ">> " + summary.name
+                ">> " + summaryName
                 + " >> " + result.errorSource
                 + " >> " + result.subject.name
                 + " >> \"" + result.name + "\"\n"
@@ -184,23 +184,26 @@ interface TK_DebugTest_file {
     };
 
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
+        const TKTest = ToolKid.debug.test;
         if (typeof inputs.title === "string") {
-            ToolKid.debug.test.switchResultGroup(inputs.title);
+            TKTest.switchResultGroup(inputs.title);
         }
         let timeStart = Date.now();
+        TKTest.setFailureHandler(
+            logFailure.bind(null, TKTest.getResultGroup().name)
+        );
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
-        const summary = ToolKid.debug.test.getSummary({
+        const summary = TKTest.getSummary({
             suspects: inputs.suspects,
             callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
                 // TODO: real test for .testFull
                 summary.missingSuspects.delete(publicExports.testFull);
                 const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
-                summary.failures.forEach(logFailure.bind(null, summary));
                 console.log(summarizeFazit({ summary, timeInitial, timeFinal }));
             }
         });

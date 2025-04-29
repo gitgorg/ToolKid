@@ -6,7 +6,7 @@
 
 
 
-    const { test, assertEquality, getResultGroup, setResultGroupFailureHandler, shouldPass, switchResultGroup } = ToolKid.debug.test;
+    const { test, assertEquality, getResultGroup, setFailureHandler, shouldPass, switchResultGroup } = ToolKid.debug.test;
 
     const shouldBeInteger = shouldPass(function isNumber(value) { return Number.isInteger(value) });
 
@@ -87,32 +87,39 @@
     switchResultGroup("TK_DebugTest");
 
     const failedResults = <any>[];
-    setResultGroupFailureHandler(failedResults.push.bind(failedResults));
+    setFailureHandler(failedResults.push.bind(failedResults));
 
     test({
         subject: getResultGroup,
         execute: function resultGroupSwitch() {
-            const emptyGroup = getResultGroup();
             assertEquality({
                 "empty resultGroup": {
-                    value: emptyGroup,
+                    value: getResultGroup(),
                     shouldBe: {
                         name: "TK_DebugTest",
                         results: []
-                    }
+                    },
+                    toleranceDepth: 3,
                 }
             });
         }
     });
 
+    test({
+        subject: test,
+        execute: function failSynchronous() {
+            throw ["synchronous failure"];
+        }
+    });
+
     const failingPromise = createPromise();
-    failingPromise.reject();
     promisedResult = <Promise<TKTestResult>>test({
         subject: test,
-        execute: function returnBadPromise() {
+        execute: function failAsynchronous() {
             return failingPromise;
         }
     })[0];
+    setTimeout(failingPromise.reject.bind(null, "asynchronous failure"), 1000);
 
     switchResultGroup(currentResultGroup.name);
 
@@ -129,16 +136,23 @@
     });
 
     test({
-        subject: setResultGroupFailureHandler,
-        execute: function handleFailures() {
+        subject: setFailureHandler,
+        execute: async function compareFailures() {
+            await promisedResult.catch();
             assertEquality({
                 "failed results": {
                     value: failedResults,
                     shouldBe: [{
                         subject: test,
-                        name: "resultGroupSwitch",
+                        name: "failSynchronous",
                         time: shouldBeInteger,
-                        errorMessage: shouldPass(function () { return true; }),
+                        errorMessage: ["synchronous failure"],
+                        errorSource: "TK_DebugTest.test",
+                    }, {
+                        subject: test,
+                        name: "failAsynchronous",
+                        time: shouldBeInteger,
+                        errorMessage: "asynchronous failure",
                         errorSource: "TK_DebugTest.test",
                     }],
                     toleranceDepth: 3
@@ -157,8 +171,8 @@
                         value: result,
                         shouldBe: {
                             subject: test,
-                            name: "returnBadPromise",
-                            errorMessage: "Unspecified Error"
+                            name: "failAsynchronous",
+                            errorMessage: "asynchronous failure"
                         },
                         allowAdditions: true
                     },

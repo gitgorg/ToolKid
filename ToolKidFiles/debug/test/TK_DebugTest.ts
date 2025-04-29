@@ -6,16 +6,16 @@ interface TK_DebugTest_file {
     getResultGroup(
         name: string
     ): TKTestResultGroup | undefined,
-    setResultGroupFailureHandler(
-        callback: TKTestResultGroup["failureHandler"]
-    ): void,
     switchResultGroup(
         name: string
     ): TKTestResultGroup["results"],
 
     test(
         ...configs: TKTestConfig[]
-    ): TKTestResultGroup["results"]
+    ): TKTestResultGroup["results"],
+    setFailureHandler(
+        callback: TKTestResultGroup["failureHandler"]
+    ): void,
 }
 
 type TKTestConfig = {
@@ -100,7 +100,7 @@ type TKTestResultGroup = {
             : { name, results }
     };
 
-    publicExports.setResultGroupFailureHandler = function TK_DebugTest_setResultGroupFailureHandler(handler) {
+    publicExports.setFailureHandler = function TK_DebugTest_setFailureHandler(handler) {
         currentResultGroup.failureHandler = handler;
     };
 
@@ -169,7 +169,8 @@ type TKTestResultGroup = {
                     testResult,
                     startTime,
                     promise: returned,
-                    resultGroup: inputs.resultGroup
+                    resultGroup: inputs.resultGroup,
+                    source: ToolKid.debug.callstack.readCallstack({ position: 6 })[0],
                 });
                 promise.then(function Test_testExecute_handlePromise() {
                     if (typeof inputs.config.callback === "function") {
@@ -201,51 +202,52 @@ type TKTestResultGroup = {
         testResult: TKTestResult,
         startTime: number,
         promise: Promise<any>,
-        resultGroup: TKTestResultGroup
+        resultGroup: TKTestResultGroup,
+        source: string,
     }) {
         let resolver: any;
         const promise = <Promise<TKTestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
             resolver = resolve;
         });
-        const bound = {
-            promise: inputs.promise,
-            resolver,
-            result: inputs.testResult,
-            startTime: inputs.startTime,
-            resultGroup: inputs.resultGroup
-        };
+        (<Dictionary>inputs).resolver = resolver;
         inputs.promise.then(
-            testPromiseSuccess.bind(null, bound),
-            testPromiseFailure.bind(null, bound)
+            testPromiseSuccess.bind(null, inputs),
+            testPromiseFailure.bind(null, inputs)
         );
         return promise;
     };
 
     const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound: {
         promise: Promise<TKTestResult>,
-        result: TKTestResult,
+        testResult: TKTestResult,
         startTime: number,
         resolver: GenericFunction
     }) {
-        bound.result.time = Date.now() - bound.startTime;
-        bound.resolver(bound.result);
+        bound.testResult.time = Date.now() - bound.startTime;
+        bound.resolver(bound.testResult);
     };
 
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(
         bound: {
-            result: TKTestResult,
+            testResult: TKTestResult,
             startTime: number,
-            resolver: GenericFunction
+            resolver: GenericFunction,
+            resultGroup: TKTestResultGroup,
+            source: string,
         }, reason: any
     ) {
-        const { result } = bound;
-        result.errorMessage = reason;
-        result.time = Date.now() - bound.startTime;
+        const { testResult } = bound;
+        testResult.errorMessage = reason;
+        testResult.time = Date.now() - bound.startTime;
         if (reason === undefined) {
             reason = "Unspecified Error"
         }
-        result.errorMessage = reason;
-        bound.resolver(Object.freeze(result));
+        testResult.errorMessage = reason;
+        testResult.errorSource = bound.source;
+        if (bound.resultGroup.failureHandler !== undefined) {
+            bound.resultGroup.failureHandler(testResult);
+        }
+        bound.resolver(Object.freeze(testResult));
     };
 
     Object.freeze(publicExports);
