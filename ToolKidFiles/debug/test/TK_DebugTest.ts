@@ -2,20 +2,20 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
-    getResultGroup(): {
-        name: string,
-        results: TKTestResultList
-    }
-    getResultGroup(name: string): {
-        name: string,
-        results: TKTestResultList
-    } | undefined,
+    getResultGroup(): TKTestResultGroup
+    getResultGroup(
+        name: string
+    ): TKTestResultGroup | undefined,
+    setResultGroupFailureHandler(
+        callback: TKTestResultGroup["failureHandler"]
+    ): void,
     switchResultGroup(
         name: string
-    ): TKTestResultList,
+    ): TKTestResultGroup["results"],
+
     test(
         ...configs: TKTestConfig[]
-    ): TKTestResultList
+    ): TKTestResultGroup["results"]
 }
 
 type TKTestConfig = {
@@ -32,18 +32,27 @@ type TKTestResult = {
     subject: any,
     name: string,
     time: number,
-    errorMessage?: any
+    errorMessage?: any,
+    errorSource?: string,
 }
-type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
+type TKTestResultGroup = {
+    name: string,
+    results: (TKTestResult | Promise<TKTestResult>)[],
+    failureHandler?(
+        result: TKTestResult
+    ): void
+}
 
 
 
 (function TK_DebugTest_init() {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-    const resultGroups: Map<string, TKTestResultList> = new Map([["default", []]]);
-    let currentResultGroupName = "default";
-    let currentResultGroup = <TKTestResultList>resultGroups.get("default");
+    const resultGroups = new Map([["default", <TKTestResultGroup>{
+        name: "default",
+        results: []
+    }]]);
+    let currentResultGroup = <TKTestResultGroup>resultGroups.get("default");
 
 
 
@@ -80,8 +89,8 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
     ) {
         if (typeof name !== "string") {
             return {
-                name: currentResultGroupName,
-                results: currentResultGroup
+                name: currentResultGroup.name,
+                results: currentResultGroup.results
             };
         }
 
@@ -91,6 +100,10 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
             : { name, results }
     };
 
+    publicExports.setResultGroupFailureHandler = function TK_DebugTest_setResultGroupFailureHandler(handler) {
+        currentResultGroup.failureHandler = handler;
+    };
+
     publicExports.switchResultGroup = function TK_DebugTest_selectTestGroup(name) {
         if (typeof name !== "string" || name.length === 0) {
             throw ["TK_DebugTest_selectTestGroup - invalid name:", name]
@@ -98,27 +111,31 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
 
         const found = resultGroups.get(name);
         if (found === undefined) {
-            currentResultGroup = [];
+            currentResultGroup = <TKTestResultGroup>{
+                name,
+                results: [],
+            };
             resultGroups.set(name, currentResultGroup);
         } else {
             currentResultGroup = found;
         }
-        currentResultGroupName = name;
-        return currentResultGroup;
+        return currentResultGroup.results;
     };
+
+
 
     publicExports.test = function TK_DebugTest_testInterface(...inputs) {
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }
 
-        const testResults = <TKTestResultList>inputs.map(testSingle.bind(null, currentResultGroup));
-        currentResultGroup.push(...testResults);
+        const testResults = <TKTestResultGroup["results"]>inputs.map(testSingle.bind(null, currentResultGroup));
+        currentResultGroup.results.push(...testResults);
         return testResults;
     };
 
     const testSingle = function TK_DebugTest_testSingle(
-        resultList: TKTestResultList,
+        resultGroup: TKTestResultGroup,
         config: TKTestConfig,
     ) {
         if (
@@ -131,7 +148,7 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
         return testExecute({
             config,
             testResult: createResultBase(config),
-            resultList
+            resultGroup
         });
     };
 
@@ -140,7 +157,7 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
     const testExecute = function Test_testExecute(inputs: {
         config: TKTestConfig,
         testResult: TKTestResult,
-        resultList: TKTestResultList
+        resultGroup: TKTestResultGroup
     }) {
         const { testResult } = inputs;
         const startTime = Date.now();
@@ -152,22 +169,28 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
                     testResult,
                     startTime,
                     promise: returned,
-                    resultList: inputs.resultList
+                    resultGroup: inputs.resultGroup
                 });
                 promise.then(function Test_testExecute_handlePromise() {
                     if (typeof inputs.config.callback === "function") {
                         inputs.config.callback({ scope, testResult });
                     }
-                    const index = inputs.resultList.indexOf(promise);
-                    inputs.resultList[index] = testResult;
+                    const { results } = inputs.resultGroup;
+                    const index = results.indexOf(promise);
+                    results[index] = testResult;
                 });
                 return promise;
             }
 
+            testResult.time = Date.now() - startTime;
         } catch (error) {
+            testResult.time = Date.now() - startTime;
             testResult.errorMessage = error;
+            testResult.errorSource = ToolKid.debug.callstack.readCallstack({ position: 6 })[0];
+            if (inputs.resultGroup.failureHandler !== undefined) {
+                inputs.resultGroup.failureHandler(testResult);
+            }
         }
-        testResult.time = Date.now() - startTime;
         if (typeof inputs.config.callback === "function") {
             inputs.config.callback({ scope, testResult });
         }
@@ -178,7 +201,7 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
         testResult: TKTestResult,
         startTime: number,
         promise: Promise<any>,
-        resultList: TKTestResultList
+        resultGroup: TKTestResultGroup
     }) {
         let resolver: any;
         const promise = <Promise<TKTestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
@@ -189,7 +212,7 @@ type TKTestResultList = (TKTestResult | Promise<TKTestResult>)[]
             resolver,
             result: inputs.testResult,
             startTime: inputs.startTime,
-            resultList: inputs.resultList
+            resultGroup: inputs.resultGroup
         };
         inputs.promise.then(
             testPromiseSuccess.bind(null, bound),

@@ -160,9 +160,7 @@ type TestSummary = {
         }
     }
 
-    const createSummary = function (inputs: {
-        name: string,
-        results: TKTestResultList,
+    const createSummary = function (inputs: TKTestResultGroup & {
         missingSuspects: Set<any>
     }) {
         const resultGroupName = inputs.name;
@@ -226,7 +224,7 @@ type TestSummary = {
             return;
         }
 
-        removeSuspect(summary, testResult.subject)
+        removeSuspect(summary, testResult.subject);
         if (testResult.errorMessage === undefined) {
             summaryRegisterSuccess({
                 list: summary.successes, testResult

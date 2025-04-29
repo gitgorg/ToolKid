@@ -6,7 +6,9 @@
 
 
 
-    const { test, assertEquality, getResultGroup, switchResultGroup } = ToolKid.debug.test;
+    const { test, assertEquality, getResultGroup, setResultGroupFailureHandler, shouldPass, switchResultGroup } = ToolKid.debug.test;
+
+    const shouldBeInteger = shouldPass(function isNumber(value) { return Number.isInteger(value) });
 
     //setup helping functions
     const createPromise = function () {
@@ -84,6 +86,9 @@
 
     switchResultGroup("TK_DebugTest");
 
+    const failedResults = <any>[];
+    setResultGroupFailureHandler(failedResults.push.bind(failedResults));
+
     test({
         subject: getResultGroup,
         execute: function resultGroupSwitch() {
@@ -118,6 +123,25 @@
                 "resultGroup": {
                     value: getResultGroup(),
                     shouldBe: currentResultGroup
+                }
+            });
+        }
+    });
+
+    test({
+        subject: setResultGroupFailureHandler,
+        execute: function handleFailures() {
+            assertEquality({
+                "failed results": {
+                    value: failedResults,
+                    shouldBe: [{
+                        subject: test,
+                        name: "resultGroupSwitch",
+                        time: shouldBeInteger,
+                        errorMessage: shouldPass(function () { return true; }),
+                        errorSource: "TK_DebugTest.test",
+                    }],
+                    toleranceDepth: 3
                 }
             });
         }

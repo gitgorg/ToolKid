@@ -61,7 +61,10 @@ interface TK_DebugTest_file {
     ) {
         console.warn("\n" +
             colorText("negative",
-                ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name
+                ">> " + summary.name
+                + " >> " + result.errorSource
+                + " >> " + result.subject.name
+                + " >> \"" + result.name + "\"\n"
             ),
             ...logFailureNice(result.errorMessage).map(shortenValue)
         );

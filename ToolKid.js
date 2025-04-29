@@ -622,6 +622,22 @@ registeredFiles["TK_DataTypesNumber.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesPromise.js"] = module.exports;
 
+(function TK_DebugCallstack_init() {
+    const publicExports = module.exports = {};
+    publicExports.readCallstack = function TK_DebugCallstack_readCallstack(inputs = {}) {
+        const start = Math.max(1, inputs.position || 1);
+        return new Error().stack.split("\n").slice(start, start + (inputs.amount || 1)).map(readCallstackCleaner);
+    };
+    const readCallstackCleaner = function TK_DebugCallstack_readCallstackCleaner(part) {
+        return part.slice(part.lastIndexOf("\\") + 1, part.lastIndexOf("."));
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "debug", subSection: "callstack", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DebugCallstack.js"] = module.exports;
+
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
     const colorsServer = {
@@ -734,8 +750,10 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
 
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
-    const resultGroups = new Map([["default", []]]);
-    let currentResultGroupName = "default";
+    const resultGroups = new Map([["default", {
+                name: "default",
+                results: []
+            }]]);
     let currentResultGroup = resultGroups.get("default");
     const createResultBase = function TK_DebugTest_createResultBase(config) {
         return {
@@ -760,8 +778,8 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
     publicExports.getResultGroup = function TK_DebugTest_getResultGroup(name) {
         if (typeof name !== "string") {
             return {
-                name: currentResultGroupName,
-                results: currentResultGroup
+                name: currentResultGroup.name,
+                results: currentResultGroup.results
             };
         }
         const results = resultGroups.get(name);
@@ -769,30 +787,35 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             ? undefined
             : { name, results };
     };
+    publicExports.setResultGroupFailureHandler = function TK_DebugTest_setResultGroupFailureHandler(handler) {
+        currentResultGroup.failureHandler = handler;
+    };
     publicExports.switchResultGroup = function TK_DebugTest_selectTestGroup(name) {
         if (typeof name !== "string" || name.length === 0) {
             throw ["TK_DebugTest_selectTestGroup - invalid name:", name];
         }
         const found = resultGroups.get(name);
         if (found === undefined) {
-            currentResultGroup = [];
+            currentResultGroup = {
+                name,
+                results: [],
+            };
             resultGroups.set(name, currentResultGroup);
         }
         else {
             currentResultGroup = found;
         }
-        currentResultGroupName = name;
-        return currentResultGroup;
+        return currentResultGroup.results;
     };
     publicExports.test = function TK_DebugTest_testInterface(...inputs) {
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }
         const testResults = inputs.map(testSingle.bind(null, currentResultGroup));
-        currentResultGroup.push(...testResults);
+        currentResultGroup.results.push(...testResults);
         return testResults;
     };
-    const testSingle = function TK_DebugTest_testSingle(resultList, config) {
+    const testSingle = function TK_DebugTest_testSingle(resultGroup, config) {
         if (!isObjectWithExecute(config)
             || !isValidSubject(config.subject)) {
             throw ["TK_DebugTest_test - invalid config:", config];
@@ -800,9 +823,10 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         return testExecute({
             config,
             testResult: createResultBase(config),
-            resultList
+            resultGroup
         });
     };
+    // TODO: unit tests for callback function
     const testExecute = function Test_testExecute(inputs) {
         const { testResult } = inputs;
         const startTime = Date.now();
@@ -814,22 +838,28 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
                     testResult,
                     startTime,
                     promise: returned,
-                    resultList: inputs.resultList
+                    resultGroup: inputs.resultGroup
                 });
                 promise.then(function Test_testExecute_handlePromise() {
                     if (typeof inputs.config.callback === "function") {
                         inputs.config.callback({ scope, testResult });
                     }
-                    const index = inputs.resultList.indexOf(promise);
-                    inputs.resultList[index] = testResult;
+                    const { results } = inputs.resultGroup;
+                    const index = results.indexOf(promise);
+                    results[index] = testResult;
                 });
                 return promise;
             }
+            testResult.time = Date.now() - startTime;
         }
         catch (error) {
+            testResult.time = Date.now() - startTime;
             testResult.errorMessage = error;
+            testResult.errorSource = ToolKid.debug.callstack.readCallstack({ position: 6 })[0];
+            if (inputs.resultGroup.failureHandler !== undefined) {
+                inputs.resultGroup.failureHandler(testResult);
+            }
         }
-        testResult.time = Date.now() - startTime;
         if (typeof inputs.config.callback === "function") {
             inputs.config.callback({ scope, testResult });
         }
@@ -845,7 +875,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
             resolver,
             result: inputs.testResult,
             startTime: inputs.startTime,
-            resultList: inputs.resultList
+            resultGroup: inputs.resultGroup
         };
         inputs.promise.then(testPromiseSuccess.bind(null, bound), testPromiseFailure.bind(null, bound));
         return promise;
@@ -1156,7 +1186,10 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     const logFailure = function TK_DebugTestFull_logFailure(summary, result) {
         console.warn("\n" +
-            colorText("negative", ">> " + summary.name + " >> \"" + result.name + "\" for " + result.subject.name), ...logFailureNice(result.errorMessage).map(shortenValue));
+            colorText("negative", ">> " + summary.name
+                + " >> " + result.errorSource
+                + " >> " + result.subject.name
+                + " >> \"" + result.name + "\"\n"), ...logFailureNice(result.errorMessage).map(shortenValue));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
