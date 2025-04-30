@@ -39,7 +39,7 @@ interface TK_DataTypesArray_file {
             batchSize: 10,
             callback: function () { },
             maxBlockDuration: 100,
-            stopSignal: {}, //unique data pointer to fail the test by default
+            stopSignal: {},
             startIndex: 0,
         }, inputs, {
             dataPosition: 0,
