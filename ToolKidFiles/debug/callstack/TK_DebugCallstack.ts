@@ -22,8 +22,9 @@ interface TK_DebugCallstack_file {
         ).map(readCallstackCleaner);
     };
 
+    const regExpAfterLastSlash = /[^\/\\]+$/;
     const readCallstackCleaner = function TK_DebugCallstack_readCallstackCleaner(part: string) {
-        return part.slice(part.lastIndexOf("\\") + 1, part.lastIndexOf("."));
+        return part.slice(part.search(regExpAfterLastSlash), part.lastIndexOf("."));
     };
 
 

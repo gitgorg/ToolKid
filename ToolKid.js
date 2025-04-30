@@ -628,8 +628,9 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
         const start = Math.max(1, inputs.position || 1);
         return new Error().stack.split("\n").slice(start, start + (inputs.amount || 1)).map(readCallstackCleaner);
     };
+    const regExpAfterLastSlash = /[^\/\\]+$/;
     const readCallstackCleaner = function TK_DebugCallstack_readCallstackCleaner(part) {
-        return part.slice(part.lastIndexOf("\\") + 1, part.lastIndexOf("."));
+        return part.slice(part.search(regExpAfterLastSlash), part.lastIndexOf("."));
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
