@@ -1,4 +1,4 @@
-(function TK_DataTypesChecks_test() {
+(function TK_DataTypesArray_test() {
     const { test, assertEquality } = ToolKid.debug.test;
     const { iterateBatch } = ToolKid.dataTypes.array;
     const { createPromise } = ToolKid.dataTypes.promise;

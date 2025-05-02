@@ -515,6 +515,30 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
 
+(function TK_DataTypesList_init() {
+    const publicExports = module.exports = {};
+    publicExports.shortenList = function TK_DataTypesList_shortenList(inputs) {
+        const { list } = inputs;
+        if ((typeof list !== "string" && !(list instanceof Array))
+            || list.length <= inputs.maxLength) {
+            return list;
+        }
+        let { omissionSignal } = inputs;
+        const limit = Math.floor(inputs.maxLength / 2);
+        if (typeof omissionSignal === "function") {
+            omissionSignal = omissionSignal(list.slice(limit, -limit));
+        }
+        return typeof list === "string"
+            ? list.slice(0, limit) + omissionSignal + list.slice(-limit)
+            : [...list.slice(0, limit), omissionSignal, ...list.slice(-limit)];
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunction({ section: "dataTypes", subSection: "list", functions: publicExports });
+    }
+})();
+registeredFiles["TK_DataTypesList.js"] = module.exports;
+
 (function TK_DataTypesNumber_init() {
     const publicExports = module.exports = {};
     publicExports.addUnderscores = function TK_DataTypesNuber_addUnderscores(value) {
@@ -621,6 +645,43 @@ registeredFiles["TK_DataTypesNumber.js"] = module.exports;
     }
 })();
 registeredFiles["TK_DataTypesPromise.js"] = module.exports;
+
+// interface ToolKid_file { dataTypes: TK_DataTypes_file }
+// interface TK_DataTypes_file { string: TK_DataTypesString_file }
+// interface TK_DataTypesString_file {
+//     shortenText(inputs: {
+//         text: string,
+//         characterLimit: number,
+//         omissionSignal: string
+//     }): string,
+//     shortenText(inputs: {
+//         text: string,
+//         characterLimit: number,
+//         omissionSignal(
+//             omittedText: string
+//         ): string
+//     }): string,
+// }
+// (function TK_DataTypesString_init() {
+//     const publicExports = module.exports = <TK_DataTypesString_file>{};
+//     publicExports.shortenText = function TK_DataTypesString_shortenText(inputs) {
+//         if (inputs.text.length <= inputs.characterLimit) {
+//             return inputs.text;
+//         }
+//         const { text } = inputs;
+//         let { omissionSignal } = inputs;
+//         const limit = Math.floor(inputs.characterLimit / 2);
+//         if (typeof omissionSignal === "function") {
+//             omissionSignal = omissionSignal(text.slice(limit, -limit));
+//         }
+//         return text.slice(0, limit) + omissionSignal + text.slice(-limit);
+//     };
+//     Object.freeze(publicExports);
+//     if (typeof ToolKid !== "undefined") {
+//         ToolKid.registerFunction({ section: "dataTypes", subSection: "string", functions: publicExports });
+//     }
+// })();
+registeredFiles["TK_DataTypesString.js"] = module.exports;
 
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
@@ -1077,7 +1138,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
                 settings.catchFailure(errorMessage);
             }
             else {
-                errors.push(errorMessage);
+                errors.push(...errorMessage);
             }
         }
     };
@@ -1174,44 +1235,34 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const colorText = function TK_DebugTestFull_colorString(color, text) {
         return colors[color] + text + colors.default;
     };
-    const getChangeDetail = function TK_DebugTestFull_getChangeDetail(inputs) {
-        const result = [];
-        Object.entries(inputs.data).forEach(function (entry) {
-            const [key, value] = entry;
-            const values = inputs.inputMask(value);
-            result.push("   proptery " + key + " is:", values.current, "   and should have been:", values.wanted);
-        });
-        return result;
+    const getChangeDetail = function TK_DebugTestFull_getChangeDetail(difference) {
+        const path = (difference.path.length === 0)
+            ? "value"
+            : "." + difference.path.join(".");
+        return [
+            "\n > " + path + "\nis:", shortenData(difference.value),
+            "\ninstead of:", shortenData(difference.shouldBe)
+        ];
     };
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(failure) {
-        return failure[failure.length - 2] === "difference:";
+        return typeof failure[1] === "object" && failure[1].path instanceof Array;
     };
     const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
         console.warn("\n" +
-            colorText("negative", ">> " + summaryName
+            colorText("negative", ">>  " + summaryName
                 + "  >  " + result.errorSource
                 + "  >  " + result.subject.name
-                + "  >  \"" + result.name + "\"\n"), ...logFailureNice(result.errorMessage).map(shortenValue));
+                + "  >  \"" + result.name + "\"\n"), ...shortenData(logFailureNice(result.errorMessage)));
     };
-    const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
-        if (!isDifferenceFailure(failure)) {
-            return (failure instanceof Array)
-                ? failure
-                : [failure];
+    const logFailureNice = function TK_DebugTestFull_logFailureNice(errorMessage) {
+        if (!isDifferenceFailure(errorMessage)) {
+            return (errorMessage instanceof Array)
+                ? errorMessage
+                : [errorMessage];
         }
-        const differences = failure[failure.length - 1];
-        return [
-            failure[0].slice(0, -9) + differences.count + " unwanted differences:",
-            ...getChangeDetail({
-                data: differences.changed, inputMask: masks.changed
-            }),
-            ...getChangeDetail({
-                data: differences.onlyB, inputMask: masks.missing
-            }),
-            ...getChangeDetail({
-                data: differences.onlyA, inputMask: masks.exceeding
-            })
-        ];
+        const errorDescription = errorMessage[0];
+        const comparisonName = errorDescription.slice(0, errorDescription.lastIndexOf("~") + 1);
+        return [comparisonName].concat(...errorMessage.slice(1).map(getChangeDetail));
     };
     const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs) {
         const { summary } = inputs;
@@ -1244,37 +1295,15 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
                 colorText("negative", ">>  " + summary.name + " >> the following suspects have not been tested:"), Array.from(missingSuspects));
         }
     };
-    const masks = {
-        changed: function (value) {
-            return { current: value[0], wanted: value[1] };
-        },
-        missing: function (value) {
-            return { current: undefined, wanted: value };
-        },
-        exceeding: function (value) {
-            return { current: value, wanted: undefined };
-        }
+    const omissionSignal = function TK_DebugTestFull_omissionSignal(omitted) {
+        return "[ ... " + omitted.length + " ... ]";
     };
-    const shortenValue = function TK_DebugTestFull_shortenValue(value) {
-        if (typeof value === "string") {
-            if (value.length > 200) {
-                return value.slice(0, 100)
-                    + ">>[...]<<"
-                    + value.slice(-100)
-                    + ">>total length:" + value.length + "<<";
-            }
-        }
-        else if (value instanceof Array) {
-            if (value.length > 50) {
-                return [
-                    ...value.slice(0, 20),
-                    ">>[...]<<",
-                    ...value.slice(-20),
-                    ">>total length:" + value.length + "<<"
-                ];
-            }
-        }
-        return value;
+    const shortenData = function TK_DebugTestFull_shortenValue(list) {
+        return ToolKid.dataTypes.list.shortenList({
+            list,
+            maxLength: (typeof list === "string" ? 200 : 10),
+            omissionSignal
+        });
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
         const TKTest = ToolKid.debug.test;

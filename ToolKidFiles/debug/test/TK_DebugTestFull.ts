@@ -8,7 +8,7 @@ interface TK_DebugTest_file {
         exclude?: string | string[],
         title?: string
         suspects?: any | any[]
-    }): void
+    }): void,
 }
 
 
@@ -33,27 +33,21 @@ interface TK_DebugTest_file {
         return colors[color] + text + colors.default;
     };
 
-    const getChangeDetail = function TK_DebugTestFull_getChangeDetail(inputs: {
-        data: Dictionary,
-        inputMask(
-            value: any
-        ): { current: any, wanted: any }
-    }) {
-        const result = <any[]>[];
-        Object.entries(inputs.data).forEach(function (entry) {
-            const [key, value] = entry;
-            const values = inputs.inputMask(value);
-            result.push(
-                "   proptery " + key + " is:", values.current, "   and should have been:", values.wanted
-            );
-        });
-        return result;
+    const getChangeDetail = function TK_DebugTestFull_getChangeDetail(
+        difference: EqualityDifference,
+    ) {
+        const path = (difference.path.length === 0)
+            ? "value"
+            : "." + difference.path.join(".");
+        return [
+            "\n > " + path + "\nis:", shortenData(difference.value),
+            "\ninstead of:", shortenData(difference.shouldBe)];
     };
 
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(
         failure: any[]
     ) {
-        return failure[failure.length - 2] === "difference:";
+        return typeof failure[1] === "object" && failure[1].path instanceof Array;
     };
 
     const logFailure = function TK_DebugTestFull_logFailure(
@@ -61,37 +55,27 @@ interface TK_DebugTest_file {
     ) {
         console.warn("\n" +
             colorText("negative",
-                ">> " + summaryName
+                ">>  " + summaryName
                 + "  >  " + result.errorSource
                 + "  >  " + result.subject.name
                 + "  >  \"" + result.name + "\"\n"
             ),
-            ...logFailureNice(result.errorMessage).map(shortenValue)
+            ...shortenData(logFailureNice(result.errorMessage))
         );
     };
 
     const logFailureNice = function TK_DebugTestFull_logFailureNice(
-        failure: any[]
+        errorMessage: TKTestResult["errorMessage"]
     ) {
-        if (!isDifferenceFailure(failure)) {
-            return (failure instanceof Array)
-                ? failure
-                : [failure];
+        if (!isDifferenceFailure(errorMessage)) {
+            return (errorMessage instanceof Array)
+                ? errorMessage
+                : [errorMessage];
         }
 
-        const differences = failure[failure.length - 1];
-        return [
-            failure[0].slice(0, -9) + differences.count + " unwanted differences:",
-            ...getChangeDetail({
-                data: differences.changed, inputMask: masks.changed
-            }),
-            ...getChangeDetail({
-                data: differences.onlyB, inputMask: masks.missing
-            }),
-            ...getChangeDetail({
-                data: differences.onlyA, inputMask: masks.exceeding
-            })
-        ];
+        const errorDescription = <string>errorMessage[0];
+        const comparisonName = errorDescription.slice(0, errorDescription.lastIndexOf("~")+1);
+        return [ comparisonName].concat(...errorMessage.slice(1).map(getChangeDetail));
     };
 
     const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs: {
@@ -148,39 +132,18 @@ interface TK_DebugTest_file {
         }
     };
 
-    const masks = {
-        changed: function (value: [current: any, wanted: any]) {
-            return { current: value[0], wanted: value[1] }
-        },
-        missing: function (
-            value: any
-        ) {
-            return { current: undefined, wanted: value }
-        },
-        exceeding: function (value: any) {
-            return { current: value, wanted: undefined }
-        }
+    const omissionSignal = function TK_DebugTestFull_omissionSignal(
+        omitted: string | any[]
+    ) {
+        return "[ ... " + omitted.length + " ... ]";
     };
 
-    const shortenValue = function TK_DebugTestFull_shortenValue(value: any) {
-        if (typeof value === "string") {
-            if (value.length > 200) {
-                return value.slice(0, 100)
-                    + ">>[...]<<"
-                    + value.slice(-100)
-                    + ">>total length:" + value.length + "<<";
-            }
-        } else if (value instanceof Array) {
-            if (value.length > 50) {
-                return [
-                    ...value.slice(0, 20),
-                    ">>[...]<<",
-                    ...value.slice(-20),
-                    ">>total length:" + value.length + "<<"
-                ];
-            }
-        }
-        return value;
+    const shortenData = function TK_DebugTestFull_shortenValue(list: any) {
+        return ToolKid.dataTypes.list.shortenList({
+            list,
+            maxLength: (typeof list === "string" ? 200 : 10),
+            omissionSignal
+        });
     };
 
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {

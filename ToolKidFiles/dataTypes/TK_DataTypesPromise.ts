@@ -1,4 +1,3 @@
-//general automated testing
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { promise: TK_DataTypesPromise_file }
 interface TK_DataTypesPromise_file {
