@@ -185,7 +185,7 @@
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.txt" }),
-                    shouldBe: undefined
+                    shouldBe: { content: undefined }
                 }
             });
             writeFile({

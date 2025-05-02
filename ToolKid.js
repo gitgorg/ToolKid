@@ -625,8 +625,8 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
     publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
-        const start = Math.max(1, inputs.position || 1);
-        return new Error().stack.split("\n").slice(start, start + (inputs.amount || 1)).map(extractFileName);
+        const firstFrameIndex = Math.max(1, inputs.position || 1);
+        return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
     };
     const regExpAfterLastSlash = /[^\/\\]+$/;
     const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
@@ -727,7 +727,7 @@ registeredFiles["TK_DebugCallstack.js"] = module.exports;
     };
     const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
         return (typeof inputs[0] === "string")
-            ? ">> " : ">>";
+            ? ">>  " : ">>";
     };
     publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
         console.error(...publicExports.colorStrings({
@@ -1189,9 +1189,9 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
         console.warn("\n" +
             colorText("negative", ">> " + summaryName
-                + " >> " + result.errorSource
-                + " >> " + result.subject.name
-                + " >> \"" + result.name + "\"\n"), ...logFailureNice(result.errorMessage).map(shortenValue));
+                + "  >  " + result.errorSource
+                + "  >  " + result.subject.name
+                + "  >  \"" + result.name + "\"\n"), ...logFailureNice(result.errorMessage).map(shortenValue));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(failure) {
         if (!isDifferenceFailure(failure)) {
@@ -1220,10 +1220,10 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
             suspects: summary.missingSuspects.size
         };
         return "\n" +
-            colorText((counts.failures === 0) ? "positive" : "negative", ">> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s"))
-            + " / "
+            colorText((counts.failures === 0) ? "positive" : "negative", ">>  " + summary.name + "  >  " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s"))
+            + "  /  "
             + colorText("positive", summary.testCount + " test groups")
-            + " / "
+            + "  /  "
             + colorText("positive", "sync " + inputs.timeInitial + " ms");
     };
     const summarizeFazit = function TK_DebugTestFull_summarizeFazit(inputs) {
@@ -1234,14 +1234,14 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         };
         return summarizeFazitSync(inputs) +
             colorText("positive", " + async " + inputs.timeFinal + " ms")
-            + " / "
+            + "  /  "
             + colorText((counts.suspects === 0) ? "positive" : "negative", counts.suspects + " untested suspects");
     };
     const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary) {
         const { missingSuspects } = summary;
         if (missingSuspects.size !== 0) {
             console.error("\n" +
-                colorText("negative", ">> " + summary.name + " >> the following suspects have not been tested:"), Array.from(missingSuspects));
+                colorText("negative", ">>  " + summary.name + " >> the following suspects have not been tested:"), Array.from(missingSuspects));
         }
     };
     const masks = {
@@ -1662,7 +1662,7 @@ registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
         path = resolvePath(path);
         if (checkExistance !== false) {
             if (!isUsedPath(path)) {
-                return undefined;
+                return { content: undefined };
             }
             else if (ToolKid.nodeJS.isDirectory(path)) {
                 throw ["TK_nodeJSFile_read - path is a directory, not a file:", path];

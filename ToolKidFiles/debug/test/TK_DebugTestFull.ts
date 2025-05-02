@@ -62,9 +62,9 @@ interface TK_DebugTest_file {
         console.warn("\n" +
             colorText("negative",
                 ">> " + summaryName
-                + " >> " + result.errorSource
-                + " >> " + result.subject.name
-                + " >> \"" + result.name + "\"\n"
+                + "  >  " + result.errorSource
+                + "  >  " + result.subject.name
+                + "  >  \"" + result.name + "\"\n"
             ),
             ...logFailureNice(result.errorMessage).map(shortenValue)
         );
@@ -105,13 +105,13 @@ interface TK_DebugTest_file {
         };
         return "\n" +
             colorText((counts.failures === 0) ? "positive" : "negative",
-                ">> " + summary.name + " >> " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
+                ">>  " + summary.name + "  >  " + counts.failures + " Error" + (counts.failures === 1 ? "" : "s")
             )
-            + " / "
+            + "  /  "
             + colorText("positive",
                 summary.testCount + " test groups"
             )
-            + " / "
+            + "  /  "
             + colorText("positive",
                 "sync " + inputs.timeInitial + " ms"
             );
@@ -131,7 +131,7 @@ interface TK_DebugTest_file {
             colorText("positive",
                 " + async " + inputs.timeFinal + " ms"
             )
-            + " / "
+            + "  /  "
             + colorText((counts.suspects === 0) ? "positive" : "negative",
                 counts.suspects + " untested suspects"
             );
@@ -142,7 +142,7 @@ interface TK_DebugTest_file {
         if (missingSuspects.size !== 0) {
             console.error("\n" +
                 colorText("negative",
-                    ">> " + summary.name + " >> the following suspects have not been tested:"),
+                    ">>  " + summary.name + " >> the following suspects have not been tested:"),
                 Array.from(missingSuspects)
             );
         }

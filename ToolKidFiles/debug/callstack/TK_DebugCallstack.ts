@@ -3,7 +3,7 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { callstack: TK_DebugCallstack_file }
 interface TK_DebugCallstack_file {
     extractFileName(
-        frameText: string
+        stackFrameText: string
     ): string,
     readFrames(inputs?: {
         position?: number,

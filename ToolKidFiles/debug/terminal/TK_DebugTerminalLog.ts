@@ -140,7 +140,7 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
 
     const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs: any[]) {
         return (typeof inputs[0] === "string")
-            ? ">> " : ">>";
+            ? ">>  " : ">>";
     };
 
     publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {

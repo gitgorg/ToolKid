@@ -16,7 +16,7 @@
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.extendFile.txt" }),
-                    shouldBe: undefined
+                    shouldBe: { content: undefined }
                 }
             });
             writeFile({
@@ -57,7 +57,7 @@
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.extendFileNew.txt" }),
-                    shouldBe: undefined
+                    shouldBe: { content: undefined }
                 }
             });
             extendFile({
@@ -85,7 +85,7 @@
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
-                    shouldBe: undefined
+                    shouldBe: { content: undefined }
                 }
             });
             extendFile({
@@ -132,11 +132,11 @@
                 },
                 "non-existing file response": {
                     value: readFile({ path: paths.fileNonExisting }),
-                    shouldBe: undefined
+                    shouldBe: { content: undefined }
                 },
                 "non-esisting directory response": {
                     value: readFile({ path: paths.directoryNonExisting }),
-                    shouldBe: undefined
+                    shouldBe: { content: undefined }
                 }
             });
         }

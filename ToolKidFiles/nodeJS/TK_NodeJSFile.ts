@@ -15,13 +15,14 @@ interface TK_nodeJS_file {
     loopFiles: LibraryTools_file["loopFiles"],
     readFile(inputs: {
         path: string,
-
         checkExistance?: false,
-        encoding?: string
+        encoding?: string,
     }): {
         encoding: "directory" | string,
         content: any
-    } | undefined,
+    } | {
+        content: undefined
+    },
     writeFile: LibraryTools_file["writeFile"]
 }
 
@@ -69,7 +70,7 @@ interface TK_nodeJS_file {
         path = resolvePath(path);
         if (checkExistance !== false) {
             if (!isUsedPath(path)) {
-                return undefined;
+                return { content: undefined };
             } else if (ToolKid.nodeJS.isDirectory(path)) {
                 throw ["TK_nodeJSFile_read - path is a directory, not a file:", path];
             }

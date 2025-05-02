@@ -58,10 +58,10 @@
     const originalLogWarning = console.warn;
     let errors = <any[][]>[];
     let warnings = <any[][]>[];
-    console.error = function (...inputs) {
+    console.error = function TK_DebugTerminalLog_errorReplacement(...inputs) {
         errors.push(inputs);
     };
-    console.warn = function (...inputs) {
+    console.warn = function TK_DebugTerminalLog_warnReplacement(...inputs) {
         warnings.push(inputs);
     };
 
@@ -112,7 +112,7 @@
                 "errors": {
                     value: errors,
                     shouldBe: [
-                        [colors.red + ">> string first" + colors.white, 1],
+                        [colors.red + ">>  string first" + colors.white, 1],
                         [
                             colors.red + ">>" + colors.white,
                             2, colors.red + "number first" + colors.white
@@ -133,7 +133,7 @@
                 "warnings": {
                     value: warnings,
                     shouldBe: [
-                        [colors.grey + ">> basic" + colors.white, 1, [true]]
+                        [colors.grey + ">>  basic" + colors.white, 1, [true]]
                     ],
                     toleranceDepth: 3
                 }
@@ -150,7 +150,7 @@
                 "warnings": {
                     value: warnings,
                     shouldBe: [
-                        [colors.cyan + ">> important" + colors.white, 2, [true]]
+                        [colors.cyan + ">>  important" + colors.white, 2, [true]]
                     ],
                     toleranceDepth: 3
                 }
@@ -167,7 +167,7 @@
                 "warnings": {
                     value: warnings,
                     shouldBe: [
-                        [colors.orange + ">> warning" + colors.white, 3, [true]]
+                        [colors.orange + ">>  warning" + colors.white, 3, [true]]
                     ],
                     toleranceDepth: 3
                 }
