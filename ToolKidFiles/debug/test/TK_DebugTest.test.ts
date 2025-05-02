@@ -147,13 +147,13 @@
                         name: "failSynchronous",
                         time: shouldBeInteger,
                         errorMessage: ["synchronous failure"],
-                        errorSource: "TK_DebugTest.test",
+                        errorSource: "TK_DebugTest.test.js",
                     }, {
                         subject: test,
                         name: "failAsynchronous",
                         time: shouldBeInteger,
                         errorMessage: "asynchronous failure",
-                        errorSource: "TK_DebugTest.test",
+                        errorSource: "TK_DebugTest.test.js",
                     }],
                     toleranceDepth: 3
                 }

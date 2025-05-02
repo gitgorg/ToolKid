@@ -170,7 +170,7 @@ type TKTestResultGroup = {
                     startTime,
                     promise: returned,
                     resultGroup: inputs.resultGroup,
-                    source: ToolKid.debug.callstack.readCallstack({ position: 6 })[0],
+                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                 });
                 promise.then(function Test_testExecute_handlePromise() {
                     if (typeof inputs.config.callback === "function") {
@@ -187,7 +187,7 @@ type TKTestResultGroup = {
         } catch (error) {
             testResult.time = Date.now() - startTime;
             testResult.errorMessage = error;
-            testResult.errorSource = ToolKid.debug.callstack.readCallstack({ position: 6 })[0];
+            testResult.errorSource = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
             if (inputs.resultGroup.failureHandler !== undefined) {
                 inputs.resultGroup.failureHandler(testResult);
             }

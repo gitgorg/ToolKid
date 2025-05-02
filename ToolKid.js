@@ -624,14 +624,16 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
 
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
-    publicExports.readCallstack = function TK_DebugCallstack_readCallstack(inputs = {}) {
+    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
         const start = Math.max(1, inputs.position || 1);
-        return new Error().stack.split("\n").slice(start, start + (inputs.amount || 1)).map(readCallstackCleaner);
+        return new Error().stack.split("\n").slice(start, start + (inputs.amount || 1)).map(extractFileName);
     };
     const regExpAfterLastSlash = /[^\/\\]+$/;
-    const readCallstackCleaner = function TK_DebugCallstack_readCallstackCleaner(part) {
-        return part.slice(part.search(regExpAfterLastSlash), part.lastIndexOf("."));
+    const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
+        const filePart = part.slice(part.search(regExpAfterLastSlash));
+        return filePart.split(":")[0];
     };
+    ;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunction({ section: "debug", subSection: "callstack", functions: publicExports });
@@ -840,7 +842,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
                     startTime,
                     promise: returned,
                     resultGroup: inputs.resultGroup,
-                    source: ToolKid.debug.callstack.readCallstack({ position: 6 })[0],
+                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                 });
                 promise.then(function Test_testExecute_handlePromise() {
                     if (typeof inputs.config.callback === "function") {
@@ -857,7 +859,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         catch (error) {
             testResult.time = Date.now() - startTime;
             testResult.errorMessage = error;
-            testResult.errorSource = ToolKid.debug.callstack.readCallstack({ position: 6 })[0];
+            testResult.errorSource = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
             if (inputs.resultGroup.failureHandler !== undefined) {
                 inputs.resultGroup.failureHandler(testResult);
             }
