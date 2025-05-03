@@ -646,43 +646,6 @@ registeredFiles["TK_DataTypesNumber.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesPromise.js"] = module.exports;
 
-// interface ToolKid_file { dataTypes: TK_DataTypes_file }
-// interface TK_DataTypes_file { string: TK_DataTypesString_file }
-// interface TK_DataTypesString_file {
-//     shortenText(inputs: {
-//         text: string,
-//         characterLimit: number,
-//         omissionSignal: string
-//     }): string,
-//     shortenText(inputs: {
-//         text: string,
-//         characterLimit: number,
-//         omissionSignal(
-//             omittedText: string
-//         ): string
-//     }): string,
-// }
-// (function TK_DataTypesString_init() {
-//     const publicExports = module.exports = <TK_DataTypesString_file>{};
-//     publicExports.shortenText = function TK_DataTypesString_shortenText(inputs) {
-//         if (inputs.text.length <= inputs.characterLimit) {
-//             return inputs.text;
-//         }
-//         const { text } = inputs;
-//         let { omissionSignal } = inputs;
-//         const limit = Math.floor(inputs.characterLimit / 2);
-//         if (typeof omissionSignal === "function") {
-//             omissionSignal = omissionSignal(text.slice(limit, -limit));
-//         }
-//         return text.slice(0, limit) + omissionSignal + text.slice(-limit);
-//     };
-//     Object.freeze(publicExports);
-//     if (typeof ToolKid !== "undefined") {
-//         ToolKid.registerFunction({ section: "dataTypes", subSection: "string", functions: publicExports });
-//     }
-// })();
-registeredFiles["TK_DataTypesString.js"] = module.exports;
-
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
     publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
