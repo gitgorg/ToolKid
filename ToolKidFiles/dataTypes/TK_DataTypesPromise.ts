@@ -92,6 +92,6 @@ type CustomPromise = {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "promise", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "promise", functions: publicExports });
     }
 })();

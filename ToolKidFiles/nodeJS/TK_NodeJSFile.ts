@@ -93,6 +93,6 @@ interface TK_nodeJS_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "nodeJS", functions: publicExports });
+        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
     }
 })();

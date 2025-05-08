@@ -42,7 +42,7 @@ interface LibraryTools_file {
     const Path = require("path");
     const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
     const LibraryTools = isCalledFromLibrary
-        ?<LibraryTools_file>require(
+        ? <LibraryTools_file>require(
             Path.resolve(__dirname, "./LibraryTools.js")
         )
         //@ts-ignore

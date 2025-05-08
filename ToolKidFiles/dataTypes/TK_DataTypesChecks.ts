@@ -141,6 +141,6 @@ type DataTypeParsers = {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "checks", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
     }
 })();

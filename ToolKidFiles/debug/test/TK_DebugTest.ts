@@ -252,6 +252,6 @@ type TKTestResultGroup = {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();

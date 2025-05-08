@@ -49,6 +49,6 @@ interface TK_DataTypesNumber_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "number", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "number", functions: publicExports });
     }
 })();

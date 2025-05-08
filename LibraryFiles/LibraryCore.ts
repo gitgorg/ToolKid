@@ -5,7 +5,7 @@ type LibraryCore_file = {
 }
 
 type Library = {
-    registerFunction(inputs: {
+    registerFunctions(inputs: {
         section: string,
         subSection?: string,
         functions: Dictionary
@@ -17,79 +17,68 @@ interface Dictionary {
     [key: string]: any
 }
 
-interface GenericFunction {(
-    ...parameters: any[]
-): any}
+interface GenericFunction {
+    (
+        ...parameters: any[]
+    ): any
+}
 
 
 
 (function LibraryCore_init() {
-    let LibraryTools:LibraryTools_file;
+    let LibraryTools: LibraryTools_file;
     const publicExports = module.exports = <LibraryCore_file>{};
+
+
+
+    publicExports.createInstance = function LibraryCore_createInstance() {
+        const result = <Library>{};
+        addAsReadOnly({
+            container: result,
+            key: "registerFunctions",
+            value: registerFunction.bind(null, result)
+        });
+        return result;
+    };
 
 
 
     const addAsReadOnly = function LibraryCore_addAsReadOnly(inputs: {
         container: Dictionary,
-        name: string,
-        property: any
+        key: string,
+        value: any
     }) {
-        Object.defineProperty(inputs.container, inputs.name, {
-            enumerable: true,
-            value: inputs.property,
-            writable: false
-        });
-    };
-
-    const addAsReadOnlyHidden = function LibraryCore_addAsReadOnlyHidden(inputs: {
-        container: Dictionary,
-        name: string,
-        property: any
-    }) {
-        Object.defineProperty(inputs.container, inputs.name, {
+        Object.defineProperty(inputs.container, inputs.key, {
             enumerable: false,
-            value: inputs.property,
+            value: inputs.value,
             writable: false
         });
     };
 
-    publicExports.createInstance = function LibraryCore_createInstance () {
-        const result = <Library>{};
-        const registerWithContext = registerFunction.bind(null,result);
-        addAsReadOnlyHidden({
-            container: result,
-            name: "registerFunction",
-            property: registerWithContext
+    const addAsReadOnlyEnumerable = function LibraryCore_addAsReadOnlyEnumerable(inputs: {
+        container: Dictionary,
+        key: string,
+        value: any
+    }) {
+        Object.defineProperty(inputs.container, inputs.key, {
+            enumerable: true,
+            value: inputs.value,
+            writable: false
         });
-        return result;
     };
 
-    const isValidInput = function LibraryCore_isValidInput(
-        inputs: Dictionary
-    ) {
-        return (
-            typeof inputs.name !== "string"
-            || typeof inputs.helperFunction !== "function"
-        )
-    };
-
-    publicExports.getTools = function LibraryCore_getTools () {
+    publicExports.getTools = function LibraryCore_getTools() {
         if (LibraryTools === undefined) {
-            const toolsPath = require("path").resolve(__dirname, "./LibraryTools_nodeJS.js");
-            LibraryTools = require(toolsPath);
+            LibraryTools = require(
+                require("path").resolve(__dirname, "./LibraryTools_nodeJS.js")
+            );
         }
         return LibraryTools;
     };
 
-    const printRegisterError = function LibraryCore_printRegisterError(inputs: Dictionary) {
-        console.error(
-            ["LibraryCore_registerHelperToSection - invalid inputs:", inputs]
-        );
-    };
-
     const registerFunction = function LibraryCore_registerFunction(
-        library:Dictionary,
-        inputs:{
+        library: Dictionary,
+        inputs: {
             section: string,
             subSection?: string,
             functions: Dictionary
@@ -128,24 +117,23 @@ interface GenericFunction {(
         name: string,
         helperFunction: GenericFunction
     }) {
-        if (isValidInput(inputs)) {
-            printRegisterError(inputs);
-            return;
+        if (typeof inputs.name !== "string" || typeof inputs.helperFunction !== "function") {
+            throw ["LibraryCore_registerHelperToSection - invalid inputs:", inputs];
         }
 
-        const {section, name} = inputs;
+        const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ."+inputs.name+"."+name+": ",section[name]," with: ",inputs.helperFunction];
+            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", inputs.helperFunction];
         }
 
-        addAsReadOnly({
-            container: inputs.section,
-            name: inputs.name,
-            property: inputs.helperFunction
+        addAsReadOnlyEnumerable({
+            container: section,
+            key: name,
+            value: inputs.helperFunction
         });
     };
 
-    const registerSection = function LibraryCore_registerSection(inputs:{
+    const registerSection = function LibraryCore_registerSection(inputs: {
         container: Dictionary,
         name: string
     }) {
@@ -155,10 +143,10 @@ interface GenericFunction {(
         }
 
         section = {};
-        addAsReadOnly({
+        addAsReadOnlyEnumerable({
             container: inputs.container,
-            name: inputs.name,
-            property: section
+            key: inputs.name,
+            value: section
         });
         return section;
     };

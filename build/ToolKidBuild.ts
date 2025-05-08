@@ -60,7 +60,7 @@ type ToolKidConfig = {
         tools: LibraryTools_file
     }) {
         const { library, tools } = inputs;
-        library.registerFunction({
+        library.registerFunctions({
             section: "nodeJS", functions: {
                 isDirectory: tools.isDirectory,
                 loopFiles: tools.loopFiles,
@@ -69,7 +69,7 @@ type ToolKidConfig = {
                 writeFile: tools.writeFile
             }
         });
-        library.registerFunction({
+        library.registerFunctions({
             section: "dataTypes", subSection: "checks", functions: {
                 isArray: tools.isArray
             }
@@ -137,12 +137,12 @@ type ToolKidConfig = {
         // TODO: making a more stable and less ugly version for including LibraryTools
         let path = resolvePath(rootLibraryFiles, "LibraryTools.js");
         appendFile(privateData, [Path.basename(path), path]);
-        privateData.combinedFile += "ToolKid.registerFunction({section:\"dataTypes\", subSection:\"checks\", functions: {\n\
+        privateData.combinedFile += "ToolKid.registerFunctions({section:\"dataTypes\", subSection:\"checks\", functions: {\n\
             isArray:module.exports.isArray,\n\
         }});\n\n";
         path = resolvePath(rootLibraryFiles, "LibraryTools_nodeJS.js");
         appendFile(privateData, [Path.basename(path), path]);
-        privateData.combinedFile += "ToolKid.registerFunction({section:\"nodeJS\", functions: {\n\
+        privateData.combinedFile += "ToolKid.registerFunctions({section:\"nodeJS\", functions: {\n\
             loopFiles:module.exports.loopFiles,\n\
             writeFile:module.exports.writeFile,\n\
         }});\n\n";

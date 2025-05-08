@@ -6,43 +6,34 @@ const registeredFiles = {};
 (function LibraryCore_init() {
     let LibraryTools;
     const publicExports = module.exports = {};
-    const addAsReadOnly = function LibraryCore_addAsReadOnly(inputs) {
-        Object.defineProperty(inputs.container, inputs.name, {
-            enumerable: true,
-            value: inputs.property,
-            writable: false
-        });
-    };
-    const addAsReadOnlyHidden = function LibraryCore_addAsReadOnlyHidden(inputs) {
-        Object.defineProperty(inputs.container, inputs.name, {
-            enumerable: false,
-            value: inputs.property,
-            writable: false
-        });
-    };
     publicExports.createInstance = function LibraryCore_createInstance() {
         const result = {};
-        const registerWithContext = registerFunction.bind(null, result);
-        addAsReadOnlyHidden({
+        addAsReadOnly({
             container: result,
-            name: "registerFunction",
-            property: registerWithContext
+            key: "registerFunctions",
+            value: registerFunction.bind(null, result)
         });
         return result;
     };
-    const isValidInput = function LibraryCore_isValidInput(inputs) {
-        return (typeof inputs.name !== "string"
-            || typeof inputs.helperFunction !== "function");
+    const addAsReadOnly = function LibraryCore_addAsReadOnly(inputs) {
+        Object.defineProperty(inputs.container, inputs.key, {
+            enumerable: false,
+            value: inputs.value,
+            writable: false
+        });
+    };
+    const addAsReadOnlyEnumerable = function LibraryCore_addAsReadOnlyEnumerable(inputs) {
+        Object.defineProperty(inputs.container, inputs.key, {
+            enumerable: true,
+            value: inputs.value,
+            writable: false
+        });
     };
     publicExports.getTools = function LibraryCore_getTools() {
         if (LibraryTools === undefined) {
-            const toolsPath = require("path").resolve(__dirname, "./LibraryTools_nodeJS.js");
-            LibraryTools = require(toolsPath);
+            LibraryTools = require(require("path").resolve(__dirname, "./LibraryTools_nodeJS.js"));
         }
         return LibraryTools;
-    };
-    const printRegisterError = function LibraryCore_printRegisterError(inputs) {
-        console.error(["LibraryCore_registerHelperToSection - invalid inputs:", inputs]);
     };
     const registerFunction = function LibraryCore_registerFunction(library, inputs) {
         let section = registerSection({
@@ -69,18 +60,17 @@ const registeredFiles = {};
         }
     };
     const registerHelperToSection = function LibraryCore_registerHelperToSection(inputs) {
-        if (isValidInput(inputs)) {
-            printRegisterError(inputs);
-            return;
+        if (typeof inputs.name !== "string" || typeof inputs.helperFunction !== "function") {
+            throw ["LibraryCore_registerHelperToSection - invalid inputs:", inputs];
         }
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ." + inputs.name + "." + name + ": ", section[name], " with: ", inputs.helperFunction];
+            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", inputs.helperFunction];
         }
-        addAsReadOnly({
-            container: inputs.section,
-            name: inputs.name,
-            property: inputs.helperFunction
+        addAsReadOnlyEnumerable({
+            container: section,
+            key: name,
+            value: inputs.helperFunction
         });
     };
     const registerSection = function LibraryCore_registerSection(inputs) {
@@ -89,10 +79,10 @@ const registeredFiles = {};
             return section;
         }
         section = {};
-        addAsReadOnly({
+        addAsReadOnlyEnumerable({
             container: inputs.container,
-            name: inputs.name,
-            property: section
+            key: inputs.name,
+            value: section
         });
         return section;
     };
@@ -178,7 +168,7 @@ registeredFiles["LibraryCore.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
+        ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();
 registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
@@ -220,7 +210,7 @@ registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
+        ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();
 registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
@@ -261,7 +251,7 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "array", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "array", functions: publicExports });
     }
 })();
 registeredFiles["TK_DataTypesArray.js"] = module.exports;
@@ -352,7 +342,7 @@ registeredFiles["TK_DataTypesArray.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "checks", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
     }
 })();
 registeredFiles["TK_DataTypesChecks.js"] = module.exports;
@@ -510,7 +500,7 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "checks", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
     }
 })();
 registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
@@ -534,7 +524,7 @@ registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "list", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "list", functions: publicExports });
     }
 })();
 registeredFiles["TK_DataTypesList.js"] = module.exports;
@@ -575,7 +565,7 @@ registeredFiles["TK_DataTypesList.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "number", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "number", functions: publicExports });
     }
 })();
 registeredFiles["TK_DataTypesNumber.js"] = module.exports;
@@ -641,7 +631,7 @@ registeredFiles["TK_DataTypesNumber.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "dataTypes", subSection: "promise", functions: publicExports });
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "promise", functions: publicExports });
     }
 })();
 registeredFiles["TK_DataTypesPromise.js"] = module.exports;
@@ -660,7 +650,7 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
     ;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "callstack", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "callstack", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugCallstack.js"] = module.exports;
@@ -770,7 +760,7 @@ registeredFiles["TK_DebugCallstack.js"] = module.exports;
     publicExports.logBasic = logWithLevel.bind(null, "basic");
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "terminal", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "terminal", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
@@ -922,7 +912,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTest.js"] = module.exports;
@@ -1073,7 +1063,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
@@ -1107,7 +1097,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
@@ -1185,7 +1175,7 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTestCondition.js"] = module.exports;
@@ -1297,7 +1287,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTestFull.js"] = module.exports;
@@ -1364,7 +1354,7 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
@@ -1572,7 +1562,7 @@ registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
 registeredFiles["TK_DebugTestSummary.js"] = module.exports;
@@ -1618,7 +1608,7 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "nodeJS", functions: publicExports });
+        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
     }
 })();
 registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
@@ -1673,7 +1663,7 @@ registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "nodeJS", functions: publicExports });
+        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
     }
 })();
 registeredFiles["TK_NodeJSFile.js"] = module.exports;
@@ -1686,7 +1676,7 @@ registeredFiles["TK_NodeJSFile.js"] = module.exports;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "nodeJS", functions: publicExports });
+        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
     }
 })();
 registeredFiles["TK_NodeJSPath.js"] = module.exports;
@@ -1762,7 +1752,7 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 })();
 registeredFiles["LibraryTools.js"] = module.exports;
 
-ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
+ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: {
             isArray:module.exports.isArray,
         }});
 
@@ -1865,7 +1855,7 @@ ToolKid.registerFunction({section:"dataTypes", subSection:"checks", functions: {
 })();
 registeredFiles["LibraryTools_nodeJS.js"] = module.exports;
 
-ToolKid.registerFunction({section:"nodeJS", functions: {
+ToolKid.registerFunctions({section:"nodeJS", functions: {
             loopFiles:module.exports.loopFiles,
             writeFile:module.exports.writeFile,
         }});

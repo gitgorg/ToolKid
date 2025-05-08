@@ -52,6 +52,6 @@ interface TK_ConnectionHTTP_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunction({ section: "connection", subSection: "HTTP", functions: publicExports });
+        ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();
