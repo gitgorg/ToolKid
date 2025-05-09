@@ -13,16 +13,7 @@ interface TK_nodeJS_file {
         content: any,
     }): void,
     loopFiles: LibraryTools_file["loopFiles"],
-    readFile(inputs: {
-        path: string,
-        checkExistance?: false,
-        encoding?: string,
-    }): {
-        encoding: "directory" | string,
-        content: any
-    } | {
-        content: undefined
-    },
+    readFile: LibraryTools_file["readFile"],
     writeFile: LibraryTools_file["writeFile"]
 }
 
@@ -32,11 +23,9 @@ interface TK_nodeJS_file {
     const {
         appendFileSync: extendFile,
         existsSync: isUsedPath,
-        readFileSync: readFile,
         rmSync: deleteFolder,
         unlinkSync: deleteFile
     } = require("fs");
-    const { resolve: resolvePath } = require("path");
 
 
 
@@ -63,30 +52,6 @@ interface TK_nodeJS_file {
         } else {
             ToolKid.nodeJS.writeFile(inputs);
         }
-    };
-
-    publicExports.readFile = function TK_nodeJSFile_read(inputs) {
-        let { path, checkExistance, encoding } = inputs;
-        path = resolvePath(path);
-        if (checkExistance !== false) {
-            if (!isUsedPath(path)) {
-                return { content: undefined };
-            } else if (ToolKid.nodeJS.isDirectory(path)) {
-                throw ["TK_nodeJSFile_read - path is a directory, not a file:", path];
-            }
-        }
-
-        if (typeof encoding !== "string") {
-            const type = ToolKid.connection.HTTP.readMediaType(<string>path);
-            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
-                encoding = "utf8";
-            }
-        }
-
-        return {
-            encoding: encoding || "dictionary",
-            content: readFile(path, encoding)
-        };
     };
 
 

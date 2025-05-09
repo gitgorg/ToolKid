@@ -53,6 +53,15 @@ type ToolKidConfig = {
         }
     };
 
+    const toolPlacement = {
+        "isArray": ["dataTypes", "checks"],
+        "isDirectory": ["nodeJS"],
+        "loopFiles": ["nodeJS"],
+        "readFile": ["nodeJS"],
+        "resolvePath": ["nodeJS"],
+        "writeFile": ["nodeJS"],
+    };
+
 
 
     const addCoreFunctions = function ToolKidBuild_addCoreFunctions(inputs: {
@@ -60,19 +69,13 @@ type ToolKidConfig = {
         tools: LibraryTools_file
     }) {
         const { library, tools } = inputs;
-        library.registerFunctions({
-            section: "nodeJS", functions: {
-                isDirectory: tools.isDirectory,
-                loopFiles: tools.loopFiles,
-                readFileName: tools.readFileName,
-                resolvePath: tools.resolvePath,
-                writeFile: tools.writeFile
-            }
-        });
-        library.registerFunctions({
-            section: "dataTypes", subSection: "checks", functions: {
-                isArray: tools.isArray
-            }
+        Object.entries(toolPlacement).forEach(function([key,sections]){
+            const functions = <Dictionary>{};
+            functions[key] = tools[<"isArray">key];
+            library.registerFunctions({
+                section: sections[0], subSection:sections[1],
+                functions
+            });
         });
     };
 
@@ -144,6 +147,7 @@ type ToolKidConfig = {
         appendFile(privateData, [Path.basename(path), path]);
         privateData.combinedFile += "ToolKid.registerFunctions({section:\"nodeJS\", functions: {\n\
             loopFiles:module.exports.loopFiles,\n\
+            readFile:module.exports.readFile,\n\
             writeFile:module.exports.writeFile,\n\
         }});\n\n";
 

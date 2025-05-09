@@ -1,110 +1,83 @@
-(function LibraryBuilder_test() {
-    const { createStringCheck, createSimpleRegxp, loopFiles, partial, writeFile } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
-    const { test, assertEquality, assertFailure, shouldPass } = ToolKid.debug.test;
-    const { deleteFile, readFile } = ToolKid.nodeJS;
+type LibraryTools_nodeJS_test_file = {
+    directoryMixedContents: string,
+    directoryEmpty: string,
+    directoryNonExisting: string,
+
+    file: string,
+    fileEmpty: string,
+    fileNonExisting: string,
+    fileTypeScript: string
+}
+
+
+(function LibraryTools_nodeJS_test() {
+    const FS = require("fs");
+    const { resolve } = require("path");
+    const {
+        isDirectory, loopFiles, readFile, resolvePath, writeFile
+    } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
+
+    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const { deleteFile } = ToolKid.nodeJS;
+
+
+
+    const testFolder = resolve(__dirname, "../T_fileDirectory/");
+    const paths = module.exports = <LibraryTools_nodeJS_test_file>{
+        directoryMixedContents: testFolder,
+        directoryEmpty: resolve(testFolder, "T_empty"),
+        directoryNonExisting: resolve(testFolder, "../T_nonExistant"),
+
+        file: resolve(testFolder, "T_file.json"),
+        fileEmpty: resolve(testFolder, "T_empty.txt"),
+        fileNonExisting: resolve(testFolder, "T_nonExistant.json"),
+        fileTypeScript: resolve(testFolder, "T_pathList.test.js"),
+    };
+
+    if (!FS.existsSync(paths.directoryMixedContents)) {
+        FS.mkdirSync(paths.directoryMixedContents);
+    }
+    if (!FS.existsSync(paths.directoryEmpty)) {
+        FS.mkdirSync(paths.directoryEmpty);
+    }
+    FS.writeFileSync(paths.fileEmpty, "");
+    FS.writeFileSync(paths.file, "{\
+        \"text\": \"hello\",\
+        \"number\": 1\
+    }");
+
+
 
     test({
-        subject: deleteFile,
-        execute: function setup() {
-            deleteFile({
-                path: "./TKTest.txt",
-                ignoreMissingFile: true
-            });
-        }
-    });
-
-    const paths = [
-        "a/b/c.ts",
-        "a/b/c.js",
-        "a/b/c.test.js",
-        "a/b/c/d",
-        "a/d/c.ts",
-        "a/b"
-    ];
-
-    test({
-        subject: createStringCheck,
-        execute: function filteringStrings() {
+        subject: isDirectory,
+        execute: function basic() {
             assertEquality({
-                "only .ts": {
-                    value: paths.filter(createStringCheck({
-                        include: [createSimpleRegxp("*.ts")]
-                    })),
-                    shouldBe: [
-                        "a/b/c.ts",
-                        "a/d/c.ts"
-                    ]
+                "directory": {
+                    value: isDirectory(paths.directoryMixedContents),
+                    shouldBe: true
                 },
-                "no .ts": {
-                    value: paths.filter(createStringCheck({
-                        exclude: [createSimpleRegxp("*.ts")]
-                    })),
-                    shouldBe: [
-                        "a/b/c.js",
-                        "a/b/c.test.js",
-                        "a/b/c/d",
-                        "a/b"
-                    ]
+                "empty directory": {
+                    value: isDirectory(paths.directoryEmpty),
+                    shouldBe: true
                 },
-                "only .js without .test": {
-                    value: paths.filter(createStringCheck({
-                        include: [createSimpleRegxp("*.js")],
-                        exclude: [createSimpleRegxp("*.test.js")]
-                    })),
-                    shouldBe: [
-                        "a/b/c.js"
-                    ]
+                "file": {
+                    value: isDirectory(paths.file),
+                    shouldBe: false
                 }
             });
         }
-    });
-
-    test({
-        subject: createSimpleRegxp,
-        execute: function filteringPaths() {
-            const filterPathsEasy = function LibraryTools_test_filterPathsEasy(
-                easyString: string
-            ) {
-                const expression = createSimpleRegxp(easyString);
-                return paths.filter(
-                    expression.test.bind(expression)
-                );
-            };
-
-            assertEquality({
-                "tests": {
-                    value: filterPathsEasy("*.test.js"),
-                    shouldBe: [
-                        "a/b/c.test.js"
-                    ]
-                },
-                "has subname starting with c": {
-                    value: filterPathsEasy("*/c*"),
-                    shouldBe: [
-                        "a/b/c.ts",
-                        "a/b/c.js",
-                        "a/b/c.test.js",
-                        "a/b/c/d",
-                        "a/d/c.ts"
-                    ]
-                },
-                "has folder": {
-                    value: filterPathsEasy("*/d/*"),
-                    shouldBe: [
-                        "a/d/c.ts"
-                    ]
-                },
-                "ends with folder": {
-                    value: filterPathsEasy("*/b"),
-                    shouldBe: [
-                        "a/b"
-                    ]
-                }
+    }, {
+        subject: isDirectory,
+        execute: function crashes() {
+            assertFailure({
+                name: "'nonExistant' returns",
+                execute: isDirectory,
+                withInputs: "nonExistant",
+                shouldThrow: Error
             });
         }
     });
 
-    const Path = require("path");
     test({
         subject: loopFiles,
         execute: function basicFileLoop() {
@@ -118,10 +91,11 @@
                 "siblingFiles": {
                     value: found,
                     shouldBe: [
-                        Path.resolve(fileDirectory, "LibraryCore.js"),
-                        Path.resolve(fileDirectory, "LibraryTools.js"),
-                        Path.resolve(fileDirectory, "LibraryTools_nodeJS.js"),
-                        Path.resolve(fileDirectory, "LibraryTools_nodeJS.test.js")
+                        resolve(fileDirectory, "LibraryCore.js"),
+                        resolve(fileDirectory, "LibraryTools.js"),
+                        resolve(fileDirectory, "LibraryTools.test.js"),
+                        resolve(fileDirectory, "LibraryTools_nodeJS.js"),
+                        resolve(fileDirectory, "LibraryTools_nodeJS.test.js")
                     ]
                 }
             });
@@ -129,52 +103,107 @@
     });
 
     test({
-        subject: partial,
-        execute: function basic() {
-            const sum = function (a: any, b: any, c = 0) {
-                return a + b + c;
-            };
-            const add1 = partial(sum, 1);
-            const concat11 = partial(add1, "1");
+        subject: loopFiles,
+        execute: function loopingDirectory() {
+            let fileList = <any[]>[];
+            loopFiles({
+                path: paths.directoryMixedContents,
+                execute: fileList.push.bind(fileList)
+            });
             assertEquality({
-                "regular function": {
-                    value: sum(1, 2),
-                    shouldBe: 3
-                },
-                "partial result type": {
-                    value: add1,
-                    shouldBe: shouldPass(ToolKid.dataTypes.checks.isFunction)
-                },
-                "partial all arguments": {
-                    value: partial(sum, 1, 2)(),
-                    shouldBe: 3
-                },
-                "partial combining arguments": {
-                    value: add1(10),
-                    shouldBe: 11
-                },
-                "partial of partial": {
-                    value: concat11(7),
-                    shouldBe: "117"
+                "fileList": {
+                    value: fileList,
+                    shouldBe: [
+                        paths.fileEmpty, paths.file
+                    ],
+                    toleranceDepth: 2
                 }
             });
         }
     }, {
-        subject: partial,
-        execute: function failures() {
-            assertFailure({
-                name: "no inputs",
-                execute: partial
+        subject: loopFiles,
+        execute: function loopingFiles() {
+            let fileList = <any[]>[];
+            loopFiles({
+                path: paths.file,
+                execute: fileList.push.bind(fileList)
             });
-            assertFailure({
-                name: "no parameters to bind",
-                execute: partial,
-                withInputs: partial
+            assertEquality({
+                "fileList": {
+                    value: fileList,
+                    shouldBe: [
+                        paths.file
+                    ],
+                    toleranceDepth: 2
+                }
             });
+        }
+    });
+
+    test({
+        subject: readFile,
+        execute: function basic() {
+            const fileResponse = <Dictionary>readFile({ path: paths.file });
+
+            assertEquality({
+                "regular file response": {
+                    value: fileResponse,
+                    shouldBe: {
+                        encoding: "utf8",
+                        content: fileResponse.content
+                    }
+                },
+                "response.content parsed as JSON": {
+                    value: JSON.parse(fileResponse.content),
+                    shouldBe: {
+                        "text": "hello",
+                        "number": 1
+                    }
+                },
+                "empty file response": {
+                    value: readFile({ path: paths.fileEmpty }),
+                    shouldBe: {
+                        encoding: "utf8",
+                        content: ""
+                    }
+                },
+                "non-existing file response": {
+                    value: readFile({ path: paths.fileNonExisting }),
+                    shouldBe: { content: undefined }
+                },
+                "non-esisting directory response": {
+                    value: readFile({ path: paths.directoryNonExisting }),
+                    shouldBe: { content: undefined }
+                }
+            });
+        }
+    }, {
+        subject: readFile,
+        execute: function readDirectory() {
             assertFailure({
-                name: "first parameter isn't a function",
-                execute: partial,
-                withInputs: [10, partial]
+                name: "directory response",
+                execute: readFile,
+                withInputs: { path: paths.directoryMixedContents },
+                shouldThrow: [
+                    "LibraryTools_nodeJS_read - path is a directory, not a file:",
+                    paths.directoryMixedContents
+                ]
+            });
+        }
+    });
+
+    test({
+        subject: resolvePath,
+        execute: function basicResolvePath() {
+            assertEquality({
+                "__dirname": {
+                    value: resolvePath(__dirname),
+                    shouldBe: __dirname
+                },
+                "./test.js": {
+                    value: resolvePath("./test.js"),
+                    shouldBe: resolve("test.js")
+                }
             });
         }
     });
@@ -201,15 +230,16 @@
                     }
                 }
             });
-        }
-    });
-
-    test({
-        subject: deleteFile,
-        execute: function cleanup() {
-            deleteFile({
-                path: "./TKTest.txt",
-                ignoreMissingFile: true
+        },
+        callback: function () {
+            test({
+                subject: deleteFile,
+                execute: function setup() {
+                    deleteFile({
+                        path: "./TKTest.txt",
+                        ignoreMissingFile: true
+                    });
+                }
             });
         }
     });

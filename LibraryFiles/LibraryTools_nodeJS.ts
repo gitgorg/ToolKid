@@ -11,9 +11,16 @@ interface LibraryTools_file {
         include?: string | string[],
         exclude?: string | string[]
     }): void,
-    readFileName(
-        path: string
-    ): string,
+    readFile(inputs: {
+        path: string,
+        checkExistance?: false,
+        encoding?: string,
+    }): {
+        encoding: "directory" | string,
+        content: any
+    } | {
+        content: undefined
+    },
     resolvePath(
         ...parts: string[]
     ): string,
@@ -40,17 +47,24 @@ interface LibraryTools_file {
 
     const FS = require("fs");
     const Path = require("path");
+
+    const {
+        existsSync: isUsedPath,
+        readFileSync: readFile,
+    } = require("fs");
+    const { resolve: resolvePath } = require("path");
+
     const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
     const LibraryTools = isCalledFromLibrary
         ? <LibraryTools_file>require(
-            Path.resolve(__dirname, "./LibraryTools.js")
+            resolvePath(__dirname, "./LibraryTools.js")
         )
         //@ts-ignore
         : registeredFiles["LibraryTools.js"];
 
     const { createSimpleRegxp } = LibraryTools;
-    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;
-    const { normalize, resolve: resolvePath } = Path;
+    const { lstatSync: readPathStats, readdirSync: readDirectory } = FS;
+    const { normalize } = Path;
 
 
 
@@ -94,7 +108,7 @@ interface LibraryTools_file {
     ) {
         path = resolvePath(path);
         if (!isUsedPath(path)) {
-            return;
+            throw ["LibraryTools_nodeJS_loopFiles - no such path exists:", path];
         }
 
         if (publicExports.isDirectory(path)) {
@@ -126,11 +140,28 @@ interface LibraryTools_file {
         }
     };
 
-    publicExports.readFileName = function LibraryTools_nodeJS_readFileName(path) {
-        if (typeof path !== "string" || path === "") {
-            throw ["LibraryTools_nodeJS_readFileName - invalid path argument:", path];
+    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
+        let { path, checkExistance, encoding } = inputs;
+        path = resolvePath(path);
+        if (checkExistance !== false) {
+            if (!isUsedPath(path)) {
+                return { content: undefined };
+            } else if (ToolKid.nodeJS.isDirectory(path)) {
+                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
+            }
         }
-        return Path.basename(path);
+
+        if (typeof encoding !== "string") {
+            const type = ToolKid.connection.HTTP.readMediaType(<string>path);
+            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
+                encoding = "utf8";
+            }
+        }
+
+        return {
+            encoding: encoding || "dictionary",
+            content: readFile(path, encoding)
+        };
     };
 
     publicExports.resolvePath = function LibraryTools_nodeJS_resolvePath(...parts) {

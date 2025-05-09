@@ -1567,55 +1567,8 @@ registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 
-(function TK_nodeJSDirectory_init() {
-    const { readdirSync: readDirectory, existsSync: isUsedPath } = require("fs");
-    const { resolve: resolvePath } = require("path");
-    const publicExports = module.exports = {};
-    publicExports.loopDirectory = function TK_nodeJSDirectory_loopDirectorySetup(inputs) {
-        const { path } = inputs;
-        if (path instanceof Array) {
-            path.forEach(loopDirectoryLayer.bind(null, inputs.execute));
-        }
-        else {
-            loopDirectoryLayer(inputs.execute, path);
-        }
-    };
-    const loopDirectoryLayer = function TK_nodeJSDirectory_loopDirectoryLayer(execute, root) {
-        const files = publicExports.readDirectory(root);
-        let isDir;
-        let path;
-        const { isDirectory } = ToolKid.nodeJS;
-        files.forEach(function (name) {
-            path = resolvePath(root, name);
-            isDir = isDirectory(path);
-            execute({
-                name, root, path, isDirectory: isDir
-            });
-            if (isDir) {
-                loopDirectoryLayer(execute, path);
-            }
-        });
-    };
-    publicExports.readDirectory = function TK_nodeJSDirectory_readDirectory(path) {
-        path = resolvePath(path);
-        if (!isUsedPath(path)) {
-            return [];
-        }
-        else if (!ToolKid.nodeJS.isDirectory(path)) {
-            throw ["TK_nodeJSDirectory_read - path is a file, not a directory:", path];
-        }
-        return readDirectory(path);
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
-    }
-})();
-registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
-
 (function TK_nodeJSFile_init() {
-    const { appendFileSync: extendFile, existsSync: isUsedPath, readFileSync: readFile, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
-    const { resolve: resolvePath } = require("path");
+    const { appendFileSync: extendFile, existsSync: isUsedPath, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
     publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
         if (typeof inputs === "string") {
@@ -1639,28 +1592,6 @@ registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
             ToolKid.nodeJS.writeFile(inputs);
         }
     };
-    publicExports.readFile = function TK_nodeJSFile_read(inputs) {
-        let { path, checkExistance, encoding } = inputs;
-        path = resolvePath(path);
-        if (checkExistance !== false) {
-            if (!isUsedPath(path)) {
-                return { content: undefined };
-            }
-            else if (ToolKid.nodeJS.isDirectory(path)) {
-                throw ["TK_nodeJSFile_read - path is a directory, not a file:", path];
-            }
-        }
-        if (typeof encoding !== "string") {
-            const type = ToolKid.connection.HTTP.readMediaType(path);
-            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
-                encoding = "utf8";
-            }
-        }
-        return {
-            encoding: encoding || "dictionary",
-            content: readFile(path, encoding)
-        };
-    };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
@@ -1668,17 +1599,6 @@ registeredFiles["TK_NodeJSDirectory.js"] = module.exports;
 })();
 registeredFiles["TK_NodeJSFile.js"] = module.exports;
 
-(function TK_nodeJSPath_init() {
-    const FS = require("fs");
-    const publicExports = module.exports = {};
-    publicExports.isUsedPath = function TK_nodeJSPath_file_isUsedPath(path) {
-        return FS.existsSync(path);
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
-    }
-})();
 registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
 (function LibraryTools_init() {
@@ -1728,12 +1648,41 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
         //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
         return new RegExp("^" + expression + "$");
     };
-    // var replaceRegex = new RegExp('[' + Object.keys(replacements).join('') + ']', 'ig');
-    // const createSimpleRegxpReplacer = function (old:string) {
-    //     return replacements[<".">old];
-    // };
+    publicExports.createPatternMatcher = function LibraryTools_createPatternMatcher(...patterns) {
+        return matchPatternSimple.bind(null, new RegExp(patterns.map(getRexExpSource).join("|")));
+    };
+    publicExports.createPatternMatcherComlex = function LibraryTools_createPatternMatcherComplex(inputs) {
+        if (inputs.indexPatterns === true) {
+            return matchPatternIndexed.bind(null, new RegExp("(" + inputs.patterns.map(getRexExpSource).join(")|(") + ")"));
+        }
+        else {
+            return publicExports.createPatternMatcher(...inputs.patterns);
+        }
+    };
+    const getRexExpSource = function (value) {
+        return (value instanceof RegExp) ? value.source : value;
+    };
     publicExports.isArray = function LibraryTools_isArray(value) {
         return value instanceof Array && value.length !== 0;
+    };
+    const isDefined = function LibraryTools_isDefined(value) {
+        return value !== undefined;
+    };
+    const matchPatternIndexed = function LibraryTools_matchPatternIndexed(regExp, text) {
+        const found = text.match(regExp);
+        return (found === null)
+            ? [-1, undefined, -1]
+            : [
+                found.index,
+                found[0],
+                found.slice(1).findIndex(isDefined)
+            ];
+    };
+    const matchPatternSimple = function LibraryTools_matchPatternSimple(regExp, text) {
+        const found = text.match(regExp);
+        return (found === null)
+            ? [-1, undefined]
+            : [found.index, found[0]];
     };
     publicExports.partial = function LibraryTools_partial(baseFunction, ...inputs) {
         if (inputs.length === 0) {
@@ -1759,14 +1708,16 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
 (function LibraryTools_nodeJS_init() {
     const FS = require("fs");
     const Path = require("path");
+    const { existsSync: isUsedPath, readFileSync: readFile, } = require("fs");
+    const { resolve: resolvePath } = require("path");
     const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
     const LibraryTools = isCalledFromLibrary
-        ? require(Path.resolve(__dirname, "./LibraryTools.js"))
+        ? require(resolvePath(__dirname, "./LibraryTools.js"))
         //@ts-ignore
         : registeredFiles["LibraryTools.js"];
     const { createSimpleRegxp } = LibraryTools;
-    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory } = FS;
-    const { normalize, resolve: resolvePath } = Path;
+    const { lstatSync: readPathStats, readdirSync: readDirectory } = FS;
+    const { normalize } = Path;
     const publicExports = module.exports = Object.assign({}, LibraryTools);
     publicExports.isDirectory = function LibraryTools_nodeJS_isDirectory(path) {
         return readPathStats(path).isDirectory();
@@ -1800,7 +1751,7 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
     const loopFilesFrom = function LibraryTools_nodeJS_loopFilesFrom(privateData, path) {
         path = resolvePath(path);
         if (!isUsedPath(path)) {
-            return;
+            throw ["LibraryTools_nodeJS_loopFiles - no such path exists:", path];
         }
         if (publicExports.isDirectory(path)) {
             loopFilesFromDirectory(privateData, path);
@@ -1822,11 +1773,27 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
             boundInputs.execute(path);
         }
     };
-    publicExports.readFileName = function LibraryTools_nodeJS_readFileName(path) {
-        if (typeof path !== "string" || path === "") {
-            throw ["LibraryTools_nodeJS_readFileName - invalid path argument:", path];
+    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
+        let { path, checkExistance, encoding } = inputs;
+        path = resolvePath(path);
+        if (checkExistance !== false) {
+            if (!isUsedPath(path)) {
+                return { content: undefined };
+            }
+            else if (ToolKid.nodeJS.isDirectory(path)) {
+                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
+            }
         }
-        return Path.basename(path);
+        if (typeof encoding !== "string") {
+            const type = ToolKid.connection.HTTP.readMediaType(path);
+            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
+                encoding = "utf8";
+            }
+        }
+        return {
+            encoding: encoding || "dictionary",
+            content: readFile(path, encoding)
+        };
     };
     publicExports.resolvePath = function LibraryTools_nodeJS_resolvePath(...parts) {
         return Path.resolve(...parts);
@@ -1857,6 +1824,7 @@ registeredFiles["LibraryTools_nodeJS.js"] = module.exports;
 
 ToolKid.registerFunctions({section:"nodeJS", functions: {
             loopFiles:module.exports.loopFiles,
+            readFile:module.exports.readFile,
             writeFile:module.exports.writeFile,
         }});
 

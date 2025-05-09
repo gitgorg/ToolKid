@@ -7,6 +7,24 @@ interface LibraryTools_file {
     createSimpleRegxp(
         simpleExpression: string
     ): RegExp,
+    createPatternMatcher(
+        ...patterns: (string | RegExp)[]
+    ): {
+        (text: string): [
+            matchingPosition: number,
+            matchingText: string | undefined,
+        ]
+    },
+    createPatternMatcherComlex(iputs: {
+        patterns: (string | RegExp)[],
+        indexPatterns: true
+    }): {
+        (text: string): [
+            matchingPosition: number,
+            matchingText: string | undefined,
+            matchigPatternIndex: number,
+        ]
+    },
     isArray(
         value: any
     ): boolean,
@@ -14,7 +32,7 @@ interface LibraryTools_file {
         baseFunction: { (...inputs: any[]): ReturnType },
         presetInput: any,
         ...additionalPresetInputs: any[]
-    ): { (...inputs: any[]): ReturnType }
+    ): { (...inputs: any[]): ReturnType },
 }
 
 
@@ -83,13 +101,52 @@ interface LibraryTools_file {
         return new RegExp("^" + expression + "$");
     };
 
-    // var replaceRegex = new RegExp('[' + Object.keys(replacements).join('') + ']', 'ig');
-    // const createSimpleRegxpReplacer = function (old:string) {
-    //     return replacements[<".">old];
-    // };
+    publicExports.createPatternMatcher = function LibraryTools_createPatternMatcher(...patterns) {
+        return matchPatternSimple.bind(null,
+            new RegExp(patterns.map(getRexExpSource).join("|"))
+        );
+    };
+    publicExports.createPatternMatcherComlex = function LibraryTools_createPatternMatcherComplex(inputs) {
+        if (inputs.indexPatterns === true) {
+            return matchPatternIndexed.bind(null,
+                new RegExp("(" + inputs.patterns.map(getRexExpSource).join(")|(") + ")")
+            );
+        } else {
+            return publicExports.createPatternMatcher(...inputs.patterns);
+        }
+    };
+
+    const getRexExpSource = function (value: string | RegExp) {
+        return (value instanceof RegExp) ? value.source : value;
+    };
 
     publicExports.isArray = function LibraryTools_isArray(value) {
         return value instanceof Array && value.length !== 0;
+    };
+
+    const isDefined = function LibraryTools_isDefined(value: any) {
+        return value !== undefined
+    };
+
+    const matchPatternIndexed = function LibraryTools_matchPatternIndexed(
+        regExp: RegExp, text: string
+    ) {
+        const found = text.match(regExp);
+        return (found === null)
+            ? [-1, undefined, -1]
+            : [
+                found.index,
+                found[0],
+                found.slice(1).findIndex(isDefined)
+            ];
+    };
+    const matchPatternSimple = function LibraryTools_matchPatternSimple(
+        regExp: RegExp, text: string
+    ) {
+        const found = text.match(regExp);
+        return (found === null)
+            ? [-1, undefined]
+            : [found.index, found[0]];
     };
 
     publicExports.partial = function LibraryTools_partial(
