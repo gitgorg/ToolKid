@@ -92,6 +92,8 @@ type LibraryTools_nodeJS_test_file = {
                     value: found,
                     shouldBe: [
                         resolve(fileDirectory, "LibraryCore.js"),
+                        resolve(fileDirectory, "LibraryParsing.js"),
+                        resolve(fileDirectory, "LibraryParsing.test.js"),
                         resolve(fileDirectory, "LibraryTools.js"),
                         resolve(fileDirectory, "LibraryTools.test.js"),
                         resolve(fileDirectory, "LibraryTools_nodeJS.js"),
@@ -232,15 +234,7 @@ type LibraryTools_nodeJS_test_file = {
             });
         },
         callback: function () {
-            test({
-                subject: deleteFile,
-                execute: function setup() {
-                    deleteFile({
-                        path: "./TKTest.txt",
-                        ignoreMissingFile: true
-                    });
-                }
-            });
+            deleteFile("./TKTest.txt");
         }
     });
 })();

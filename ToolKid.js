@@ -4,6 +4,9 @@ const registeredFiles = {};
 
 
 (function LibraryCore_init() {
+    const extensionPaths = {
+        "parsing": "LibraryParsing.js"
+    };
     let LibraryTools;
     const publicExports = module.exports = {};
     publicExports.createInstance = function LibraryCore_createInstance() {
@@ -28,6 +31,16 @@ const registeredFiles = {};
             value: inputs.value,
             writable: false
         });
+    };
+    publicExports.getExtension = function LibraryCore_getExtension(name) {
+        const path = extensionPaths[name];
+        if (path === undefined) {
+            throw [
+                "LibraryCore_getExtension - unknonw extension:", name,
+                "allowed extensions are:", Object.keys(extensionPaths)
+            ];
+        }
+        return require(require("path").resolve(__dirname, "./" + path));
     };
     publicExports.getTools = function LibraryCore_getTools() {
         if (LibraryTools === undefined) {
@@ -90,6 +103,38 @@ const registeredFiles = {};
 })();
 registeredFiles["LibraryCore.js"] = module.exports;
 
+;
+(function TK_NodeJSFile_init() {
+    const publicExports = module.exports = {};
+    const importSignals = {
+        requireStart: "require(\"",
+        requireEnd: "\")"
+    };
+    publicExports.readJSImports = function TK_CodeParse_readJSImports(inputs) {
+        const codeSections = inputs.code.split(importSignals.requireStart);
+        if (codeSections.length === 1) {
+            return;
+        }
+        let position = codeSections[0].length;
+        let codeSection, content;
+        const { length } = codeSections;
+        for (let i = 1; i < length; i += 1) {
+            codeSection = codeSections[i];
+            content = codeSection.slice(0, codeSection.indexOf(importSignals.requireEnd));
+            if (content !== "fs" && content !== "path") {
+                inputs.parser(position, content);
+            }
+            position += codeSection.length + importSignals.requireStart.length;
+        }
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunctions({ section: "code", functions: publicExports });
+    }
+})();
+registeredFiles["TK_CodeParsing.js"] = module.exports;
+
+;
 (function TK_ConnectionHTTPinit() {
     const publicExports = module.exports = {};
     publicExports.request = function TK_ConnectionHTTPRequest(inputs) {
@@ -173,6 +218,7 @@ registeredFiles["LibraryCore.js"] = module.exports;
 })();
 registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
 
+;
 (function TK_ConnectionHTTPFormats_init() {
     const publicExports = module.exports = {};
     publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType(path) {
@@ -215,6 +261,7 @@ registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
 })();
 registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 
+;
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
     publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
@@ -256,6 +303,7 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesArray.js"] = module.exports;
 
+;
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
     publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
@@ -347,6 +395,7 @@ registeredFiles["TK_DataTypesArray.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesChecks.js"] = module.exports;
 
+;
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = {};
     publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(inputs) {
@@ -505,6 +554,7 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
 
+;
 (function TK_DataTypesList_init() {
     const publicExports = module.exports = {};
     publicExports.shortenList = function TK_DataTypesList_shortenList(inputs) {
@@ -529,6 +579,7 @@ registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesList.js"] = module.exports;
 
+;
 (function TK_DataTypesNumber_init() {
     const publicExports = module.exports = {};
     publicExports.addUnderscores = function TK_DataTypesNuber_addUnderscores(value) {
@@ -570,6 +621,7 @@ registeredFiles["TK_DataTypesList.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesNumber.js"] = module.exports;
 
+;
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
@@ -636,6 +688,7 @@ registeredFiles["TK_DataTypesNumber.js"] = module.exports;
 })();
 registeredFiles["TK_DataTypesPromise.js"] = module.exports;
 
+;
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
     publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
@@ -655,6 +708,7 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
 })();
 registeredFiles["TK_DebugCallstack.js"] = module.exports;
 
+;
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
     const colorsServer = {
@@ -765,6 +819,7 @@ registeredFiles["TK_DebugCallstack.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
 
+;
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
     const resultGroups = new Map([["default", {
@@ -917,6 +972,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTest.js"] = module.exports;
 
+;
 (function TK_DebugTestAssertFailure_init() {
     const { areEqual } = ToolKid.dataTypes.checks;
     const publicExports = module.exports = {};
@@ -1068,6 +1124,7 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
 
+;
 (function TK_DebugTestAssertion_init() {
     const publicExports = module.exports = {};
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
@@ -1102,6 +1159,7 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
 
+;
 (function TK_DebugTestCondition_init() {
     const publicExports = module.exports = {};
     const registeredConditions = new Map();
@@ -1180,6 +1238,7 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 
+;
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
@@ -1292,6 +1351,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestFull.js"] = module.exports;
 
+;
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
     const createValueChecker = function TD_DebugTestShouldPass_createValueChecker(mode, value) {
@@ -1359,6 +1419,7 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
 
+;
 (function TK_DebugTestSummary_init() {
     const publicExports = module.exports = {};
     const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(testResult) {
@@ -1567,24 +1628,22 @@ registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
 })();
 registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 
-(function TK_nodeJSFile_init() {
+;
+(function TK_NodeJSFile_init() {
     const { appendFileSync: extendFile, existsSync: isUsedPath, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
-    publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
-        if (typeof inputs === "string") {
-            inputs = { path: inputs };
-        }
-        if (!isUsedPath(inputs.path)) {
+    publicExports.deleteFile = function TK_NodeJSFile_deleteFile(path) {
+        if (!isUsedPath(path)) {
             return;
         }
-        if (ToolKid.nodeJS.isDirectory(inputs.path)) {
-            deleteFolder(inputs.path, { recursive: true });
+        if (ToolKid.nodeJS.isDirectory(path)) {
+            deleteFolder(path, { recursive: true });
         }
         else {
-            deleteFile(inputs.path);
+            deleteFile(path);
         }
     };
-    publicExports.extendFile = function TK_nodeJSFile_extendFile(inputs) {
+    publicExports.extendFile = function TK_NodeJSFile_extendFile(inputs) {
         if (isUsedPath(inputs.path)) {
             extendFile(inputs.path, inputs.content);
         }
@@ -1599,8 +1658,10 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 })();
 registeredFiles["TK_NodeJSFile.js"] = module.exports;
 
+;
 registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
+;
 (function LibraryTools_init() {
     const publicExports = module.exports = {};
     publicExports.createStringCheck = function LibraryTools_createStringCheck(inputs) {
@@ -1648,41 +1709,8 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
         //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
         return new RegExp("^" + expression + "$");
     };
-    publicExports.createPatternMatcher = function LibraryTools_createPatternMatcher(...patterns) {
-        return matchPatternSimple.bind(null, new RegExp(patterns.map(getRexExpSource).join("|")));
-    };
-    publicExports.createPatternMatcherComlex = function LibraryTools_createPatternMatcherComplex(inputs) {
-        if (inputs.indexPatterns === true) {
-            return matchPatternIndexed.bind(null, new RegExp("(" + inputs.patterns.map(getRexExpSource).join(")|(") + ")"));
-        }
-        else {
-            return publicExports.createPatternMatcher(...inputs.patterns);
-        }
-    };
-    const getRexExpSource = function (value) {
-        return (value instanceof RegExp) ? value.source : value;
-    };
     publicExports.isArray = function LibraryTools_isArray(value) {
         return value instanceof Array && value.length !== 0;
-    };
-    const isDefined = function LibraryTools_isDefined(value) {
-        return value !== undefined;
-    };
-    const matchPatternIndexed = function LibraryTools_matchPatternIndexed(regExp, text) {
-        const found = text.match(regExp);
-        return (found === null)
-            ? [-1, undefined, -1]
-            : [
-                found.index,
-                found[0],
-                found.slice(1).findIndex(isDefined)
-            ];
-    };
-    const matchPatternSimple = function LibraryTools_matchPatternSimple(regExp, text) {
-        const found = text.match(regExp);
-        return (found === null)
-            ? [-1, undefined]
-            : [found.index, found[0]];
     };
     publicExports.partial = function LibraryTools_partial(baseFunction, ...inputs) {
         if (inputs.length === 0) {
@@ -1705,6 +1733,7 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
             isArray:module.exports.isArray,
         }});
 
+;
 (function LibraryTools_nodeJS_init() {
     const FS = require("fs");
     const Path = require("path");

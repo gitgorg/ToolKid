@@ -1,25 +1,20 @@
 //file operations for nodeJS
 interface ToolKid_file { nodeJS: TK_nodeJS_file }
 interface TK_nodeJS_file {
-    deleteFile(
-        path: string
-    ): void
-    deleteFile(inputs: {
-        path: string,
-        ignoreMissingFile?: true,
-    }): void,
+    loopFiles: LibraryTools_file["loopFiles"],
+    readFile: LibraryTools_file["readFile"],
+    writeFile: LibraryTools_file["writeFile"],
+
+    deleteFile(path: string): void,
     extendFile(inputs: {
         path: string,
         content: any,
     }): void,
-    loopFiles: LibraryTools_file["loopFiles"],
-    readFile: LibraryTools_file["readFile"],
-    writeFile: LibraryTools_file["writeFile"]
 }
 
 
 
-(function TK_nodeJSFile_init() {
+(function TK_NodeJSFile_init() {
     const {
         appendFileSync: extendFile,
         existsSync: isUsedPath,
@@ -31,22 +26,19 @@ interface TK_nodeJS_file {
 
     const publicExports = module.exports = <TK_nodeJS_file>{};
 
-    publicExports.deleteFile = function TK_nodeJSFile_deleteFile(inputs) {
-        if (typeof inputs === "string") {
-            inputs = { path: inputs };
-        }
-        if (!isUsedPath(inputs.path)) {
+    publicExports.deleteFile = function TK_NodeJSFile_deleteFile(path) {
+        if (!isUsedPath(path)) {
             return;
         }
 
-        if (ToolKid.nodeJS.isDirectory(inputs.path)) {
-            deleteFolder(inputs.path, { recursive: true });
+        if (ToolKid.nodeJS.isDirectory(path)) {
+            deleteFolder(path, { recursive: true });
         } else {
-            deleteFile(inputs.path);
+            deleteFile(path);
         }
     };
 
-    publicExports.extendFile = function TK_nodeJSFile_extendFile(inputs) {
+    publicExports.extendFile = function TK_NodeJSFile_extendFile(inputs) {
         if (isUsedPath(inputs.path)) {
             extendFile(inputs.path, inputs.content);
         } else {

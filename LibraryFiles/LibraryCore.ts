@@ -1,6 +1,7 @@
 //core functionality for custom Library
 type LibraryCore_file = {
     createInstance(): Library,
+    getExtension(name: "parsing"): LibraryParsing_file,
     getTools(): LibraryTools_file
 }
 
@@ -26,6 +27,9 @@ interface GenericFunction {
 
 
 (function LibraryCore_init() {
+    const extensionPaths = {
+        "parsing": "LibraryParsing.js"
+    };
     let LibraryTools: LibraryTools_file;
     const publicExports = module.exports = <LibraryCore_file>{};
 
@@ -65,6 +69,20 @@ interface GenericFunction {
             value: inputs.value,
             writable: false
         });
+    };
+
+    publicExports.getExtension = function LibraryCore_getExtension(name) {
+        const path = extensionPaths[name];
+        if (path === undefined) {
+            throw [
+                "LibraryCore_getExtension - unknonw extension:", name,
+                "allowed extensions are:", Object.keys(extensionPaths)
+            ];
+        }
+
+        return require(
+            require("path").resolve(__dirname, "./" + path)
+        );
     };
 
     publicExports.getTools = function LibraryCore_getTools() {

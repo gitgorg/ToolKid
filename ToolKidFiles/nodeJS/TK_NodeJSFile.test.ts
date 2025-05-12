@@ -7,10 +7,7 @@
     test({
         subject: extendFile,
         execute: function regularFileExtension() {
-            deleteFile({
-                path: "./TKTest.extendFile.txt",
-                ignoreMissingFile: true
-            });
+            deleteFile("./TKTest.extendFile.txt");
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.extendFile.txt" }),
@@ -43,15 +40,19 @@
                     }
                 }
             });
-            deleteFile("./TKTest.extendFile.txt");
+        },
+        callback: function () {
+            test({
+                subject: deleteFile,
+                execute: function simpleUsage() {
+                    deleteFile("./TKTest.extendFile.txt");
+                }
+            })
         }
     }, {
         subject: extendFile,
         execute: function newFileExtension() {
-            deleteFile({
-                path: "./TKTest.extendFileNew.txt",
-                ignoreMissingFile: true
-            });
+            deleteFile("./TKTest.extendFileNew.txt");
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.extendFileNew.txt" }),
@@ -71,15 +72,14 @@
                     }
                 }
             });
+        },
+        callback: function () {
             deleteFile("./TKTest.extendFileNew.txt");
         }
     }, {
         subject: extendFile,
         execute: function newFolderFileExtension() {
-            deleteFile({
-                path: "./testFolder",
-                ignoreMissingFile: true
-            });
+            deleteFile("./testFolder");
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
@@ -99,6 +99,8 @@
                     }
                 }
             });
+        },
+        callback: function () {
             deleteFile("./testFolder");
         }
     });
