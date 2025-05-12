@@ -1,11 +1,13 @@
 //core functionality for custom Library
 type LibraryCore_file = {
     createInstance(): Library,
-    getExtension(name: "parsing"): LibraryParsing_file,
+    getCoreModule(name: "parsing"): LibraryParsing_file,
+    getCoreModule(name: "files"): LibraryFiles_file,
     getTools(): LibraryTools_file
 }
 
 type Library = {
+    getCoreModule: LibraryCore_file["getCoreModule"],
     registerFunctions(inputs: {
         section: string,
         subSection?: string,
@@ -27,9 +29,11 @@ interface GenericFunction {
 
 
 (function LibraryCore_init() {
-    const extensionPaths = {
-        "parsing": "LibraryParsing.js"
+    const coreModuleNames = {
+        "parsing": "LibraryParsing.js",
+        "files": "LibraryFiles.js"
     };
+    const coreModules = <Dictionary>{};
     let LibraryTools: LibraryTools_file;
     const publicExports = module.exports = <LibraryCore_file>{};
 
@@ -41,6 +45,11 @@ interface GenericFunction {
             container: result,
             key: "registerFunctions",
             value: registerFunction.bind(null, result)
+        });
+        addAsReadOnly({
+            container: result,
+            key: "getCoreModule",
+            value: publicExports.getCoreModule
         });
         return result;
     };
@@ -71,16 +80,20 @@ interface GenericFunction {
         });
     };
 
-    publicExports.getExtension = function LibraryCore_getExtension(name) {
-        const path = extensionPaths[name];
+    publicExports.getCoreModule = function LibraryCore_getCoreModule(moduleName) {
+        if (coreModules[moduleName] !== undefined) {
+            return coreModules[moduleName];
+        }
+
+        const path = coreModuleNames[moduleName];
         if (path === undefined) {
             throw [
-                "LibraryCore_getExtension - unknonw extension:", name,
-                "allowed extensions are:", Object.keys(extensionPaths)
+                "LibraryCore_getCoreModule - unknonw core module name:", moduleName,
+                "allowed extensions are:", Object.keys(coreModuleNames)
             ];
         }
 
-        return require(
+        return coreModules[moduleName] = require(
             require("path").resolve(__dirname, "./" + path)
         );
     };

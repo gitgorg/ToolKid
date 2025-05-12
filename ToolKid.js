@@ -4,9 +4,11 @@ const registeredFiles = {};
 
 
 (function LibraryCore_init() {
-    const extensionPaths = {
-        "parsing": "LibraryParsing.js"
+    const coreModuleNames = {
+        "parsing": "LibraryParsing.js",
+        "files": "LibraryFiles.js"
     };
+    const coreModules = {};
     let LibraryTools;
     const publicExports = module.exports = {};
     publicExports.createInstance = function LibraryCore_createInstance() {
@@ -15,6 +17,11 @@ const registeredFiles = {};
             container: result,
             key: "registerFunctions",
             value: registerFunction.bind(null, result)
+        });
+        addAsReadOnly({
+            container: result,
+            key: "getCoreModule",
+            value: publicExports.getCoreModule
         });
         return result;
     };
@@ -32,15 +39,18 @@ const registeredFiles = {};
             writable: false
         });
     };
-    publicExports.getExtension = function LibraryCore_getExtension(name) {
-        const path = extensionPaths[name];
+    publicExports.getCoreModule = function LibraryCore_getCoreModule(moduleName) {
+        if (coreModules[moduleName] !== undefined) {
+            return coreModules[moduleName];
+        }
+        const path = coreModuleNames[moduleName];
         if (path === undefined) {
             throw [
-                "LibraryCore_getExtension - unknonw extension:", name,
-                "allowed extensions are:", Object.keys(extensionPaths)
+                "LibraryCore_getCoreModule - unknonw core module name:", moduleName,
+                "allowed extensions are:", Object.keys(coreModuleNames)
             ];
         }
-        return require(require("path").resolve(__dirname, "./" + path));
+        return coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
     };
     publicExports.getTools = function LibraryCore_getTools() {
         if (LibraryTools === undefined) {
@@ -99,11 +109,169 @@ const registeredFiles = {};
         });
         return section;
     };
+    registeredFiles.coreModules = coreModules;
     global.ToolKid = publicExports.createInstance();
 })();
 registeredFiles["LibraryCore.js"] = module.exports;
 
-;
+(function LibraryFiles_init() {
+    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, } = require("fs");
+    const { normalize: normalizePath, resolve: resolvePath, } = require("path");
+    const publicExports = module.exports = {};
+    const checkString = function LibraryFiles_checkString(value, expression) {
+        return expression.test(value);
+    };
+    const checkStringConditions = function LibraryFiles_checkStringConditions(conditions, value) {
+        const test = checkString.bind(null, value);
+        return conditions.includes.find(test) !== undefined
+            && conditions.excludes.find(test) === undefined;
+    };
+    const checkStringExclusion = function checkStringExclusion(exclude, value) {
+        const test = checkString.bind(null, value);
+        return exclude.find(test) === undefined;
+    };
+    const checkStringInclusion = function checkStringInclusion(include, value) {
+        const test = checkString.bind(null, value);
+        return include.find(test) !== undefined;
+    };
+    // TODO: replacements more structured, maybe backwards compatible
+    // const replacements = {
+    //     "\\": "\\\\",
+    //     ".": "\\.",
+    //     "\*": ".+"
+    // };
+    const createSimpleRegxp = function LibraryFiles_createSimpleRegxp(expression) {
+        expression = expression.replaceAll("\\", "\\\\");
+        expression = expression.replaceAll(".", "\\.");
+        expression = expression.replaceAll("\*", ".+");
+        //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
+        return new RegExp("^" + expression + "$");
+    };
+    publicExports.createStringChecker = function LibraryFiles_createStringChecker(inputs) {
+        const hasIncludes = isArray(inputs.includes);
+        const hasExcludes = isArray(inputs.excludes);
+        if (hasIncludes && hasExcludes) {
+            return checkStringConditions.bind(null, inputs);
+        }
+        else if (hasIncludes) {
+            return checkStringInclusion.bind(null, inputs.includes);
+        }
+        else if (hasExcludes) {
+            return checkStringExclusion.bind(null, inputs.excludes);
+        }
+        else {
+            return function LibraryFiles_checkNothing() { return true; };
+        }
+    };
+    const isArray = function LibraryFiles_isArray(value) {
+        return value instanceof Array && value.length !== 0;
+    };
+    const isDirectory = function LibraryFiles_isDirectory(path) {
+        return readPathStats(path).isDirectory();
+    };
+    const collectPaths = function LibraryFiles_collectPaths(expressions) {
+        if (!(expressions instanceof Array)) {
+            return [];
+        }
+        const result = [];
+        expressions.map(collectPathsFilter.bind(null, result));
+        return result;
+    };
+    const collectPathsFilter = function LibraryFiles_collectPathsFilter(validated, expression) {
+        if (typeof expression === "string") {
+            validated.push(createSimpleRegxp(normalizePath(expression)));
+        }
+        else if (expression instanceof RegExp) {
+            validated.push(expression);
+        }
+    };
+    publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
+        const checker = publicExports.createStringChecker({
+            includes: collectPaths(inputs.includes),
+            excludes: collectPaths(inputs.excludes),
+        });
+        const DataForLooping = {
+            isIncluded: checker,
+            execute: inputs.execute,
+        };
+        const { path } = inputs;
+        if (path instanceof Array) {
+            path.forEach(loopFilesFrom.bind(null, DataForLooping));
+        }
+        else {
+            loopFilesFrom(DataForLooping, path);
+        }
+    };
+    const loopFilesFrom = function LibraryFiles_loopFilesFrom(DataForLooping, path) {
+        path = resolvePath(path);
+        if (!isUsedPath(path)) {
+            throw ["LibraryFiles_loopFiles - no such path exists:", path];
+        }
+        if (isDirectory(path)) {
+            loopFilesFromDirectory(DataForLooping, path);
+        }
+        else {
+            loopFilesExecute(DataForLooping, "", path);
+        }
+    };
+    const loopFilesFromDirectory = function LibraryFiles_loopFilesFromDirectory(DataForLooping, path) {
+        readDirectory(path).forEach(loopFilesExecute.bind(null, DataForLooping, path));
+    };
+    const loopFilesExecute = function LibraryFiles_loopFilesExecute(boundInputs, root, path) {
+        path = resolvePath(root, path);
+        if (isDirectory(path)) {
+            loopFilesFromDirectory(boundInputs, path);
+            return;
+        }
+        if (boundInputs.isIncluded(path)) {
+            boundInputs.execute(path);
+        }
+    };
+    Object.freeze(publicExports);
+})();
+registeredFiles.coreModules.files = module.exports;
+
+(function LibraryParsing_init() {
+    const publicExports = module.exports = {};
+    publicExports.createPatternMatcher = function LibraryParsing_createPatternMatcher(...patterns) {
+        return matchPatternSimple.bind(null, new RegExp(patterns.map(getRexExpSource).join("|")));
+    };
+    publicExports.createPatternMatcherComlex = function LibraryParsing_createPatternMatcherComplex(inputs) {
+        if (inputs.indexPatterns === true) {
+            return matchPatternIndexed.bind(null, new RegExp("(" + inputs.patterns.map(getRexExpSource).join(")|(") + ")"));
+        }
+        else {
+            return publicExports.createPatternMatcher(...inputs.patterns);
+        }
+    };
+    const getRexExpSource = function (value) {
+        return (value instanceof RegExp) ? value.source : value;
+    };
+    const isDefined = function LibraryParsing_isDefined(value) {
+        return value !== undefined;
+    };
+    const matchPatternIndexed = function LibraryParsing_matchPatternIndexed(regExp, text) {
+        const found = text.match(regExp);
+        return (found === null)
+            ? [-1, undefined, -1]
+            : [
+                found.index,
+                found[0],
+                found.slice(1).findIndex(isDefined)
+            ];
+    };
+    const matchPatternSimple = function LibraryParsing_matchPatternSimple(regExp, text) {
+        const found = text.match(regExp);
+        return (found === null)
+            ? [-1, undefined]
+            : [found.index, found[0]];
+    };
+    Object.freeze(publicExports);
+})();
+registeredFiles.coreModules.parsing = module.exports;
+
+
+delete registeredFiles.coreModules;;
 (function TK_NodeJSFile_init() {
     const publicExports = module.exports = {};
     const importSignals = {
@@ -1654,6 +1822,8 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
+        const { loopFiles } = ToolKid.getCoreModule("files");
+        ToolKid.registerFunctions({ section: "nodeJS", functions: { loopFiles } });
     }
 })();
 registeredFiles["TK_NodeJSFile.js"] = module.exports;
@@ -1744,63 +1914,10 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
         ? require(resolvePath(__dirname, "./LibraryTools.js"))
         //@ts-ignore
         : registeredFiles["LibraryTools.js"];
-    const { createSimpleRegxp } = LibraryTools;
-    const { lstatSync: readPathStats, readdirSync: readDirectory } = FS;
-    const { normalize } = Path;
+    const { lstatSync: readPathStats } = FS;
     const publicExports = module.exports = Object.assign({}, LibraryTools);
     publicExports.isDirectory = function LibraryTools_nodeJS_isDirectory(path) {
         return readPathStats(path).isDirectory();
-    };
-    const listPaths = function LibraryTools_nodeJS_listPaths(expressions) {
-        if (typeof expressions === "string") {
-            expressions = [expressions];
-        }
-        else if (!(expressions instanceof Array)) {
-            return [];
-        }
-        return expressions.map(normalize);
-    };
-    publicExports.loopFiles = function LibraryTools_nodeJS_loopFiles(inputs) {
-        const pathCheck = publicExports.createStringCheck({
-            include: listPaths(inputs.include).map(createSimpleRegxp),
-            exclude: listPaths(inputs.exclude).map(createSimpleRegxp),
-        });
-        const privateData = {
-            isIncluded: pathCheck,
-            execute: inputs.execute
-        };
-        const { path } = inputs;
-        if (path instanceof Array) {
-            path.forEach(publicExports.partial(loopFilesFrom, privateData));
-        }
-        else {
-            loopFilesFrom(privateData, path);
-        }
-    };
-    const loopFilesFrom = function LibraryTools_nodeJS_loopFilesFrom(privateData, path) {
-        path = resolvePath(path);
-        if (!isUsedPath(path)) {
-            throw ["LibraryTools_nodeJS_loopFiles - no such path exists:", path];
-        }
-        if (publicExports.isDirectory(path)) {
-            loopFilesFromDirectory(privateData, path);
-        }
-        else {
-            loopFilesExecute(privateData, "", path);
-        }
-    };
-    const loopFilesFromDirectory = function LibraryTools_nodeJS_loopFilesFromDirectory(privateData, path) {
-        readDirectory(path).forEach(publicExports.partial(loopFilesExecute, privateData, path));
-    };
-    const loopFilesExecute = function LibraryTools_nodeJS_loopFilesExecute(boundInputs, root, path) {
-        path = resolvePath(root, path);
-        if (publicExports.isDirectory(path)) {
-            loopFilesFromDirectory(boundInputs, path);
-            return;
-        }
-        if (boundInputs.isIncluded(path)) {
-            boundInputs.execute(path);
-        }
     };
     publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
         let { path, checkExistance, encoding } = inputs;
@@ -1852,7 +1969,6 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
 registeredFiles["LibraryTools_nodeJS.js"] = module.exports;
 
 ToolKid.registerFunctions({section:"nodeJS", functions: {
-            loopFiles:module.exports.loopFiles,
             readFile:module.exports.readFile,
             writeFile:module.exports.writeFile,
         }});

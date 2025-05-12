@@ -10,41 +10,17 @@ type LibraryTools_nodeJS_test_file = {
 }
 
 
+
 (function LibraryTools_nodeJS_test() {
-    const FS = require("fs");
     const { resolve } = require("path");
     const {
-        isDirectory, loopFiles, readFile, resolvePath, writeFile
+        isDirectory, readFile, resolvePath, writeFile
     } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
+
+    const paths = require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.test.js"));
 
     const { assertEquality, assertFailure, test } = ToolKid.debug.test;
     const { deleteFile } = ToolKid.nodeJS;
-
-
-
-    const testFolder = resolve(__dirname, "../T_fileDirectory/");
-    const paths = module.exports = <LibraryTools_nodeJS_test_file>{
-        directoryMixedContents: testFolder,
-        directoryEmpty: resolve(testFolder, "T_empty"),
-        directoryNonExisting: resolve(testFolder, "../T_nonExistant"),
-
-        file: resolve(testFolder, "T_file.json"),
-        fileEmpty: resolve(testFolder, "T_empty.txt"),
-        fileNonExisting: resolve(testFolder, "T_nonExistant.json"),
-        fileTypeScript: resolve(testFolder, "T_pathList.test.js"),
-    };
-
-    if (!FS.existsSync(paths.directoryMixedContents)) {
-        FS.mkdirSync(paths.directoryMixedContents);
-    }
-    if (!FS.existsSync(paths.directoryEmpty)) {
-        FS.mkdirSync(paths.directoryEmpty);
-    }
-    FS.writeFileSync(paths.fileEmpty, "");
-    FS.writeFileSync(paths.file, "{\
-        \"text\": \"hello\",\
-        \"number\": 1\
-    }");
 
 
 
@@ -74,70 +50,6 @@ type LibraryTools_nodeJS_test_file = {
                 execute: isDirectory,
                 withInputs: "nonExistant",
                 shouldThrow: Error
-            });
-        }
-    });
-
-    test({
-        subject: loopFiles,
-        execute: function basicFileLoop() {
-            const fileDirectory = __dirname;
-            let found = <string[]>[];
-            loopFiles({
-                path: fileDirectory,
-                execute: found.push.bind(found)
-            });
-            assertEquality({
-                "siblingFiles": {
-                    value: found,
-                    shouldBe: [
-                        resolve(fileDirectory, "LibraryCore.js"),
-                        resolve(fileDirectory, "LibraryParsing.js"),
-                        resolve(fileDirectory, "LibraryParsing.test.js"),
-                        resolve(fileDirectory, "LibraryTools.js"),
-                        resolve(fileDirectory, "LibraryTools.test.js"),
-                        resolve(fileDirectory, "LibraryTools_nodeJS.js"),
-                        resolve(fileDirectory, "LibraryTools_nodeJS.test.js")
-                    ]
-                }
-            });
-        }
-    });
-
-    test({
-        subject: loopFiles,
-        execute: function loopingDirectory() {
-            let fileList = <any[]>[];
-            loopFiles({
-                path: paths.directoryMixedContents,
-                execute: fileList.push.bind(fileList)
-            });
-            assertEquality({
-                "fileList": {
-                    value: fileList,
-                    shouldBe: [
-                        paths.fileEmpty, paths.file
-                    ],
-                    toleranceDepth: 2
-                }
-            });
-        }
-    }, {
-        subject: loopFiles,
-        execute: function loopingFiles() {
-            let fileList = <any[]>[];
-            loopFiles({
-                path: paths.file,
-                execute: fileList.push.bind(fileList)
-            });
-            assertEquality({
-                "fileList": {
-                    value: fileList,
-                    shouldBe: [
-                        paths.file
-                    ],
-                    toleranceDepth: 2
-                }
             });
         }
     });

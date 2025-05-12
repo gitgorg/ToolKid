@@ -23,6 +23,7 @@ type ToolKidConfig = {
 (function ToolKidBuild_init() {
     const FS = require("fs");
     const Path = require("path");
+    let LibraryCore: LibraryCore_file;
     let LibraryTools: LibraryTools_file;
 
 
@@ -35,16 +36,18 @@ type ToolKidConfig = {
         if (config === undefined) {
             config = readConfig();
         }
-        const LibraryCore = <LibraryCore_file>require(Path.resolve(config.rootLibraryFiles, "LibraryCore.js"));
+        LibraryCore = require(Path.resolve(config.rootLibraryFiles, "LibraryCore.js"));
         const library = (<Dictionary>global).ToolKid = <ToolKid_file>LibraryCore.createInstance();
-        library.registerFunctions({ section: "core", functions: LibraryCore.getExtension("parsing") });
+        library.registerFunctions({ section: "core", functions: {
+            ...library.getCoreModule("parsing"),
+            ...library.getCoreModule("files")
+        }});
         LibraryTools = LibraryCore.getTools();
         addCoreFunctions({
             library,
             distribution: {
                 "isArray": ["dataTypes", "checks"],
                 "isDirectory": ["nodeJS"],
-                "loopFiles": ["nodeJS"],
                 "readFile": ["nodeJS"],
                 "resolvePath": ["nodeJS"],
                 "writeFile": ["nodeJS"],
@@ -82,23 +85,36 @@ type ToolKidConfig = {
         });
     };
 
-    const combinedLibrarySetup = function (libraryPath: string) {
+    const combinedLibrarySetup = function (libraryRoot: string) {
         let combinedLibraryContent = "\"use strict\";\n";
         combinedLibraryContent += "(function ToolKid_init () {\n";
         combinedLibraryContent += "const registeredFiles = {};\n\n\n";
-        combinedLibraryContent += LibraryTools.readFile({ path: libraryPath }).content.slice(14, -7);
+        let path = LibraryTools.resolvePath(libraryRoot, "LibraryCore.js");
+        combinedLibraryContent += LibraryTools.readFile({ path }).content.slice(14, -7);
+        combinedLibraryContent += "\n    registeredFiles.coreModules = coreModules;";
         combinedLibraryContent += "\n    global.ToolKid = publicExports.createInstance();";
         combinedLibraryContent += "\n})();\n";
         combinedLibraryContent += "registeredFiles[\"LibraryCore.js\"] = module.exports;\n\n";
+
+        path = LibraryTools.resolvePath(libraryRoot, "LibraryFiles.js");
+        combinedLibraryContent += LibraryTools.readFile({ path }).content.trim().slice(14);
+        combinedLibraryContent += "\nregisteredFiles.coreModules.files = module.exports;\n\n";
+
+        path = LibraryTools.resolvePath(libraryRoot, "LibraryParsing.js");
+        combinedLibraryContent += LibraryTools.readFile({ path }).content.trim().slice(14);
+        combinedLibraryContent += "\nregisteredFiles.coreModules.parsing = module.exports;\n\n";
+
+        // combinedLibraryContent += "\nconsole.log(111111,registeredFiles.coreModules);";
+        combinedLibraryContent += "\ndelete registeredFiles.coreModules;";
         return combinedLibraryContent;
     };
 
     const findIncludedFiles = function ToolKidBuild_findIncludedFiles(config: ToolKidConfig) {
         const pathsByFileName = <{ [alias: string]: string }>{};
-        LibraryTools.loopFiles({
+        LibraryCore.getCoreModule("files").loopFiles({
             path: config.rootToolKidFiles,
-            include: config.include,
-            exclude: config.exclude,
+            includes: config.include,
+            excludes: config.exclude,
             execute: LibraryTools.partial(registerExtendedFile, pathsByFileName)
         });
         return pathsByFileName;
@@ -123,10 +139,9 @@ type ToolKidConfig = {
     }) {
         const { libraryRoot } = inputs;
         const { resolvePath } = LibraryTools;
-        const libraryPath = resolvePath(libraryRoot) + "/LibraryCore.js";
 
         const privateData = {
-            combinedFile: combinedLibrarySetup(libraryPath),
+            combinedFile: combinedLibrarySetup(libraryRoot),
             registeredFiles: inputs.fileLocations,
             importedFiles: new Set(["LibraryCore.js"])
         };
@@ -144,7 +159,6 @@ type ToolKidConfig = {
         path = resolvePath(libraryRoot, "LibraryTools_nodeJS.js");
         appendFile(privateData, [Path.basename(path), path]);
         privateData.combinedFile += "ToolKid.registerFunctions({section:\"nodeJS\", functions: {\n\
-            loopFiles:module.exports.loopFiles,\n\
             readFile:module.exports.readFile,\n\
             writeFile:module.exports.writeFile,\n\
         }});\n\n";
