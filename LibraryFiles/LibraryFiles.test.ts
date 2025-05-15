@@ -1,4 +1,4 @@
-(function LibraryBuilder_test() {
+(function LibraryFiles_test() {
     const {
         createStringChecker, loopFiles
     } = <LibraryFiles_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.js"));

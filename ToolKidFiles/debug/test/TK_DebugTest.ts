@@ -124,7 +124,7 @@ type TKTestResultGroup = {
 
 
 
-    publicExports.test = function TK_DebugTest_testInterface(...inputs) {
+    publicExports.test = function TK_DebugTest_test(...inputs) {
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }

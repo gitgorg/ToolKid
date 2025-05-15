@@ -1,4 +1,4 @@
-(function LibraryBuilder_test() {
+(function LibraryTools_test() {
     const {
         createSimpleRegxp, createStringCheck, partial
     } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));

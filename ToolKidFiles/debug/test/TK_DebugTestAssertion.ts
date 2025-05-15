@@ -24,7 +24,7 @@ interface TK_DebugTest_file {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
-        const errors = <EqualityDifference[]>[];
+        const errors = <(string | EqualityDifference)[]>[];
         inputs.forEach(function TK_DebugTestAssertion_testForEquealityPerInput(inputs) {
             Object.entries(inputs).forEach(assertEqualityPerName.bind(null, errors));
         });

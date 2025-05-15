@@ -234,19 +234,101 @@ registeredFiles.coreModules.files = module.exports;
 (function LibraryParsing_init() {
     const publicExports = module.exports = {};
     publicExports.createPatternMatcher = function LibraryParsing_createPatternMatcher(...patterns) {
-        return matchPatternSimple.bind(null, new RegExp(patterns.map(getRexExpSource).join("|")));
+        return matchPatternSimple.bind(null, new RegExp(patterns.map(getRegExSource).join("|")));
     };
     publicExports.createPatternMatcherComlex = function LibraryParsing_createPatternMatcherComplex(inputs) {
         if (inputs.indexPatterns === true) {
-            return matchPatternIndexed.bind(null, new RegExp("(" + inputs.patterns.map(getRexExpSource).join(")|(") + ")"));
+            return matchPatternIndexed.bind(null, new RegExp("(" + inputs.patterns.map(getRegExSource).join(")|(") + ")"));
         }
         else {
             return publicExports.createPatternMatcher(...inputs.patterns);
         }
     };
-    const getRexExpSource = function (value) {
-        return (value instanceof RegExp) ? value.source : value;
+    const regExSimplify = /(\.|\?)|(\*\*)|(\*)/g;
+    publicExports.createRegExp = function LibraryParsing_createRegEx(inputs) {
+        if (typeof inputs === "string") {
+            inputs = { pattern: inputs };
+        }
+        let pattern = inputs.pattern;
+        log(111111, pattern);
+        pattern = pattern.replaceAll(regExSimplify, function (match, control, doubleStar, star, index) {
+            if (control !== undefined) {
+                return "\\" + match;
+            }
+            else if (doubleStar !== undefined) {
+                return ".*";
+            }
+            else if (star !== undefined) {
+                return ".*?";
+            }
+            return match;
+        });
+        log(2222222, pattern);
+        if (inputs.isFromStartToEnd === true) {
+            pattern = "^" + pattern + "$";
+        }
+        let flags = "vs";
+        if (inputs.isRepeatable === true) {
+            flags += "g";
+        }
+        return new RegExp(pattern, flags);
     };
+    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
+        let matchers = [];
+        let generators = [];
+        patterns.forEach(function (pattern) {
+            let generator = pattern[1];
+            if (typeof generator !== "function") {
+                generator = returnText.bind(null, generator);
+            }
+            matchers.push(getRegExSource(pattern[0]));
+            generators.push(generator);
+        });
+        const generator = (generators.length === 1)
+            ? generators[0]
+            : useGeneratorChoice.bind(null, generators);
+        const pattern = (generators.length === 1)
+            ? new RegExp(matchers[0], "g")
+            : new RegExp("(" + matchers.join(")|(") + ")", "g");
+        return textReplacer.bind(null, pattern, generator);
+    };
+    const textReplacer = function LibraryParsing_textReplacer(pattern, generator, text) {
+        // log(text, pattern, generator)
+        const parts = [];
+        let position = 0;
+        let found = pattern.exec(text);
+        while (found !== null) {
+            if (position !== found.index) {
+                parts.push(text.slice(position, found.index));
+            }
+            parts.push(generator(found));
+            position = found.index + found[0].length;
+            found = pattern.exec(text);
+        }
+        if (position !== text.length) {
+            parts.push(text.slice(position));
+        }
+        return parts.join("");
+    };
+    const useGeneratorChoice = function LibraryParsing_useGeneratorChoice(generators, found) {
+        const patternID = found.slice(1).findIndex(isDefined);
+        return generators[patternID](found);
+    };
+    const returnText = function (value) {
+        return value;
+    };
+    const getRegExSource = function (value) {
+        if (value instanceof RegExp) {
+            return value.source;
+        }
+        else if (typeof value !== "string") {
+            return value;
+        }
+        return escapeRegExp(value);
+    };
+    const escapeRegExp = textReplacer.bind(null, /\./g, function (found) {
+        return "\\.";
+    });
     const isDefined = function LibraryParsing_isDefined(value) {
         return value !== undefined;
     };
@@ -1047,7 +1129,7 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         }
         return currentResultGroup.results;
     };
-    publicExports.test = function TK_DebugTest_testInterface(...inputs) {
+    publicExports.test = function TK_DebugTest_test(...inputs) {
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }
@@ -1416,6 +1498,9 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         return colors[color] + text + colors.default;
     };
     const getChangeDetail = function TK_DebugTestFull_getChangeDetail(difference) {
+        if (typeof difference === "string") {
+            return "\n" + readErrorName(difference);
+        }
         const path = (difference.path.length === 0)
             ? "value"
             : "." + difference.path.join(".");
@@ -1440,9 +1525,10 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
                 ? errorMessage
                 : [errorMessage];
         }
-        const errorDescription = errorMessage[0];
-        const comparisonName = errorDescription.slice(0, errorDescription.lastIndexOf("~") + 1);
-        return [comparisonName].concat(...errorMessage.slice(1).map(getChangeDetail));
+        return [readErrorName(errorMessage[0])].concat(...errorMessage.slice(1).map(getChangeDetail));
+    };
+    const readErrorName = function (errorText) {
+        return errorText.slice(0, errorText.lastIndexOf("~") + 1);
     };
     const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs) {
         const { summary } = inputs;

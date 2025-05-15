@@ -34,8 +34,12 @@ interface TK_DebugTest_file {
     };
 
     const getChangeDetail = function TK_DebugTestFull_getChangeDetail(
-        difference: EqualityDifference,
+        difference: EqualityDifference | string,
     ) {
+        if (typeof difference === "string") {
+            return "\n" + readErrorName(difference);
+        }
+
         const path = (difference.path.length === 0)
             ? "value"
             : "." + difference.path.join(".");
@@ -73,9 +77,11 @@ interface TK_DebugTest_file {
                 : [errorMessage];
         }
 
-        const errorDescription = <string>errorMessage[0];
-        const comparisonName = errorDescription.slice(0, errorDescription.lastIndexOf("~")+1);
-        return [ comparisonName].concat(...errorMessage.slice(1).map(getChangeDetail));
+        return [readErrorName(errorMessage[0])].concat(...errorMessage.slice(1).map(getChangeDetail));
+    };
+
+    const readErrorName = function (errorText:string) {
+        return errorText.slice(0, errorText.lastIndexOf("~") + 1);
     };
 
     const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs: {
