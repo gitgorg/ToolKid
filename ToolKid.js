@@ -231,6 +231,10 @@ registeredFiles["LibraryCore.js"] = module.exports;
 })();
 registeredFiles.coreModules.files = module.exports;
 
+// regExp flags:
+// g = to store .lastIndex inside the regExp
+// s = to make . match really EVERY character...
+// v = to support all the new unicode stuff
 (function LibraryParsing_init() {
     const publicExports = module.exports = {};
     publicExports.createPatternMatcher = function LibraryParsing_createPatternMatcher(...patterns) {
@@ -250,7 +254,6 @@ registeredFiles.coreModules.files = module.exports;
             inputs = { pattern: inputs };
         }
         let pattern = inputs.pattern;
-        log(111111, pattern);
         pattern = pattern.replaceAll(regExSimplify, function (match, control, doubleStar, star, index) {
             if (control !== undefined) {
                 return "\\" + match;
@@ -263,74 +266,29 @@ registeredFiles.coreModules.files = module.exports;
             }
             return match;
         });
-        log(2222222, pattern);
         if (inputs.isFromStartToEnd === true) {
             pattern = "^" + pattern + "$";
         }
-        let flags = "vs";
+        // regExp flags explained on top /\
+        let flags = "sv";
         if (inputs.isRepeatable === true) {
             flags += "g";
         }
         return new RegExp(pattern, flags);
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
-        let matchers = [];
-        let generators = [];
-        patterns.forEach(function (pattern) {
-            let generator = pattern[1];
-            if (typeof generator !== "function") {
-                generator = returnText.bind(null, generator);
-            }
-            matchers.push(getRegExSource(pattern[0]));
-            generators.push(generator);
-        });
-        const generator = (generators.length === 1)
-            ? generators[0]
-            : useGeneratorChoice.bind(null, generators);
-        const pattern = (generators.length === 1)
-            ? new RegExp(matchers[0], "g")
-            : new RegExp("(" + matchers.join(")|(") + ")", "g");
-        return textReplacer.bind(null, pattern, generator);
-    };
-    const textReplacer = function LibraryParsing_textReplacer(pattern, generator, text) {
-        // log(text, pattern, generator)
-        const parts = [];
-        let position = 0;
-        let found = pattern.exec(text);
-        while (found !== null) {
-            if (position !== found.index) {
-                parts.push(text.slice(position, found.index));
-            }
-            parts.push(generator(found));
-            position = found.index + found[0].length;
-            found = pattern.exec(text);
-        }
-        if (position !== text.length) {
-            parts.push(text.slice(position));
-        }
-        return parts.join("");
-    };
-    const useGeneratorChoice = function LibraryParsing_useGeneratorChoice(generators, found) {
-        const patternID = found.slice(1).findIndex(isDefined);
-        return generators[patternID](found);
-    };
-    const returnText = function (value) {
-        return value;
+        return replaceText.bind(null, ...setupPatternAndHandler(patterns));
     };
     const getRegExSource = function (value) {
         if (value instanceof RegExp) {
             return value.source;
         }
-        else if (typeof value !== "string") {
+        else if (typeof value === "string") {
+            return escapeRegExp(value);
+        }
+        else {
             return value;
         }
-        return escapeRegExp(value);
-    };
-    const escapeRegExp = textReplacer.bind(null, /\./g, function (found) {
-        return "\\.";
-    });
-    const isDefined = function LibraryParsing_isDefined(value) {
-        return value !== undefined;
     };
     const matchPatternIndexed = function LibraryParsing_matchPatternIndexed(regExp, text) {
         const found = text.match(regExp);
@@ -347,6 +305,57 @@ registeredFiles.coreModules.files = module.exports;
         return (found === null)
             ? [-1, undefined]
             : [found.index, found[0]];
+    };
+    const replaceText = function LibraryParsing_replaceText(pattern, handler, text) {
+        const parts = [];
+        let position = 0;
+        let RXResult = pattern.exec(text);
+        while (RXResult !== null) {
+            if (position !== RXResult.index) {
+                parts.push(text.slice(position, RXResult.index));
+            }
+            parts.push(handler(RXResult));
+            position = pattern.lastIndex;
+            RXResult = pattern.exec(text);
+        }
+        if (position !== text.length) {
+            parts.push(text.slice(position));
+        }
+        return parts.join("");
+    };
+    const escapeRegExp = replaceText.bind(null, /\./g, function (found) {
+        return "\\.";
+    });
+    const returnText = function LibraryParsing_returnText(value) {
+        return value;
+    };
+    const setupPatternAndHandler = function (patterns) {
+        let matchers = new Array(patterns.length);
+        let handlers = new Array(patterns.length);
+        patterns.forEach(function LibraryParsing_createTextReplacerGenerator(pattern, index) {
+            matchers[index] = getRegExSource(pattern[0]);
+            if (typeof pattern[1] === "function") {
+                handlers[index] = pattern[1];
+            }
+            else {
+                handlers[index] = returnText.bind(null, pattern[1]);
+            }
+        });
+        // regExp flags explained on top /\
+        return [
+            (handlers.length === 1)
+                ? new RegExp(matchers[0], "gsv")
+                : new RegExp("(" + matchers.join(")|(") + ")", "gsv"),
+            (patterns.length === 1)
+                ? handlers[0]
+                : useWantedHandler.bind(null, handlers)
+        ];
+    };
+    const useWantedHandler = function LibraryParsing_useWantedHandler(handlers, RXResult) {
+        return handlers[RXResult.slice(1).findIndex(isDefined)](RXResult);
+    };
+    const isDefined = function LibraryParsing_isDefined(value) {
+        return value !== undefined;
     };
     Object.freeze(publicExports);
 })();

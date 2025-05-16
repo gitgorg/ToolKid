@@ -99,31 +99,13 @@
                 ["e", "f"], ["f", "g"], ["g", "h"], ["h", "i"],
                 ["i", "j"], ["j", "k"], ["k", "l"], ["l", "m"],
             );
-            const ASCII = createTextReplacer([/.|\s/, function (found) {
+            const ASCII = createTextReplacer([/./, function (found) {
                 return found[0].charCodeAt(0);
             }]);
-            const removeIDs = createTextReplacer([/data-testid=".*?"/s, ""]);
-            const RXImage = createRegExp('<img*>');
-            const RXSource = createRegExp('src="(*)"');
-            const addAlt = createTextReplacer([
-                RXImage,
-                function (found) {
-                    let content = found[0];
-                    if (content.indexOf("alt=\"") === -1) {
-                        const source = RXSource.exec(content);
-                        if (source !== null) {
-                            log(source)
-                            content = content.slice(0, -1) + " alt=\"" + source[1].split(".")[0] + "\">";
-                        }
-                    }
-                    return content;
-                }
-            ]);
-            // const testIDsForReal = createTextReplacer([/data-testid="[^"]*"/, ""]);
 
             const HTML =
                 '<img data-testid="one" src="one.jpg" alt="one">\n\
-<img data-testid="two" src="two.jpg">\n\
+<img data-testid="two" src="two.test.jpg">\n\
 <img src="three.jpg">\n\
 <a data-testid="four" href="www.four.com">four</a>';
 
@@ -144,19 +126,45 @@
                     value: [ASCII("hallo"), ASCII("\n .\r")],
                     shouldBe: ["10497108108111", "10324613"],
                 },
+            });
+
+
+            const removeIDs = createTextReplacer(
+                [createRegExp('data-testid="*"'), ""]
+            );
+            assertEquality({
                 "removeIDs": {
                     value: removeIDs(HTML),
                     shouldBe:
                         '<img  src="one.jpg" alt="one">\n\
-<img  src="two.jpg">\n\
+<img  src="two.test.jpg">\n\
 <img src="three.jpg">\n\
 <a  href="www.four.com">four</a>'
                 },
+            });
+
+            const RXSource = createRegExp('src="(*).*"');
+            const addAlt = createTextReplacer(
+                [createRegExp('<img*>'),
+                function (found) {
+                    let content = found[0];
+                    if (content.indexOf("alt=\"") !== -1) {
+                        return content;
+                    }
+
+                    const source = RXSource.exec(content);
+                    if (source !== null) {
+                        content = content.slice(0, -1) + " alt=\"" + source[1] + "\">";
+                    }
+                    return content;
+                }]
+            );
+            assertEquality({
                 "addAlt": {
                     value: addAlt(HTML),
                     shouldBe:
                         '<img data-testid="one" src="one.jpg" alt="one">\n\
-<img data-testid="two" src="two.jpg" alt="two">\n\
+<img data-testid="two" src="two.test.jpg" alt="two">\n\
 <img src="three.jpg" alt="three">\n\
 <a data-testid="four" href="www.four.com">four</a>'
                 }
