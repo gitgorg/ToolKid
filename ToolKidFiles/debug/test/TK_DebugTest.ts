@@ -66,14 +66,6 @@ type TKTestResultGroup = {
         };
     };
 
-    const isObjectWithExecute = function TK_DebutTest_isObjectWithExecute(
-        value: any
-    ) {
-        return typeof value === "object"
-            && value !== null
-            && typeof value.execute === "function";
-    };
-
     const isValidSubject = function TK_DebugTest_isValidSubject(
         subject: any
     ) {
@@ -138,11 +130,10 @@ type TKTestResultGroup = {
         resultGroup: TKTestResultGroup,
         config: TKTestConfig,
     ) {
-        if (
-            !isObjectWithExecute(config)
-            || !isValidSubject(config.subject)
-        ) {
-            throw ["TK_DebugTest_test - invalid config:", config];
+        if (typeof config !== "object" || config === null) {
+            throw ["TK_DebugTest_test - config has to be an object but is:", config];
+        } else if (!isValidSubject(config.subject)) {
+            throw ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject];
         }
 
         return testExecute({
