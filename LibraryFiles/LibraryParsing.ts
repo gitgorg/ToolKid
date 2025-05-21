@@ -36,6 +36,18 @@ type RegExpInputs = { pattern: string }
 
 
 (function LibraryParsing_init() {
+    type LayerData = {
+        name: string,
+        openings: string[],
+        closings: (string|undefined)[],
+        contains?: string[],
+        signals: (string|undefined)[],
+        directions: (LayerData | undefined)[],
+        pattern: RegExp
+    }
+
+
+
     const publicExports = module.exports = <LibraryParsing_file>{};
 
     const regExSimplify = /(\.|\?)|(\*\*)|(\*)/g;
@@ -73,17 +85,17 @@ type RegExpInputs = { pattern: string }
     };
 
     publicExports.createTextParserLayered = function LibraryParsing_createTextParserLayered(inputs) {
-        let layer: Dictionary;
-        const layers = <Dictionary>{
-            MAIN: {
+        let layer: LayerData;
+        const layers = <{[key:string]: LayerData}>{
+            MAIN: <LayerData><any>{
                 name: "MAIN",
-                openings: <any[]>[],
-                closings: <any[]>[],
-                contains: <any[]>[]
+                openings: [],
+                closings: [],
+                contains: []
             }
         };
         Object.entries(inputs.layers).forEach(function ([key, layerData]) {
-            layer = { name: key, openings: [], closings: [], contains: layerData.contains };
+            layer = <LayerData><any>{ name: key, openings: [], closings: [], contains: layerData.contains };
             layers[key] = layer;
             layerData.patterns.forEach(function (pattern: any) {
                 if (pattern instanceof Array) {
@@ -95,14 +107,14 @@ type RegExpInputs = { pattern: string }
                 }
             });
             if (layerData.isMAINLayer !== false) {
-                layers.MAIN.contains.push(key);
+                (<string[]>layers.MAIN.contains).push(key);
             }
         });
 
         log(111, layers);
         Object.values(layers).forEach(function (layer) {
             const signals = layer.signals = layer.closings.slice(0);
-            const directions = layer.directions = signals.map(function(){return undefined;});
+            const directions = layer.directions = new Array(signals.length);
             if (layer.contains instanceof Array) {
                 layer.contains.forEach(function (key: string) {
                     if (key === "MAIN") {
@@ -122,11 +134,6 @@ type RegExpInputs = { pattern: string }
     };
 
 
-
-    const handler = function (layer: any, RXResult: RegExpExecArray) {
-        const position = RXResult.indexOf(RXResult[0], 1) - 1;
-        return layer.directions[position];
-    }
 
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
         return replaceText.bind(null, ...setupPatternAndHandler(patterns));
@@ -158,28 +165,37 @@ type RegExpInputs = { pattern: string }
     };
 
     const parseTextLayers = function LibraryParsing_parseTextLayers(
-        layer: Dictionary,
+        layer: LayerData,
         parser: GenericFunction,
         text: string,
     ) {
-        const layers = new Array(20);
-        layers[0] = layer;
+        const layerStack = new Array(20);
+        layerStack[0] = layer;
         let depth = 0;
-        let RXResult = layer.pattern.exec(text);
+        let RXResult = <RegExpExecArray>layer.pattern.exec(text);
         let lastIndex = 0;
+        let foundSignal = "";
         while (RXResult !== null) {
-            lastIndex = layer.pattern.lastIndex;
-            layer = handler(layer, RXResult);
+            foundSignal = RXResult[0];
+            layer = <LayerData>layer.directions[
+                RXResult.indexOf(foundSignal, 1) - 1
+            ];
             if (layer === undefined) {
+                if (foundSignal !== "") {
+                    parser(RXResult, layerStack[depth], depth);
+                }
                 depth -= 1;
-                layer = layers[depth];
+                layer = layerStack[depth];
             } else {
                 depth += 1;
-                layers[depth] = layer;
+                layerStack[depth] = layer;
+                if (foundSignal !== "") {
+                    parser(RXResult, layer, depth);
+                }
             }
-            parser(RXResult, layer, lastIndex, depth);
+            lastIndex = layer.pattern.lastIndex;
             layer.pattern.lastIndex = lastIndex;
-            RXResult = layer.pattern.exec(text);
+            RXResult = <RegExpExecArray>layer.pattern.exec(text);
         }
     };
 

@@ -126,22 +126,30 @@
     test({
         subject: createTextParserLayered,
         execute: function parsingJS() {
+            const inputList = <any[]>[];
             const parser = createTextParserLayered({
                 layers: layersJS,
                 parser: function(RXResult, layer, lastIndex, depth) {
-                    log(RXResult.index, layer.name, [RXResult[0]], depth-1, lastIndex);
+                    inputList.push(RXResult.index, depth, RXResult[0]);
+                    log(depth, RXResult.index, layer.name, [RXResult[0]], lastIndex);
                 },
             });
 
-            parser('\
+            let parsed = parser('\
 (function (){\n\
-    const data = require("whatever(2)");\n\
+    const data = require("whatever\\(2\\)");\n\
     //const data = {a:1, b:2};\n\
     data.forEach(function (value) {\n\
         log(555, value)\n\
     });\n\
 })();\n\
             ');
+            // assertEquality({
+            //     "js": {value:inputList, shouldBe:[
+            //         0, 1, "(",
+            //         1, 2, "(",
+            //     ]}
+            // });
         }
     });
 

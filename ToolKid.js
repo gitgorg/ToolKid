@@ -298,7 +298,7 @@ registeredFiles.coreModules.files = module.exports;
         log(111, layers);
         Object.values(layers).forEach(function (layer) {
             const signals = layer.signals = layer.closings.slice(0);
-            const directions = layer.directions = signals.map(function () { return undefined; });
+            const directions = layer.directions = new Array(signals.length);
             if (layer.contains instanceof Array) {
                 layer.contains.forEach(function (key) {
                     if (key === "MAIN") {
@@ -316,10 +316,6 @@ registeredFiles.coreModules.files = module.exports;
         });
         log(333, layers);
         return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
-    };
-    const handler = function (layer, RXResult) {
-        const position = RXResult.indexOf(RXResult[0], 1) - 1;
-        return layer.directions[position];
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
         return replaceText.bind(null, ...setupPatternAndHandler(patterns));
@@ -346,23 +342,30 @@ registeredFiles.coreModules.files = module.exports;
         }
     };
     const parseTextLayers = function LibraryParsing_parseTextLayers(layer, parser, text) {
-        const layers = new Array(20);
-        layers[0] = layer;
+        const layerStack = new Array(20);
+        layerStack[0] = layer;
         let depth = 0;
         let RXResult = layer.pattern.exec(text);
         let lastIndex = 0;
+        let foundSignal = "";
         while (RXResult !== null) {
-            lastIndex = layer.pattern.lastIndex;
-            layer = handler(layer, RXResult);
+            foundSignal = RXResult[0];
+            layer = layer.directions[RXResult.indexOf(foundSignal, 1) - 1];
             if (layer === undefined) {
+                if (foundSignal !== "") {
+                    parser(RXResult, layerStack[depth], depth);
+                }
                 depth -= 1;
-                layer = layers[depth];
+                layer = layerStack[depth];
             }
             else {
                 depth += 1;
-                layers[depth] = layer;
+                layerStack[depth] = layer;
+                if (foundSignal !== "") {
+                    parser(RXResult, layer, depth);
+                }
             }
-            parser(RXResult, layer, lastIndex, depth);
+            lastIndex = layer.pattern.lastIndex;
             layer.pattern.lastIndex = lastIndex;
             RXResult = layer.pattern.exec(text);
         }
