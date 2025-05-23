@@ -36,7 +36,7 @@ interface TK_DebugTest_file {
     const getChangeDetail = function TK_DebugTestFull_getChangeDetail(
         difference: EqualityDifference,
     ) {
-        const path = (difference.path.length === 0)
+        const path = (!(difference.path instanceof Array) || difference.path.length === 0)
             ? "value"
             : "." + difference.path.join(".");
         return [

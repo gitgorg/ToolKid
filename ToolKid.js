@@ -1199,7 +1199,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         return colors[color] + text + colors.default;
     };
     const getChangeDetail = function TK_DebugTestFull_getChangeDetail(difference) {
-        const path = (difference.path.length === 0)
+        const path = (!(difference.path instanceof Array) || difference.path.length === 0)
             ? "value"
             : "." + difference.path.join(".");
         return [
