@@ -18,10 +18,8 @@ interface LibraryParsing_file {
         firstPattern: [TextMatcher, { (RXResult: RegExpExecArray): void }],
         ...patterns: [TextMatcher, { (RXResult: RegExpExecArray): void }][]
     ): { (text: string): void },
-    createTextParserLayered<LayerName extends string>(inputs: {
-        layers: {[layerName:string]: {
-            name: LayerName
-        }},
+    createTextParserLayered(inputs: {
+        layers: TextLayerDefinition,
         parser(
             RXResult: RegExpExecArray,
             layerName: string,
@@ -38,6 +36,17 @@ interface LibraryParsing_file {
 type TextMatcher = string | RegExp
 type TextGenerator = string | TextGeneratorFunction
 type TextGeneratorFunction = { (RXResult: RegExpExecArray): string | number }
+type TextLayerDefinition = {
+    [layerName: string]: {
+        patterns: (
+            [string | RegExp, string | RegExp]
+            | string
+            | RegExp
+        )[],
+        contains?: string[],
+        isMAINLayer?: false
+    }
+}
 type RegExpInputs = { pattern: string }
 
 
@@ -49,6 +58,7 @@ type RegExpInputs = { pattern: string }
         pattern: RegExp,
     }
     type LayerData = LayerDataSlim & {
+        isMain?: false,
         openings: string[],
         closings: (string | undefined)[],
         contains?: string[],
@@ -94,7 +104,6 @@ type RegExpInputs = { pattern: string }
     };
 
     publicExports.createTextParserLayered = function LibraryParsing_createTextParserLayered(inputs) {
-        let layer: LayerData;
         const layers = <{ [key: string]: LayerData }>{
             MAIN: <LayerData><any>{
                 name: "MAIN",
@@ -103,49 +112,58 @@ type RegExpInputs = { pattern: string }
                 contains: []
             }
         };
-        Object.entries(inputs.layers).forEach(function ([key, layerData]) {
-            layer = <LayerData><any>{ name: key, openings: [], closings: [], contains: layerData.contains };
-            layers[key] = layer;
-            layerData.patterns.forEach(function (pattern: any) {
-                if (pattern instanceof Array) {
-                    layer.openings.push(getTextFromRX(pattern[0]));
-                    layer.closings.push(getTextFromRX(pattern[1]));
+        Object.entries(inputs.layers).forEach(createTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(connectTextParserLayer.bind(null,layers));
+        Object.values(layers).forEach(cleanUpTextParserLayer);
+        return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
+    };
+
+    const createTextParserLayer = function LibraryParsing_createTextParserLayer(
+        layers: { [key: string]: LayerData }, [key, layerData]: [string, Dictionary]
+    ) {
+        const layer = <any>{ name: key, openings: [], closings: [], contains: layerData.contains };
+        layers[key] = layer;
+        layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(pattern: any) {
+            if (pattern instanceof Array) {
+                layer.openings.push(getTextFromRX(pattern[0]));
+                layer.closings.push(getTextFromRX(pattern[1]));
+            } else {
+                layer.openings.push(getTextFromRX(pattern));
+                layer.closings.push(undefined);
+            }
+        });
+        if (layerData.isMAINLayer !== false) {
+            (<string[]>layers.MAIN.contains).push(key);
+        }
+    };
+
+    const connectTextParserLayer = function LibraryParsing_connectTextParserLayer(
+        layers: { [key: string]: LayerData }, layer:LayerData
+    ) {
+        layer.signals = layer.closings.slice(0);
+        const directions = layer.directions = Array(layer.signals.length);
+        if (layer.contains instanceof Array) {
+            layer.contains.forEach(function (key: string) {
+                if (key === "MAIN") {
+                    layer.signals.push(...layers.MAIN.signals);
+                    directions.push(...layers.MAIN.directions);
                 } else {
-                    layer.openings.push(getTextFromRX(pattern));
-                    layer.closings.push(undefined);
+                    const subLayer = layers[key];
+                    layer.signals.push(...subLayer.openings);
+                    directions.push(...Array(subLayer.openings.length).fill(subLayer));
                 }
             });
-            if (layerData.isMAINLayer !== false) {
-                (<string[]>layers.MAIN.contains).push(key);
-            }
-        });
+        }
+        layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
+    };
 
-        log(111, layers);
-        Object.values(layers).forEach(function (layer) {
-            const signals = layer.signals = layer.closings.slice(0);
-            const directions = layer.directions = new Array(signals.length);
-            if (layer.contains instanceof Array) {
-                layer.contains.forEach(function (key: string) {
-                    if (key === "MAIN") {
-                        signals.push(...layers.MAIN.signals);
-                        directions.push(...layers.MAIN.directions);
-                    } else {
-                        const subLayer = layers[key];
-                        signals.push(...subLayer.openings);
-                        directions.push(...Array(subLayer.openings.length).fill(subLayer));
-                    }
-                });
-            }
-            layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
-        });
-        Object.values(layers).forEach(function(layer:Dictionary){
-            delete layer.openings;
-            delete layer.closings;
-            delete layer.signals;
-            delete layer.contains;
-        });
-        log(333, layers)
-        return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
+    const cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(
+        layer: Dictionary
+    ) {
+        delete layer.openings;
+        delete layer.closings;
+        delete layer.signals;
+        delete layer.contains;
     };
 
 

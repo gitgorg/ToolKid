@@ -269,7 +269,6 @@ registeredFiles.coreModules.files = module.exports;
         return parseText.bind(null, ...setupPatternAndHandler(patterns));
     };
     publicExports.createTextParserLayered = function LibraryParsing_createTextParserLayered(inputs) {
-        let layer;
         const layers = {
             MAIN: {
                 name: "MAIN",
@@ -278,50 +277,51 @@ registeredFiles.coreModules.files = module.exports;
                 contains: []
             }
         };
-        Object.entries(inputs.layers).forEach(function ([key, layerData]) {
-            layer = { name: key, openings: [], closings: [], contains: layerData.contains };
-            layers[key] = layer;
-            layerData.patterns.forEach(function (pattern) {
-                if (pattern instanceof Array) {
-                    layer.openings.push(getTextFromRX(pattern[0]));
-                    layer.closings.push(getTextFromRX(pattern[1]));
+        Object.entries(inputs.layers).forEach(createTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(connectTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(cleanUpTextParserLayer);
+        return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
+    };
+    const createTextParserLayer = function LibraryParsing_createTextParserLayer(layers, [key, layerData]) {
+        const layer = { name: key, openings: [], closings: [], contains: layerData.contains };
+        layers[key] = layer;
+        layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(pattern) {
+            if (pattern instanceof Array) {
+                layer.openings.push(getTextFromRX(pattern[0]));
+                layer.closings.push(getTextFromRX(pattern[1]));
+            }
+            else {
+                layer.openings.push(getTextFromRX(pattern));
+                layer.closings.push(undefined);
+            }
+        });
+        if (layerData.isMAINLayer !== false) {
+            layers.MAIN.contains.push(key);
+        }
+    };
+    const connectTextParserLayer = function LibraryParsing_connectTextParserLayer(layers, layer) {
+        layer.signals = layer.closings.slice(0);
+        const directions = layer.directions = Array(layer.signals.length);
+        if (layer.contains instanceof Array) {
+            layer.contains.forEach(function (key) {
+                if (key === "MAIN") {
+                    layer.signals.push(...layers.MAIN.signals);
+                    directions.push(...layers.MAIN.directions);
                 }
                 else {
-                    layer.openings.push(getTextFromRX(pattern));
-                    layer.closings.push(undefined);
+                    const subLayer = layers[key];
+                    layer.signals.push(...subLayer.openings);
+                    directions.push(...Array(subLayer.openings.length).fill(subLayer));
                 }
             });
-            if (layerData.isMAINLayer !== false) {
-                layers.MAIN.contains.push(key);
-            }
-        });
-        log(111, layers);
-        Object.values(layers).forEach(function (layer) {
-            const signals = layer.signals = layer.closings.slice(0);
-            const directions = layer.directions = new Array(signals.length);
-            if (layer.contains instanceof Array) {
-                layer.contains.forEach(function (key) {
-                    if (key === "MAIN") {
-                        signals.push(...layers.MAIN.signals);
-                        directions.push(...layers.MAIN.directions);
-                    }
-                    else {
-                        const subLayer = layers[key];
-                        signals.push(...subLayer.openings);
-                        directions.push(...Array(subLayer.openings.length).fill(subLayer));
-                    }
-                });
-            }
-            layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
-        });
-        Object.values(layers).forEach(function (layer) {
-            delete layer.openings;
-            delete layer.closings;
-            delete layer.signals;
-            delete layer.contains;
-        });
-        log(333, layers);
-        return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
+        }
+        layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
+    };
+    const cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(layer) {
+        delete layer.openings;
+        delete layer.closings;
+        delete layer.signals;
+        delete layer.contains;
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
         return replaceText.bind(null, ...setupPatternAndHandler(patterns));

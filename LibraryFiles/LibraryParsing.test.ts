@@ -87,7 +87,7 @@
         }
     });
 
-    const layersJS = {
+    const layersJS = <TextLayerDefinition>{
         comment: {
             patterns: [
                 ["//", /\n|$/],
