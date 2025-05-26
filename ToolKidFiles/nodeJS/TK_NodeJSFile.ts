@@ -2,7 +2,8 @@
 interface ToolKid_file { nodeJS: TK_nodeJS_file }
 interface TK_nodeJS_file {
     loopFiles: LibraryFiles_file["loopFiles"],
-    readFile: LibraryTools_file["readFile"],
+    readFile: LibraryFiles_file["readFile"],
+    resolvePath: LibraryFiles_file["resolvePath"],
     writeFile: LibraryTools_file["writeFile"],
 
     deleteFile(path: string): void,
@@ -51,7 +52,11 @@ interface TK_nodeJS_file {
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
-        const { loopFiles } = ToolKid.getCoreModule("files");
-        ToolKid.registerFunctions({ section: "nodeJS", functions: { loopFiles } });
+        const core = ToolKid.getCoreModule("files");
+        ToolKid.registerFunctions({ section: "nodeJS", functions: {
+            loopFiles: core.loopFiles,
+            readFile: core.readFile,
+            resolvePath: core.resolvePath,
+        } });
     }
 })();

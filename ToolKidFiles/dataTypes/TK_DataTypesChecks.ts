@@ -12,7 +12,7 @@ interface TK_DataTypesChecks_file {
         withInputs?: any[]
     }): any,
 
-    isArray: LibraryTools_file["isArray"],
+    isArray(value: any): boolean,
     isBoolean(value: any): boolean,
     isError(value: any): boolean,
     isFunction(value: any): boolean,
@@ -83,6 +83,10 @@ type DataTypeParsers = {
             }
         }
     }
+
+    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
+        return value instanceof Array && value.length !== 0;
+    };
 
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";

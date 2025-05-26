@@ -11,6 +11,19 @@ type LibraryFiles_file = {
         includes?: (string | RegExp)[],
         excludes?: (string | RegExp)[],
     }): void,
+    readFile(inputs: {
+        path: string,
+        checkExistance?: false,
+        encoding?: string,
+    }): {
+        encoding: "directory" | string,
+        content: any
+    } | {
+        content: undefined
+    },
+    resolvePath(
+        ...parts: string[]
+    ): string,
 }
 
 
@@ -31,6 +44,7 @@ type LibraryFiles_file = {
         existsSync: isUsedPath,
         lstatSync: readPathStats,
         readdirSync: readDirectory,
+        readFileSync: readFile,
     } = require("fs");
     const {
         normalize: normalizePath,
@@ -186,6 +200,32 @@ type LibraryFiles_file = {
             boundInputs.execute(path);
         }
     };
+
+    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
+        let { path, checkExistance, encoding } = inputs;
+        path = resolvePath(path);
+        if (checkExistance !== false) {
+            if (!isUsedPath(path)) {
+                return { content: undefined };
+            } else if (ToolKid.nodeJS.isDirectory(path)) {
+                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
+            }
+        }
+
+        if (typeof encoding !== "string") {
+            const type = ToolKid.connection.HTTP.readMediaType(<string>path);
+            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
+                encoding = "utf8";
+            }
+        }
+
+        return {
+            encoding: encoding || "dictionary",
+            content: readFile(path, encoding)
+        };
+    };
+
+    publicExports.resolvePath = resolvePath;
 
 
 

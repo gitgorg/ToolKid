@@ -3,19 +3,6 @@ interface LibraryTools_file {
     isDirectory(
         path: string
     ): boolean,
-    readFile(inputs: {
-        path: string,
-        checkExistance?: false,
-        encoding?: string,
-    }): {
-        encoding: "directory" | string,
-        content: any
-    } | {
-        content: undefined
-    },
-    resolvePath(
-        ...parts: string[]
-    ): string,
     writeFile(inputs: {
         path: string,
         content: any,
@@ -31,7 +18,6 @@ interface LibraryTools_file {
 
     const {
         existsSync: isUsedPath,
-        readFileSync: readFile,
     } = require("fs");
     const { resolve: resolvePath } = require("path");
 
@@ -51,34 +37,6 @@ interface LibraryTools_file {
 
     publicExports.isDirectory = function LibraryTools_nodeJS_isDirectory(path) {
         return readPathStats(path).isDirectory();
-    };
-
-    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
-        let { path, checkExistance, encoding } = inputs;
-        path = resolvePath(path);
-        if (checkExistance !== false) {
-            if (!isUsedPath(path)) {
-                return { content: undefined };
-            } else if (ToolKid.nodeJS.isDirectory(path)) {
-                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
-            }
-        }
-
-        if (typeof encoding !== "string") {
-            const type = ToolKid.connection.HTTP.readMediaType(<string>path);
-            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
-                encoding = "utf8";
-            }
-        }
-
-        return {
-            encoding: encoding || "dictionary",
-            content: readFile(path, encoding)
-        };
-    };
-
-    publicExports.resolvePath = function LibraryTools_nodeJS_resolvePath(...parts) {
-        return Path.resolve(...parts);
     };
 
     const writeDirectory = function LibraryTools_nodeJS_writeDirectory(path: string) {

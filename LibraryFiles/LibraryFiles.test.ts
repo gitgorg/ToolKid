@@ -1,11 +1,11 @@
 (function LibraryFiles_test() {
     const {
-        createStringChecker, loopFiles
+        createStringChecker, loopFiles, readFile, resolvePath
     } = <LibraryFiles_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.js"));
 
     const FS = require("fs");
     const { resolve } = require("path");
-    const { assertEquality, test } = ToolKid.debug.test;
+    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
 
 
 
@@ -119,6 +119,74 @@
                         paths.file
                     ],
                     toleranceDepth: 2
+                }
+            });
+        }
+    });
+
+    test({
+        subject: readFile,
+        execute: function basic() {
+            const fileResponse = <Dictionary>readFile({ path: paths.file });
+
+            assertEquality({
+                "regular file response": {
+                    value: fileResponse,
+                    shouldBe: {
+                        encoding: "utf8",
+                        content: fileResponse.content
+                    }
+                },
+                "response.content parsed as JSON": {
+                    value: JSON.parse(fileResponse.content),
+                    shouldBe: {
+                        "text": "hello",
+                        "number": 1
+                    }
+                },
+                "empty file response": {
+                    value: readFile({ path: paths.fileEmpty }),
+                    shouldBe: {
+                        encoding: "utf8",
+                        content: ""
+                    }
+                },
+                "non-existing file response": {
+                    value: readFile({ path: paths.fileNonExisting }),
+                    shouldBe: { content: undefined }
+                },
+                "non-esisting directory response": {
+                    value: readFile({ path: paths.directoryNonExisting }),
+                    shouldBe: { content: undefined }
+                }
+            });
+        }
+    }, {
+        subject: readFile,
+        execute: function readDirectory() {
+            assertFailure({
+                name: "directory response",
+                execute: readFile,
+                withInputs: { path: paths.directoryMixedContents },
+                shouldThrow: [
+                    "LibraryTools_nodeJS_read - path is a directory, not a file:",
+                    paths.directoryMixedContents
+                ]
+            });
+        }
+    });
+
+    test({
+        subject: resolvePath,
+        execute: function basicResolvePath() {
+            assertEquality({
+                "__dirname": {
+                    value: resolvePath(__dirname),
+                    shouldBe: __dirname
+                },
+                "./test.js": {
+                    value: resolvePath("./test.js"),
+                    shouldBe: resolve("test.js")
                 }
             });
         }

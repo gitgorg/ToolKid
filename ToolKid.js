@@ -115,7 +115,7 @@ const registeredFiles = {};
 registeredFiles["LibraryCore.js"] = module.exports;
 
 (function LibraryFiles_init() {
-    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, } = require("fs");
+    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, } = require("fs");
     const { normalize: normalizePath, resolve: resolvePath, } = require("path");
     const publicExports = module.exports = {};
     const checkString = function LibraryFiles_checkString(value, expression) {
@@ -227,6 +227,29 @@ registeredFiles["LibraryCore.js"] = module.exports;
             boundInputs.execute(path);
         }
     };
+    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
+        let { path, checkExistance, encoding } = inputs;
+        path = resolvePath(path);
+        if (checkExistance !== false) {
+            if (!isUsedPath(path)) {
+                return { content: undefined };
+            }
+            else if (ToolKid.nodeJS.isDirectory(path)) {
+                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
+            }
+        }
+        if (typeof encoding !== "string") {
+            const type = ToolKid.connection.HTTP.readMediaType(path);
+            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
+                encoding = "utf8";
+            }
+        }
+        return {
+            encoding: encoding || "dictionary",
+            content: readFile(path, encoding)
+        };
+    };
+    publicExports.resolvePath = resolvePath;
     Object.freeze(publicExports);
 })();
 registeredFiles.coreModules.files = module.exports;
@@ -675,6 +698,9 @@ registeredFiles["TK_DataTypesArray.js"] = module.exports;
             }
         };
     }
+    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
+        return value instanceof Array && value.length !== 0;
+    };
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
     };
@@ -1985,8 +2011,12 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
-        const { loopFiles } = ToolKid.getCoreModule("files");
-        ToolKid.registerFunctions({ section: "nodeJS", functions: { loopFiles } });
+        const core = ToolKid.getCoreModule("files");
+        ToolKid.registerFunctions({ section: "nodeJS", functions: {
+                loopFiles: core.loopFiles,
+                readFile: core.readFile,
+                resolvePath: core.resolvePath,
+            } });
     }
 })();
 registeredFiles["TK_NodeJSFile.js"] = module.exports;
@@ -1998,8 +2028,8 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 (function LibraryTools_init() {
     const publicExports = module.exports = {};
     publicExports.createStringCheck = function LibraryTools_createStringCheck(inputs) {
-        const hasIncludes = publicExports.isArray(inputs.include);
-        const hasExcludes = publicExports.isArray(inputs.exclude);
+        const hasIncludes = isArray(inputs.include);
+        const hasExcludes = isArray(inputs.exclude);
         if (hasIncludes && hasExcludes) {
             return publicExports.partial(checkStringConditions, inputs);
         }
@@ -2042,7 +2072,7 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
         //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
         return new RegExp("^" + expression + "$");
     };
-    publicExports.isArray = function LibraryTools_isArray(value) {
+    const isArray = function LibraryTools_isArray(value) {
         return value instanceof Array && value.length !== 0;
     };
     publicExports.partial = function LibraryTools_partial(baseFunction, ...inputs) {
@@ -2062,15 +2092,11 @@ registeredFiles["TK_NodeJSPath.js"] = module.exports;
 })();
 registeredFiles["LibraryTools.js"] = module.exports;
 
-ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: {
-            isArray:module.exports.isArray,
-        }});
-
 ;
 (function LibraryTools_nodeJS_init() {
     const FS = require("fs");
     const Path = require("path");
-    const { existsSync: isUsedPath, readFileSync: readFile, } = require("fs");
+    const { existsSync: isUsedPath, } = require("fs");
     const { resolve: resolvePath } = require("path");
     const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
     const LibraryTools = isCalledFromLibrary
@@ -2081,31 +2107,6 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
     const publicExports = module.exports = Object.assign({}, LibraryTools);
     publicExports.isDirectory = function LibraryTools_nodeJS_isDirectory(path) {
         return readPathStats(path).isDirectory();
-    };
-    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
-        let { path, checkExistance, encoding } = inputs;
-        path = resolvePath(path);
-        if (checkExistance !== false) {
-            if (!isUsedPath(path)) {
-                return { content: undefined };
-            }
-            else if (ToolKid.nodeJS.isDirectory(path)) {
-                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
-            }
-        }
-        if (typeof encoding !== "string") {
-            const type = ToolKid.connection.HTTP.readMediaType(path);
-            if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
-                encoding = "utf8";
-            }
-        }
-        return {
-            encoding: encoding || "dictionary",
-            content: readFile(path, encoding)
-        };
-    };
-    publicExports.resolvePath = function LibraryTools_nodeJS_resolvePath(...parts) {
-        return Path.resolve(...parts);
     };
     const writeDirectory = function LibraryTools_nodeJS_writeDirectory(path) {
         if (isUsedPath(path)) {
@@ -2130,11 +2131,6 @@ ToolKid.registerFunctions({section:"dataTypes", subSection:"checks", functions: 
     Object.freeze(publicExports);
 })();
 registeredFiles["LibraryTools_nodeJS.js"] = module.exports;
-
-ToolKid.registerFunctions({section:"nodeJS", functions: {
-            readFile:module.exports.readFile,
-            writeFile:module.exports.writeFile,
-        }});
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;

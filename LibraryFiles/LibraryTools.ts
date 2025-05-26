@@ -7,9 +7,6 @@ interface LibraryTools_file {
     createSimpleRegxp(
         simpleExpression: string
     ): RegExp,
-    isArray(
-        value: any
-    ): boolean,
     partial<ReturnType>(
         baseFunction: { (...inputs: any[]): ReturnType },
         presetInput: any,
@@ -23,8 +20,8 @@ interface LibraryTools_file {
     const publicExports = module.exports = <LibraryTools_file>{};
 
     publicExports.createStringCheck = function LibraryTools_createStringCheck(inputs): any {
-        const hasIncludes = publicExports.isArray(inputs.include);
-        const hasExcludes = publicExports.isArray(inputs.exclude);
+        const hasIncludes = isArray(inputs.include);
+        const hasExcludes = isArray(inputs.exclude);
         if (hasIncludes && hasExcludes) {
             return publicExports.partial(checkStringConditions, inputs);
         } else if (hasIncludes) {
@@ -83,7 +80,7 @@ interface LibraryTools_file {
         return new RegExp("^" + expression + "$");
     };
 
-    publicExports.isArray = function LibraryTools_isArray(value) {
+    const isArray = function LibraryTools_isArray(value:any) {
         return value instanceof Array && value.length !== 0;
     };
 
