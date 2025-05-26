@@ -18,9 +18,16 @@ interface LibraryParsing_file {
         firstPattern: [TextMatcher, { (RXResult: RegExpExecArray): void }],
         ...patterns: [TextMatcher, { (RXResult: RegExpExecArray): void }][]
     ): { (text: string): void },
-    createTextParserLayered(inputs: {
-        layers: Dictionary,
-        parser(): void
+    createTextParserLayered<LayerName extends string>(inputs: {
+        layers: {[layerName:string]: {
+            name: LayerName
+        }},
+        parser(
+            RXResult: RegExpExecArray,
+            layerName: string,
+            RXOpening: undefined | RegExpExecArray,
+            layerDepth: number,
+        ): void
     }): { (text: string): void },
     createTextReplacer(
         firstPattern: [TextMatcher, TextGenerator],
@@ -36,14 +43,16 @@ type RegExpInputs = { pattern: string }
 
 
 (function LibraryParsing_init() {
-    type LayerData = {
+    type LayerDataSlim = {
         name: string,
-        openings: string[],
-        closings: (string|undefined)[],
-        contains?: string[],
-        signals: (string|undefined)[],
         directions: (LayerData | undefined)[],
-        pattern: RegExp
+        pattern: RegExp,
+    }
+    type LayerData = LayerDataSlim & {
+        openings: string[],
+        closings: (string | undefined)[],
+        contains?: string[],
+        signals: (string | undefined)[],
     }
 
 
@@ -86,7 +95,7 @@ type RegExpInputs = { pattern: string }
 
     publicExports.createTextParserLayered = function LibraryParsing_createTextParserLayered(inputs) {
         let layer: LayerData;
-        const layers = <{[key:string]: LayerData}>{
+        const layers = <{ [key: string]: LayerData }>{
             MAIN: <LayerData><any>{
                 name: "MAIN",
                 openings: [],
@@ -123,11 +132,17 @@ type RegExpInputs = { pattern: string }
                     } else {
                         const subLayer = layers[key];
                         signals.push(...subLayer.openings);
-                        directions.push(...subLayer.openings.map(function(){return subLayer}));
+                        directions.push(...Array(subLayer.openings.length).fill(subLayer));
                     }
                 });
             }
             layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
+        });
+        Object.values(layers).forEach(function(layer:Dictionary){
+            delete layer.openings;
+            delete layer.closings;
+            delete layer.signals;
+            delete layer.contains;
         });
         log(333, layers)
         return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
@@ -165,35 +180,38 @@ type RegExpInputs = { pattern: string }
     };
 
     const parseTextLayers = function LibraryParsing_parseTextLayers(
-        layer: LayerData,
+        layer: LayerDataSlim,
         parser: GenericFunction,
         text: string,
     ) {
+        let layerDepth = 0;
+        let RXResult = <RegExpExecArray>layer.pattern.exec(text);
         const layerStack = new Array(20);
         layerStack[0] = layer;
-        let depth = 0;
-        let RXResult = <RegExpExecArray>layer.pattern.exec(text);
+        const resultStack = new Array(20);
+        resultStack[0] = RXResult;
         let lastIndex = 0;
-        let foundSignal = "";
+        let resultString = "";
         while (RXResult !== null) {
-            foundSignal = RXResult[0];
+            lastIndex = layer.pattern.lastIndex;
+            resultString = RXResult[0];
             layer = <LayerData>layer.directions[
-                RXResult.indexOf(foundSignal, 1) - 1
+                RXResult.indexOf(resultString, 1) - 1
             ];
             if (layer === undefined) {
-                if (foundSignal !== "") {
-                    parser(RXResult, layerStack[depth], depth);
+                if (resultString !== "") {
+                    parser(RXResult, layerStack[layerDepth].name, resultStack[layerDepth], layerDepth);
                 }
-                depth -= 1;
-                layer = layerStack[depth];
+                layerDepth -= 1;
+                layer = layerStack[layerDepth];
             } else {
-                depth += 1;
-                layerStack[depth] = layer;
-                if (foundSignal !== "") {
-                    parser(RXResult, layer, depth);
+                layerDepth += 1;
+                layerStack[layerDepth] = layer;
+                resultStack[layerDepth] = RXResult;
+                if (resultString !== "") {
+                    parser(RXResult, layer.name, undefined, layerDepth);
                 }
             }
-            lastIndex = layer.pattern.lastIndex;
             layer.pattern.lastIndex = lastIndex;
             RXResult = <RegExpExecArray>layer.pattern.exec(text);
         }

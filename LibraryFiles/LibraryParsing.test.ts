@@ -126,30 +126,57 @@
     test({
         subject: createTextParserLayered,
         execute: function parsingJS() {
-            const inputList = <any[]>[];
-            const parser = createTextParserLayered({
-                layers: layersJS,
-                parser: function(RXResult, layer, lastIndex, depth) {
-                    inputList.push(RXResult.index, depth, RXResult[0]);
-                    log(depth, RXResult.index, layer.name, [RXResult[0]], lastIndex);
-                },
-            });
-
-            let parsed = parser('\
+            const file = '\
 (function (){\n\
     const data = require("whatever\\(2\\)");\n\
     //const data = {a:1, b:2};\n\
     data.forEach(function (value) {\n\
         log(555, value)\n\
     });\n\
-})();\n\
-            ');
-            // assertEquality({
-            //     "js": {value:inputList, shouldBe:[
-            //         0, 1, "(",
-            //         1, 2, "(",
-            //     ]}
-            // });
+})();';
+            const inputList = <any[]>[];
+            const parser = createTextParserLayered({
+                layers: layersJS,
+                parser: function (RXResult, layerName, RXOpening) {
+                    inputList.push([
+                        RXResult.index, layerName, RXResult[0],
+                        RXOpening === undefined ? false : RXOpening.index
+                    ]);
+                },
+            });
+            parser(file);
+            assertEquality({
+                "js": {
+                    value: inputList,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [0, 'bracket', '(', false],
+                        [10, 'bracket', '(', false],
+                        [11, 'bracket', ')', 10],
+                        [12, 'bracket', '{', false],
+                        [31, 'function', 'require(', false],
+                        [39, 'text', '"', false],
+                        [48, 'escape', '\\(', false],
+                        [51, 'escape', '\\)', false],
+                        [53, 'text', '"', 39],
+                        [54, 'function', ')', 31],
+                        [61, 'comment', '//', false],
+                        [87, 'comment', '\n', 61],
+                        [97, 'function', 'forEach(', false],
+                        [114, 'bracket', '(', false],
+                        [120, 'bracket', ')', 114],
+                        [122, 'bracket', '{', false],
+                        [132, 'function', 'log(', false],
+                        [146, 'function', ')', 132],
+                        [152, 'bracket', '}', 122],
+                        [153, 'function', ')', 97],
+                        [156, 'bracket', '}', 12],
+                        [157, 'bracket', ')', 0],
+                        [158, 'bracket', '(', false],
+                        [159, 'bracket', ')', 158]
+                    ]
+                }
+            });
         }
     });
 

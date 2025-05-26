@@ -40,7 +40,7 @@ interface TK_DebugTest_file {
             return "\n" + readErrorName(difference);
         }
 
-        const path = (difference.path.length === 0)
+        const path = (!(difference.path instanceof Array) || difference.path.length === 0)
             ? "value"
             : "." + difference.path.join(".");
         return [
@@ -147,7 +147,7 @@ interface TK_DebugTest_file {
     const shortenData = function TK_DebugTestFull_shortenValue(list: any) {
         return ToolKid.dataTypes.list.shortenList({
             list,
-            maxLength: (typeof list === "string" ? 200 : 10),
+            maxLength: (typeof list === "string" ? 200 : 20),
             omissionSignal
         });
     };

@@ -308,11 +308,17 @@ registeredFiles.coreModules.files = module.exports;
                     else {
                         const subLayer = layers[key];
                         signals.push(...subLayer.openings);
-                        directions.push(...subLayer.openings.map(function () { return subLayer; }));
+                        directions.push(...Array(subLayer.openings.length).fill(subLayer));
                     }
                 });
             }
             layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
+        });
+        Object.values(layers).forEach(function (layer) {
+            delete layer.openings;
+            delete layer.closings;
+            delete layer.signals;
+            delete layer.contains;
         });
         log(333, layers);
         return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
@@ -342,30 +348,33 @@ registeredFiles.coreModules.files = module.exports;
         }
     };
     const parseTextLayers = function LibraryParsing_parseTextLayers(layer, parser, text) {
+        let layerDepth = 0;
+        let RXResult = layer.pattern.exec(text);
         const layerStack = new Array(20);
         layerStack[0] = layer;
-        let depth = 0;
-        let RXResult = layer.pattern.exec(text);
+        const resultStack = new Array(20);
+        resultStack[0] = RXResult;
         let lastIndex = 0;
-        let foundSignal = "";
+        let resultString = "";
         while (RXResult !== null) {
-            foundSignal = RXResult[0];
-            layer = layer.directions[RXResult.indexOf(foundSignal, 1) - 1];
+            lastIndex = layer.pattern.lastIndex;
+            resultString = RXResult[0];
+            layer = layer.directions[RXResult.indexOf(resultString, 1) - 1];
             if (layer === undefined) {
-                if (foundSignal !== "") {
-                    parser(RXResult, layerStack[depth], depth);
+                if (resultString !== "") {
+                    parser(RXResult, layerStack[layerDepth].name, resultStack[layerDepth], layerDepth);
                 }
-                depth -= 1;
-                layer = layerStack[depth];
+                layerDepth -= 1;
+                layer = layerStack[layerDepth];
             }
             else {
-                depth += 1;
-                layerStack[depth] = layer;
-                if (foundSignal !== "") {
-                    parser(RXResult, layer, depth);
+                layerDepth += 1;
+                layerStack[layerDepth] = layer;
+                resultStack[layerDepth] = RXResult;
+                if (resultString !== "") {
+                    parser(RXResult, layer.name, undefined, layerDepth);
                 }
             }
-            lastIndex = layer.pattern.lastIndex;
             layer.pattern.lastIndex = lastIndex;
             RXResult = layer.pattern.exec(text);
         }
@@ -1569,7 +1578,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         if (typeof difference === "string") {
             return "\n" + readErrorName(difference);
         }
-        const path = (difference.path.length === 0)
+        const path = (!(difference.path instanceof Array) || difference.path.length === 0)
             ? "value"
             : "." + difference.path.join(".");
         return [
@@ -1635,7 +1644,7 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
     const shortenData = function TK_DebugTestFull_shortenValue(list) {
         return ToolKid.dataTypes.list.shortenList({
             list,
-            maxLength: (typeof list === "string" ? 200 : 10),
+            maxLength: (typeof list === "string" ? 200 : 20),
             omissionSignal
         });
     };
