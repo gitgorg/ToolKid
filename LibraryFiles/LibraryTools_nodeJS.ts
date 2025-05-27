@@ -3,11 +3,6 @@ interface LibraryTools_file {
     isDirectory(
         path: string
     ): boolean,
-    writeFile(inputs: {
-        path: string,
-        content: any,
-        encoding?: "utf-8" | "base64"
-    }): void
 }
 
 
@@ -39,31 +34,7 @@ interface LibraryTools_file {
         return readPathStats(path).isDirectory();
     };
 
-    const writeDirectory = function LibraryTools_nodeJS_writeDirectory(path: string) {
-        if (isUsedPath(path)) {
-            return;
-        }
 
-        const rootPath = Path.dirname(path);
-        if (!isUsedPath(rootPath)) {
-            writeDirectory(rootPath);
-        }
-        try {
-            FS.mkdirSync(path);
-        } catch (err) {
-            console.warn(err);
-        }
-    };
-
-    publicExports.writeFile = function LibraryTools_nodeJS_writeFile(inputs) {
-        const path = resolvePath(inputs.path);
-        writeDirectory(Path.dirname(path));
-        FS.writeFileSync(
-            inputs.path,
-            inputs.content,
-            { encoding: inputs.encoding }
-        );
-    };
 
     Object.freeze(publicExports);
 })();

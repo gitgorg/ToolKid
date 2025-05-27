@@ -3,7 +3,11 @@ type LibraryCore_file = {
     createInstance(): Library,
     getCoreModule(name: "parsing"): LibraryParsing_file,
     getCoreModule(name: "files"): LibraryFiles_file,
-    getTools(): LibraryTools_file
+    getTools(): LibraryTools_file,
+    registerCoreModule(inputs: {
+        name: string,
+        module: Dictionary,
+    }): void,
 }
 
 type Library = {
@@ -14,17 +18,10 @@ type Library = {
         functions: Dictionary
     }): void
 }
-
-interface Dictionary {
-    //@ts-ignore
+type Dictionary = {
     [key: string]: any
 }
-
-interface GenericFunction {
-    (
-        ...parameters: any[]
-    ): any
-}
+type GenericFunction = { (...parameters: any[]): any }
 
 
 
@@ -105,6 +102,17 @@ interface GenericFunction {
             );
         }
         return LibraryTools;
+    };
+
+    publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
+        const { name } = inputs;
+        if (coreModules[name] === undefined) {
+            coreModules[name] = inputs.module;
+        } else {
+            throw [
+                "LibraryCore_registerCoreModule - tried to overwrite " + name + ": current value = ", coreModules[name], " new value = ", inputs.module
+            ];
+        }
     };
 
     const registerFunction = function LibraryCore_registerFunction(

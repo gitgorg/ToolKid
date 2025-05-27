@@ -4,7 +4,7 @@ interface TK_nodeJS_file {
     loopFiles: LibraryFiles_file["loopFiles"],
     readFile: LibraryFiles_file["readFile"],
     resolvePath: LibraryFiles_file["resolvePath"],
-    writeFile: LibraryTools_file["writeFile"],
+    writeFile: LibraryFiles_file["writeFile"],
 
     deleteFile(path: string): void,
     extendFile(inputs: {
@@ -57,6 +57,7 @@ interface TK_nodeJS_file {
             loopFiles: core.loopFiles,
             readFile: core.readFile,
             resolvePath: core.resolvePath,
+            writeFile: core.writeFile,
         } });
     }
 })();

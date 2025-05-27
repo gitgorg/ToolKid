@@ -1,6 +1,6 @@
 (function LibraryFiles_test() {
     const {
-        createStringChecker, loopFiles, readFile, resolvePath
+        createStringChecker, loopFiles, readFile, resolvePath, writeFile,
     } = <LibraryFiles_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.js"));
 
     const FS = require("fs");
@@ -189,6 +189,34 @@
                     shouldBe: resolve("test.js")
                 }
             });
+        }
+    });
+
+    test({
+        subject: writeFile,
+        execute: function basic() {
+            assertEquality({
+                "file not there yet": {
+                    value: readFile({ path: "./TKTest.txt" }),
+                    shouldBe: { content: undefined }
+                }
+            });
+            writeFile({
+                path: "./TKTest.txt",
+                content: "working"
+            });
+            assertEquality({
+                "file ready": {
+                    value: readFile({ path: "./TKTest.txt" }),
+                    shouldBe: {
+                        encoding: "utf8",
+                        content: "working"
+                    }
+                }
+            });
+        },
+        callback: function () {
+            ToolKid.nodeJS.deleteFile("./TKTest.txt");
         }
     });
 

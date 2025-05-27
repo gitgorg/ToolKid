@@ -24,6 +24,11 @@ type LibraryFiles_file = {
     resolvePath(
         ...parts: string[]
     ): string,
+    writeFile(inputs: {
+        path: string,
+        content: any,
+        encoding?: "utf-8" | "base64"
+    }): void,
 }
 
 
@@ -42,11 +47,14 @@ type LibraryFiles_file = {
 
     const {
         existsSync: isUsedPath,
+        mkdirSync: createDirectory,
         lstatSync: readPathStats,
         readdirSync: readDirectory,
         readFileSync: readFile,
+        writeFileSync: createFile,
     } = require("fs");
     const {
+        dirname: directoryName,
         normalize: normalizePath,
         resolve: resolvePath,
     } = require("path");
@@ -226,6 +234,32 @@ type LibraryFiles_file = {
     };
 
     publicExports.resolvePath = resolvePath;
+
+    const writeDirectory = function LibraryFiles_writeDirectory(path: string) {
+        if (isUsedPath(path)) {
+            return;
+        }
+
+        const rootPath = directoryName(path);
+        if (!isUsedPath(rootPath)) {
+            writeDirectory(rootPath);
+        }
+        try {
+            createDirectory(path);
+        } catch (err) {
+            console.warn(err);
+        }
+    };
+
+    publicExports.writeFile = function LibraryFiles_writeFile(inputs) {
+        const path = resolvePath(inputs.path);
+        writeDirectory(directoryName(path));
+        createFile(
+            inputs.path,
+            inputs.content,
+            { encoding: inputs.encoding }
+        );
+    };
 
 
 

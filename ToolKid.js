@@ -1,9 +1,7 @@
 "use strict";
-(function ToolKid_init () {
-const registeredFiles = {};
-
-
-(function LibraryCore_init() {
+(function ToolKid_init() {
+    const registeredFiles = {};
+    (function LibraryCore_init() {
     const coreModuleNames = {
         "parsing": "LibraryParsing.js",
         "files": "LibraryFiles.js"
@@ -58,6 +56,17 @@ const registeredFiles = {};
         }
         return LibraryTools;
     };
+    publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
+        const { name } = inputs;
+        if (coreModules[name] === undefined) {
+            coreModules[name] = inputs.module;
+        }
+        else {
+            throw [
+                "LibraryCore_registerCoreModule - tried to overwrite " + name + ": current value = ", coreModules[name], " new value = ", inputs.module
+            ];
+        }
+    };
     const registerFunction = function LibraryCore_registerFunction(library, inputs) {
         let section = registerSection({
             container: library,
@@ -109,14 +118,12 @@ const registeredFiles = {};
         });
         return section;
     };
-    registeredFiles.coreModules = coreModules;
-    global.ToolKid = publicExports.createInstance();
 })();
-registeredFiles["LibraryCore.js"] = module.exports;
-
-(function LibraryFiles_init() {
-    const { existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, } = require("fs");
-    const { normalize: normalizePath, resolve: resolvePath, } = require("path");
+    registeredFiles["LibraryCore.js"] = module.exports;
+    global.ToolKid = module.exports.createInstance();
+    (function LibraryFiles_init() {
+    const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
+    const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
     const publicExports = module.exports = {};
     const checkString = function LibraryFiles_checkString(value, expression) {
         return expression.test(value);
@@ -250,11 +257,32 @@ registeredFiles["LibraryCore.js"] = module.exports;
         };
     };
     publicExports.resolvePath = resolvePath;
+    const writeDirectory = function LibraryFiles_writeDirectory(path) {
+        if (isUsedPath(path)) {
+            return;
+        }
+        const rootPath = directoryName(path);
+        if (!isUsedPath(rootPath)) {
+            writeDirectory(rootPath);
+        }
+        try {
+            createDirectory(path);
+        }
+        catch (err) {
+            console.warn(err);
+        }
+    };
+    publicExports.writeFile = function LibraryFiles_writeFile(inputs) {
+        const path = resolvePath(inputs.path);
+        writeDirectory(directoryName(path));
+        createFile(inputs.path, inputs.content, { encoding: inputs.encoding });
+    };
     Object.freeze(publicExports);
 })();
-registeredFiles.coreModules.files = module.exports;
-
-// regExp flags:
+    registeredFiles["LibraryCore.js"].registerCoreModule({
+        name: "files", module: module.exports
+    });
+    // regExp flags:
 // g = to store .lastIndex inside the regExp
 // s = to make . match really EVERY character...
 // v = to support all the new unicode stuff
@@ -453,10 +481,14 @@ registeredFiles.coreModules.files = module.exports;
     };
     Object.freeze(publicExports);
 })();
-registeredFiles.coreModules.parsing = module.exports;
-
-
-delete registeredFiles.coreModules;;
+    registeredFiles["LibraryCore.js"].registerCoreModule({
+        name: "parsing", module: module.exports
+    });
+    //#start imported extensions
+    //#end imported extensions
+    // (<Dictionary>global).log = ToolKid.debug.terminal.logImportant;
+    // module.exports = ToolKid;
+;
 (function TK_NodeJSFile_init() {
     const publicExports = module.exports = {};
     const importSignals = {
@@ -2016,6 +2048,7 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
                 loopFiles: core.loopFiles,
                 readFile: core.readFile,
                 resolvePath: core.resolvePath,
+                writeFile: core.writeFile,
             } });
     }
 })();
@@ -2107,26 +2140,6 @@ registeredFiles["LibraryTools.js"] = module.exports;
     const publicExports = module.exports = Object.assign({}, LibraryTools);
     publicExports.isDirectory = function LibraryTools_nodeJS_isDirectory(path) {
         return readPathStats(path).isDirectory();
-    };
-    const writeDirectory = function LibraryTools_nodeJS_writeDirectory(path) {
-        if (isUsedPath(path)) {
-            return;
-        }
-        const rootPath = Path.dirname(path);
-        if (!isUsedPath(rootPath)) {
-            writeDirectory(rootPath);
-        }
-        try {
-            FS.mkdirSync(path);
-        }
-        catch (err) {
-            console.warn(err);
-        }
-    };
-    publicExports.writeFile = function LibraryTools_nodeJS_writeFile(inputs) {
-        const path = resolvePath(inputs.path);
-        writeDirectory(Path.dirname(path));
-        FS.writeFileSync(inputs.path, inputs.content, { encoding: inputs.encoding });
     };
     Object.freeze(publicExports);
 })();
