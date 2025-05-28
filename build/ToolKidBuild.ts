@@ -23,7 +23,6 @@ type ToolKidConfig = {
 (function ToolKidBuild_init() {
     const FS = require("fs");
     const Path = require("path");
-    let LibraryTools: LibraryTools_file;
 
 
 
@@ -35,27 +34,24 @@ type ToolKidConfig = {
         if (config === undefined) {
             config = readConfig();
         }
-        const LibraryCore = <LibraryCore_file>require(Path.resolve(config.rootLibraryFiles, "LibraryCore.js"));
-        const library = (<Dictionary>global).ToolKid = LibraryCore.createInstance();
+        const library = (<LibraryCore_file>require(
+            Path.resolve(config.rootLibraryFiles, "LibraryCore.js")
+        )).createInstance();
+        const coreModuleFiles = library.getCoreModule("files");
         library.registerFunctions({
             section: "core", functions: {
                 ...library.getCoreModule("parsing"),
-                ...library.getCoreModule("files")
+                ...coreModuleFiles
             }
         });
-        LibraryTools = LibraryCore.getTools();
-        addCoreFunctions({
-            library,
-            distribution: {
-                "isDirectory": ["nodeJS"],
-            }
-        });
+
+        (<Dictionary>global).ToolKid = library;
         const fileLocations = <{ [fileName: string]: string }>{};
-        library.getCoreModule("files").loopFiles({
+        coreModuleFiles.loopFiles({
             path: config.rootToolKidFiles,
             includes: config.include,
             excludes: config.exclude,
-            execute: registerExtendedFile.bind(null, fileLocations)
+            execute: registerExtensionFile.bind(null, fileLocations)
         });
         writeLibraryFile({
             library,
@@ -72,52 +68,6 @@ type ToolKidConfig = {
 
 
 
-    const addCoreFunctions = function ToolKidBuild_addCoreFunctions(inputs: {
-        library: Library,
-        distribution: {
-            [functionName: string]: [module: string, submodule?: string]
-        }
-    }) {
-        const { library } = inputs;
-        Object.entries(inputs.distribution).forEach(function ([key, sections]) {
-            const functions = <Dictionary>{};
-            functions[key] = LibraryTools[<"partial">key];
-            library.registerFunctions({
-                section: sections[0], subSection: sections[1],
-                functions
-            });
-        });
-    };
-
-    const layers = <TextLayerDefinition>{
-        import: {
-            patterns: [
-                ["//#import:",/\n|$/],
-                ["/*#import:","*/"]
-            ]
-        },
-        comment: {
-            patterns: [
-                ["//", /\n|$/],
-                ["/*", "*/"]
-            ],
-        },
-        text: {
-            patterns: [
-                ["\"", "\""],
-                ["'", "'"],
-                ["`", "`"]
-            ],
-            contains: ["escape"],
-        },
-        escape: {
-            isMAINLayer: false,
-            patterns: [
-                /\\./s
-            ],
-        },
-    };
-
     const combinedLibrarySetup = function (inputs: {
         library: Library, libraryRoot: string
     }) {
@@ -130,34 +80,44 @@ type ToolKidConfig = {
         }).content;
         let result = "";
         let index = 0;
+        const layers = Object.assign({
+            importLibrary: {
+                patterns: [
+                    ["//#import:", /\n|$/],
+                    ["/*#import:", "*/"]
+                ]
+            },
+        }, ToolKid.core.getLayerDefinition());
         ToolKid.core.createTextParserLayered({
             layers,
-            parser:function(RXResult, name, RXOpening){
-                if (name === "import" && RXOpening !== undefined) {
-                    result += template.slice(index, RXOpening.index);
-                    const path = RXResult.input.slice(RXOpening.index+RXOpening[0].length,RXResult.index);
-                    let file = readFile({
-                        path: resolvePath(libraryRoot, path),
-                        checkExistance: false
-                    });
-                    result += removeStrictMode(file.content) + "\n";
-                    index = RXResult.index + RXResult[0].length;
+            parser: function (RXResult, name, RXOpening) {
+                if (name !== "importLibrary" || RXOpening === undefined) {
+                    return;
                 }
+
+                result += template.slice(index, RXOpening.index);
+                const path = RXResult.input.slice(RXOpening.index + RXOpening[0].length, RXResult.index);
+                let file = readFile({
+                    path: resolvePath(libraryRoot, path),
+                    checkExistance: false
+                });
+                result += removeStrictMode(file.content) + "\n";
+                index = RXResult.index + RXResult[0].length;
             }
         })(template);
         return result + template.slice(index, -6);
     };
 
-    const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent:string) {
+    const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
         const firstPosition = fileContent.indexOf("use strict") - 1;
         if (firstPosition !== -2 && firstPosition < 20) {
-            return fileContent.slice(firstPosition+13).trim();
+            return fileContent.slice(firstPosition + 13).trim();
         } else {
             return fileContent;
         }
     };
 
-    const registerExtendedFile = function ToolKidBuild_registerExtendedFile(
+    const registerExtensionFile = function ToolKidBuild_registerExtensionFile(
         pathsByFileName: Dictionary,
         path: string
     ) {
@@ -185,13 +145,8 @@ type ToolKidConfig = {
             appendFile.bind(null, privateData)
         );
 
-        // TODO: making a more stable and less ugly version for including LibraryTools
-        const { libraryRoot } = inputs;
-        const { resolvePath, writeFile } = inputs.library.getCoreModule("files");
-        let path = resolvePath(libraryRoot, "LibraryTools.js");
-        appendFile(privateData, [Path.basename(path), path]);
-        path = resolvePath(libraryRoot, "LibraryTools_nodeJS.js");
-        appendFile(privateData, [Path.basename(path), path]);
+        // TODO: making a more stable and less ugly version for including
+        const { writeFile } = inputs.library.getCoreModule("files");
 
         privateData.combinedFile += "global.log = ToolKid.debug.terminal.logImportant;\n";
         privateData.combinedFile += "module.exports = ToolKid;\n";
@@ -275,7 +230,7 @@ type ToolKidConfig = {
                 : [...config.rootToolKidFiles, config.rootLibraryFiles],
             include: ["*.test.js"],
             exclude: config.exclude.slice(1),
-            suspects: [ToolKid, LibraryTools],
+            suspects: [ToolKid],
         }
     };
 

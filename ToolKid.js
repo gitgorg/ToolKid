@@ -7,7 +7,6 @@
         "files": "LibraryFiles.js"
     };
     const coreModules = {};
-    let LibraryTools;
     const publicExports = module.exports = {};
     publicExports.createInstance = function LibraryCore_createInstance() {
         const result = {};
@@ -49,12 +48,6 @@
             ];
         }
         return coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
-    };
-    publicExports.getTools = function LibraryCore_getTools() {
-        if (LibraryTools === undefined) {
-            LibraryTools = require(require("path").resolve(__dirname, "./LibraryTools_nodeJS.js"));
-        }
-        return LibraryTools;
     };
     publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
         const { name } = inputs;
@@ -234,7 +227,7 @@
             boundInputs.execute(path);
         }
     };
-    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
+    publicExports.readFile = function LibraryFiles_readFile(inputs) {
         let { path, checkExistance, encoding } = inputs;
         path = resolvePath(path);
         if (checkExistance !== false) {
@@ -242,7 +235,7 @@
                 return { content: undefined };
             }
             else if (ToolKid.nodeJS.isDirectory(path)) {
-                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
+                throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
             }
         }
         if (typeof encoding !== "string") {
@@ -376,6 +369,30 @@
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
         return replaceText.bind(null, ...setupPatternAndHandler(patterns));
+    };
+    publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition() {
+        return {
+            comment: {
+                patterns: [
+                    ["//", /\n|$/],
+                    ["/*", "*/"]
+                ],
+            },
+            text: {
+                patterns: [
+                    ["\"", "\""],
+                    ["'", "'"],
+                    ["`", "`"]
+                ],
+                contains: ["escape"],
+            },
+            escape: {
+                isMAINLayer: false,
+                patterns: [
+                    /\\./s
+                ],
+            },
+        };
     };
     const getTextFromRX = function LibraryParsing_getTextFromRX(value) {
         if (value instanceof RegExp) {
@@ -2055,95 +2072,18 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
 registeredFiles["TK_NodeJSFile.js"] = module.exports;
 
 ;
-registeredFiles["TK_NodeJSPath.js"] = module.exports;
-
-;
-(function LibraryTools_init() {
+(function TK_NodeJSPath_init() {
+    const { lstatSync: readPathStats } = require("fs");
     const publicExports = module.exports = {};
-    publicExports.createStringCheck = function LibraryTools_createStringCheck(inputs) {
-        const hasIncludes = isArray(inputs.include);
-        const hasExcludes = isArray(inputs.exclude);
-        if (hasIncludes && hasExcludes) {
-            return publicExports.partial(checkStringConditions, inputs);
-        }
-        else if (hasIncludes) {
-            return publicExports.partial(checkStringInclusion, inputs.include);
-        }
-        else if (hasExcludes) {
-            return publicExports.partial(checkStringExclusion, inputs.exclude);
-        }
-        else {
-            return function LibraryTools_checkNothing() { return true; };
-        }
-    };
-    const checkString = function LibraryTools_checkString(value, expression) {
-        return expression.test(value);
-    };
-    const checkStringConditions = function LibraryTools_checkStringConditions(conditions, value) {
-        const test = publicExports.partial(checkString, value);
-        return conditions.include.find(test) !== undefined
-            && conditions.exclude.find(test) === undefined;
-    };
-    const checkStringExclusion = function checkStringExclusion(exclude, value) {
-        const test = publicExports.partial(checkString, value);
-        return exclude.find(test) === undefined;
-    };
-    const checkStringInclusion = function checkStringInclusion(include, value) {
-        const test = publicExports.partial(checkString, value);
-        return include.find(test) !== undefined;
-    };
-    // TODO: replacements more structured, maybe backwards compatible
-    // const replacements = {
-    //     "\\": "\\\\",
-    //     ".": "\\.",
-    //     "\*": ".+"
-    // };
-    publicExports.createSimpleRegxp = function LibraryTools_createSimpleRegxp(expression) {
-        expression = expression.replaceAll("\\", "\\\\");
-        expression = expression.replaceAll(".", "\\.");
-        expression = expression.replaceAll("\*", ".+");
-        //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
-        return new RegExp("^" + expression + "$");
-    };
-    const isArray = function LibraryTools_isArray(value) {
-        return value instanceof Array && value.length !== 0;
-    };
-    publicExports.partial = function LibraryTools_partial(baseFunction, ...inputs) {
-        if (inputs.length === 0) {
-            throw ["LibraryTools_partial - no inputs to preset for:", baseFunction];
-        }
-        const result = baseFunction.bind(null, ...inputs);
-        if (baseFunction.presetInputs instanceof Array) {
-            result.presetInputs = [...baseFunction.presetInputs, ...inputs];
-        }
-        else {
-            result.presetInputs = inputs;
-        }
-        return result;
-    };
-    Object.freeze(publicExports);
-})();
-registeredFiles["LibraryTools.js"] = module.exports;
-
-;
-(function LibraryTools_nodeJS_init() {
-    const FS = require("fs");
-    const Path = require("path");
-    const { existsSync: isUsedPath, } = require("fs");
-    const { resolve: resolvePath } = require("path");
-    const isCalledFromLibrary = (Path.basename(__dirname) === "LibraryFiles");
-    const LibraryTools = isCalledFromLibrary
-        ? require(resolvePath(__dirname, "./LibraryTools.js"))
-        //@ts-ignore
-        : registeredFiles["LibraryTools.js"];
-    const { lstatSync: readPathStats } = FS;
-    const publicExports = module.exports = Object.assign({}, LibraryTools);
-    publicExports.isDirectory = function LibraryTools_nodeJS_isDirectory(path) {
+    publicExports.isDirectory = function TK_NodeJSPath_isDirectory(path) {
         return readPathStats(path).isDirectory();
     };
     Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
+    }
 })();
-registeredFiles["LibraryTools_nodeJS.js"] = module.exports;
+registeredFiles["TK_NodeJSPath.js"] = module.exports;
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;

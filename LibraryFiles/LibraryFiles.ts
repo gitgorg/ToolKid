@@ -209,14 +209,14 @@ type LibraryFiles_file = {
         }
     };
 
-    publicExports.readFile = function LibraryTools_nodeJS_read(inputs) {
+    publicExports.readFile = function LibraryFiles_readFile(inputs) {
         let { path, checkExistance, encoding } = inputs;
         path = resolvePath(path);
         if (checkExistance !== false) {
             if (!isUsedPath(path)) {
                 return { content: undefined };
             } else if (ToolKid.nodeJS.isDirectory(path)) {
-                throw ["LibraryTools_nodeJS_read - path is a directory, not a file:", path];
+                throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
             }
         }
 

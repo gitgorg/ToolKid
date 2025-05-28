@@ -1,3 +1,16 @@
+type LibraryFiles_test_file = {
+    directoryMixedContents: string,
+    directoryEmpty: string,
+    directoryNonExisting: string,
+
+    file: string,
+    fileEmpty: string,
+    fileNonExisting: string,
+    fileTypeScript: string
+}
+
+
+
 (function LibraryFiles_test() {
     const {
         createStringChecker, loopFiles, readFile, resolvePath, writeFile,
@@ -10,7 +23,7 @@
 
 
     const testFolder = resolve(__dirname, "../T_fileDirectory/");
-    const paths = module.exports = <LibraryTools_nodeJS_test_file>{
+    const paths = module.exports = <LibraryFiles_test_file>{
         directoryMixedContents: testFolder,
         directoryEmpty: resolve(testFolder, "T_empty"),
         directoryNonExisting: resolve(testFolder, "../T_nonExistant"),
@@ -76,10 +89,6 @@
                         resolve(fileDirectory, "LibraryFiles.test.js"),
                         resolve(fileDirectory, "LibraryParsing.js"),
                         resolve(fileDirectory, "LibraryParsing.test.js"),
-                        resolve(fileDirectory, "LibraryTools.js"),
-                        resolve(fileDirectory, "LibraryTools.test.js"),
-                        resolve(fileDirectory, "LibraryTools_nodeJS.js"),
-                        resolve(fileDirectory, "LibraryTools_nodeJS.test.js")
                     ]
                 }
             });
@@ -169,7 +178,7 @@
                 execute: readFile,
                 withInputs: { path: paths.directoryMixedContents },
                 shouldThrow: [
-                    "LibraryTools_nodeJS_read - path is a directory, not a file:",
+                    "LibraryFiles_readFile - path is a directory, not a file:",
                     paths.directoryMixedContents
                 ]
             });

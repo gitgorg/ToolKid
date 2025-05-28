@@ -31,6 +31,8 @@ interface LibraryParsing_file {
         firstPattern: [TextMatcher, TextGenerator],
         ...patterns: [TextMatcher, TextGenerator][]
     ): { (text: string): string },
+
+    getLayerDefinition(): TextLayerDefinition,
 }
 
 type TextMatcher = string | RegExp
@@ -123,7 +125,9 @@ type RegExpInputs = { pattern: string }
     ) {
         const layer = <any>{ name: key, openings: [], closings: [], contains: layerData.contains };
         layers[key] = layer;
-        layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(pattern: any) {
+        layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(
+            pattern: any
+        ) {
             if (pattern instanceof Array) {
                 layer.openings.push(getTextFromRX(pattern[0]));
                 layer.closings.push(getTextFromRX(pattern[1]));
@@ -171,6 +175,31 @@ type RegExpInputs = { pattern: string }
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
         return replaceText.bind(null, ...setupPatternAndHandler(patterns));
     };
+
+    publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition () {
+        return {
+            comment: {
+                patterns: [
+                    ["//", /\n|$/],
+                    ["/*", "*/"]
+                ],
+            },
+            text: {
+                patterns: [
+                    ["\"", "\""],
+                    ["'", "'"],
+                    ["`", "`"]
+                ],
+                contains: ["escape"],
+            },
+            escape: {
+                isMAINLayer: false,
+                patterns: [
+                    /\\./s
+                ],
+            },
+        };
+    }
 
     const getTextFromRX = function LibraryParsing_getTextFromRX(value: string | RegExp) {
         if (value instanceof RegExp) {

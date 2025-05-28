@@ -1,26 +1,8 @@
-type LibraryTools_nodeJS_test_file = {
-    directoryMixedContents: string,
-    directoryEmpty: string,
-    directoryNonExisting: string,
-
-    file: string,
-    fileEmpty: string,
-    fileNonExisting: string,
-    fileTypeScript: string
-}
-
-
-
-(function LibraryTools_nodeJS_test() {
-    const {
-        isDirectory
-    } = <LibraryTools_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryTools_nodeJS.js"));
-
+(function TK_nodeJSPath_test() {
     const paths = require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.test.js"));
 
     const { assertEquality, assertFailure, test } = ToolKid.debug.test;
-    const { deleteFile } = ToolKid.nodeJS;
-    const { readFile } = ToolKid.core;
+    const { isDirectory } = ToolKid.nodeJS;
 
 
 

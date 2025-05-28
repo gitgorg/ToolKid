@@ -3,7 +3,6 @@ type LibraryCore_file = {
     createInstance(): Library,
     getCoreModule(name: "parsing"): LibraryParsing_file,
     getCoreModule(name: "files"): LibraryFiles_file,
-    getTools(): LibraryTools_file,
     registerCoreModule(inputs: {
         name: string,
         module: Dictionary,
@@ -31,7 +30,6 @@ type GenericFunction = { (...parameters: any[]): any }
         "files": "LibraryFiles.js"
     };
     const coreModules = <Dictionary>{};
-    let LibraryTools: LibraryTools_file;
     const publicExports = module.exports = <LibraryCore_file>{};
 
 
@@ -93,15 +91,6 @@ type GenericFunction = { (...parameters: any[]): any }
         return coreModules[moduleName] = require(
             require("path").resolve(__dirname, "./" + path)
         );
-    };
-
-    publicExports.getTools = function LibraryCore_getTools() {
-        if (LibraryTools === undefined) {
-            LibraryTools = require(
-                require("path").resolve(__dirname, "./LibraryTools_nodeJS.js")
-            );
-        }
-        return LibraryTools;
     };
 
     publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
