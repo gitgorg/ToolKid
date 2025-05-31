@@ -53,59 +53,46 @@ type ToolKidConfig = {
             excludes: config.exclude,
             execute: registerExtensionFile.bind(null, fileLocations)
         });
-        writeLibraryFile({
-            library,
-            exportFile: config.exportFile,
-            fileLocations,
-            libraryRoot: config.rootLibraryFiles
+        const {resolvePath} = library.getCoreModule("files");
+        const files = new Map([
+            ["LibraryCore.js",{filePath:resolvePath(__dirname,"../LibraryFiles/LibraryCore.js")}],
+            ["LibraryFiles.js",{filePath:resolvePath(__dirname,"../LibraryFiles/LibraryFiles.js")}],
+            ["LibraryParsing.js",{filePath:resolvePath(__dirname, "../LibraryFiles/LibraryParsing.js")}]
+        ]);
+        Object.entries(fileLocations).forEach(function([importID, filePath]){
+            files.set(importID, {filePath});
         });
+        const test = library.getCoreModule("building").bundleFiles({
+            fileList: files,
+            fileParser: function (inputs) {
+                let result = removeStrictMode(inputs.fileContent);
+                result += '\n\
+fileCollection.set("' + inputs.importID + '", module.exports);\n';
+                if (inputs.importID === "LibraryCore.js") {
+                    result += 'global.ToolKid = module.exports.createInstance();\n';
+                } else if (inputs.importID.indexOf("Library") === 0) {
+                    result += 'fileCollection.get("LibraryCore.js").registerCoreModule({\n\
+    name: "' + inputs.importID.slice(7,-3).toLocaleLowerCase()+ '", module: module.exports\n\
+});\n'
+                }
+                return result + '\n';
+            },
+            footer: '\n\
+global.log = ToolKid.debug.terminal.logImportant;\n\
+module.exports = ToolKid;\n\
+})();'
+        });
+        library.getCoreModule("files").writeFile({
+            path: config.exportFile || (__dirname.slice(0, -5) + "ToolKid.js"),
+            // path: (__dirname + "/test.js"),
+            content: test
+        });
+
         if (config.runTests !== false) {
             setTimeout(
                 runTests.bind(null, config), 100
             );
         }
-    };
-
-
-
-    const combinedLibrarySetup = function (inputs: {
-        library: Library, libraryRoot: string
-    }) {
-        const { libraryRoot } = inputs;
-        const { readFile, resolvePath } = ToolKid.core;
-
-        const template = readFile({
-            path: resolvePath(libraryRoot, "../build/ToolKidTemplate.js"),
-            checkExistance: false
-        }).content;
-        let result = "";
-        let index = 0;
-        const layers = Object.assign({
-            importLibrary: {
-                patterns: [
-                    ["//#import:", /\n|$/],
-                    ["/*#import:", "*/"]
-                ]
-            },
-        }, ToolKid.core.getLayerDefinition());
-        ToolKid.core.createTextParserLayered({
-            layers,
-            parser: function (RXResult, name, RXOpening) {
-                if (name !== "importLibrary" || RXOpening === undefined) {
-                    return;
-                }
-
-                result += template.slice(index, RXOpening.index);
-                const path = RXResult.input.slice(RXOpening.index + RXOpening[0].length, RXResult.index);
-                let file = readFile({
-                    path: resolvePath(libraryRoot, path),
-                    checkExistance: false
-                });
-                result += removeStrictMode(file.content) + "\n";
-                index = RXResult.index + RXResult[0].length;
-            }
-        })(template);
-        return result + template.slice(index, -6);
     };
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
@@ -127,83 +114,6 @@ type ToolKidConfig = {
         }
         pathsByFileName[alias] = path;
         require(path);
-    };
-
-    const writeLibraryFile = function (inputs: {
-        library: Library,
-        libraryRoot: string,
-        fileLocations: Dictionary,
-        exportFile?: string,
-    }) {
-        const privateData = {
-            combinedFile: combinedLibrarySetup(inputs),
-            registeredFiles: inputs.fileLocations,
-            importedFiles: new Set(["LibraryCore.js"])
-        };
-
-        Object.entries(inputs.fileLocations).forEach(
-            appendFile.bind(null, privateData)
-        );
-
-        // TODO: making a more stable and less ugly version for including
-        const { writeFile } = inputs.library.getCoreModule("files");
-
-        privateData.combinedFile += "global.log = ToolKid.debug.terminal.logImportant;\n";
-        privateData.combinedFile += "module.exports = ToolKid;\n";
-        privateData.combinedFile += "})();";
-        writeFile({
-            path: inputs.exportFile || (__dirname.slice(0, -5) + "ToolKid.js"),
-            content: privateData.combinedFile
-        });
-    };
-
-    const appendFile = function (
-        privateData: Dictionary,
-        aliasAndPath: [alias: string, path: string]
-    ) {
-        const [aliasOfFile, filePath] = aliasAndPath;
-        if (privateData.importedFiles.has(aliasOfFile)) {
-            return;
-        }
-
-        const analysed = analyseFile(filePath, function (position, fileName) {
-            const aliasOfDependency = Path.basename(fileName);
-            if (!privateData.importedFiles.has(aliasOfDependency)) {
-                const dependencyPath = privateData.registeredFiles[aliasOfDependency];
-                appendFile(privateData, [aliasOfDependency, dependencyPath]);
-            }
-        });
-
-        privateData.combinedFile += analysed.contentReworked;
-        privateData.combinedFile += "registeredFiles[\"" + aliasOfFile + "\"] = module.exports;\n\n";
-        privateData.importedFiles.add(aliasOfFile);
-        return require(filePath);
-    };
-
-    const regExpUseSctrict = /^\s*"use strict"/;
-
-    const analyseFile = function ToolKidBuild_analyseFile(
-        path: string, parser: GenericFunction
-    ) {
-        let { content } = ToolKid.core.readFile({ path });
-        let contentClean = content.replace(regExpUseSctrict, "");
-
-        let contentReworked = "";
-        let position = 0;
-        ToolKid.code.readJSImports({
-            code: contentClean,
-            parser: function (position, fileName) {
-                parser(position, fileName);
-                contentReworked += contentClean.slice(position, position);
-                contentReworked += "registeredFiles[\"" + Path.basename(fileName) + "\"]";
-                position = position + fileName.length + 11;
-            }
-        });
-        contentReworked += contentClean.slice(position);
-        return {
-            path,
-            contentReworked
-        };
     };
 
     const readConfig = function ToolKidBuild_readConfig() {

@@ -1,8 +1,6 @@
 //core functionality for custom Library
-type LibraryCore_file = {
+interface LibraryCore_file {
     createInstance(): Library,
-    getCoreModule(name: "parsing"): LibraryParsing_file,
-    getCoreModule(name: "files"): LibraryFiles_file,
     registerCoreModule(inputs: {
         name: string,
         module: Dictionary,
@@ -26,8 +24,9 @@ type GenericFunction = { (...parameters: any[]): any }
 
 (function LibraryCore_init() {
     const coreModuleNames = {
+        "building": "LibraryBuilding.js",
         "parsing": "LibraryParsing.js",
-        "files": "LibraryFiles.js"
+        "files": "LibraryFiles.js",
     };
     const coreModules = <Dictionary>{};
     const publicExports = module.exports = <LibraryCore_file>{};

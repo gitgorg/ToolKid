@@ -84,6 +84,7 @@ type LibraryFiles_test_file = {
                 "siblingFiles": {
                     value: found,
                     shouldBe: [
+                        resolve(fileDirectory, "LibraryBuilding.js"),
                         resolve(fileDirectory, "LibraryCore.js"),
                         resolve(fileDirectory, "LibraryFiles.js"),
                         resolve(fileDirectory, "LibraryFiles.test.js"),

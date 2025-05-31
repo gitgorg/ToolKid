@@ -1,6 +1,6 @@
 (function LibraryParsing_test() {
     const {
-        createSimpleRX, createTextParser, createTextParserLayered, createTextReplacer
+        createSimpleRX, createTextParser, createTextReplacer, getLayerDefinition
     } = <LibraryParsing_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryParsing.js"));
 
     const { assertEquality, test } = ToolKid.debug.test;
@@ -43,75 +43,18 @@
         }
     });
 
-    test({
-        subject: createTextParser,
-        execute: function singularParsing() {
-            let registry = <any[]>[];
-            const register = function (key: any, RXResult: RegExpExecArray) {
-                registry.push(key, RXResult.index, RXResult[0]);
-            };
-            const parser = createTextParser(["a", register.bind(null, true)], ["b", register.bind(null, false)]);
-            parser("abcbcba");
-            assertEquality({
-                "simple": {
-                    value: registry, shouldBe: [
-                        true, 0, "a",
-                        false, 1, "b",
-                        false, 3, "b",
-                        false, 5, "b",
-                        true, 6, "a"
-                    ]
-                }
-            });
-        }
-    }, {
-        subject: createTextParser,
-        execute: function singularParsing() {
-            let registry = <any[]>[];
-            const register = function (key: any, RXResult: RegExpExecArray) {
-                registry.push(key, RXResult.index, RXResult[0]);
-            };
-            const parser = createTextParser(["a", register.bind(null, true)], ["b", register.bind(null, false)]);
-            parser("abcbcba");
-            assertEquality({
-                "simple": {
-                    value: registry, shouldBe: [
-                        true, 0, "a",
-                        false, 1, "b",
-                        false, 3, "b",
-                        false, 5, "b",
-                        true, 6, "a",
-                    ]
-                }
-            });
-        }
-    });
-
-    const layersJS = <TextLayerDefinition>{
-        comment: {
-            patterns: [
-                ["//", /\n|$/],
-                ["/*", "*/"]
-            ],
-        },
-        text: {
-            patterns: [
-                ["\"", "\""],
-                ["'", "'"],
-                ["`", "`"]
-            ],
-            contains: ["escape"],
-        },
-        escape: {
-            isMAINLayer: false,
-            patterns: [
-                /\\./s
-            ],
-        },
+    const layersJS = <TextLayerDefinition>Object.assign(getLayerDefinition(),{
         bracket: {
             patterns: [
                 ["(", ")"],
-                ["{", "}"]
+                ["{", "}"],
+                ["[", "]"]
+            ],
+            contains: ["MAIN"]
+        },
+        import: {
+            patterns: [
+                ["require(",")"]
             ],
             contains: ["MAIN"]
         },
@@ -121,60 +64,68 @@
             ],
             contains: ["MAIN"]
         },
-    };
+    });
 
-    test({
-        subject: createTextParserLayered,
-        execute: function parsingJS() {
-            const file = '\
+    const file = '\
 (function (){\n\
     const data = require("whatever\\(2\\)");\n\
-    //const data = {a:1, b:2};\n\
-    data.forEach(function (value) {\n\
+    //const data = require({a:1, b:2});\n\
+    [1,2,3].forEach(function (value) {\n\
         log(555, value)\n\
     });\n\
 })();';
+    const fileParserInputs = [
+/*0*/   [0, 'bracket', '(', false],
+        [10, 'bracket', '(', false],
+        [11, 'bracket', ')', 10],
+        [12, 'bracket', '{', false],
+        [31, 'import', 'require(', false],
+/*5*/   [39, 'text', '"', false],
+        [48, 'escape', '\\(', false],
+        [51, 'escape', '\\)', false],
+        [53, 'text', '"', 39],
+        [54, 'import', ')', 31],
+/*10*/  [61, 'comment', '//', false],
+        [96, 'comment', '\n', 61],
+        [101, 'bracket', '[', false],
+        [107, 'bracket', ']', 101],
+        [109, 'function', 'forEach(', false],
+/*15*/  [126, 'bracket', '(', false],
+        [132, 'bracket', ')', 126],
+        [134, 'bracket', '{', false],
+        [144, 'function', 'log(', false],
+        [158, 'function', ')', 144],
+/*20*/  [164, 'bracket', '}', 134],
+        [165, 'function', ')', 109],
+        [168, 'bracket', '}', 12],
+        [169, 'bracket', ')', 0],
+        [170, 'bracket', '(', false],
+/*25*/  [171, 'bracket', ')', 170]
+    ];
+
+    test({
+        subject: createTextParser,
+        execute: function parseLayered() {
             const inputList = <any[]>[];
-            const parser = createTextParserLayered({
-                layers: layersJS,
-                parser: function (RXResult, layerName, RXOpening) {
-                    inputList.push([
-                        RXResult.index, layerName, RXResult[0],
-                        RXOpening === undefined ? false : RXOpening.index
-                    ]);
-                },
+            const register = <TextParserForOpenings & TextParserForClosings>function (
+                RXResult, layerName, layerDepth, RXOpening
+            ) {
+                inputList.push([
+                    RXResult.index, layerName, RXResult[0],
+                    RXOpening === undefined ? false : RXOpening.index
+                ]);
+            };
+            const parser = createTextParser({
+                layerDefinition: layersJS,
+                parseOpenings: register,
+                parseClosings: register,
             });
             parser(file);
             assertEquality({
                 "js": {
                     value: inputList,
                     toleranceDepth: 3,
-                    shouldBe: [
-                        [0, 'bracket', '(', false],
-                        [10, 'bracket', '(', false],
-                        [11, 'bracket', ')', 10],
-                        [12, 'bracket', '{', false],
-                        [31, 'function', 'require(', false],
-                        [39, 'text', '"', false],
-                        [48, 'escape', '\\(', false],
-                        [51, 'escape', '\\)', false],
-                        [53, 'text', '"', 39],
-                        [54, 'function', ')', 31],
-                        [61, 'comment', '//', false],
-                        [87, 'comment', '\n', 61],
-                        [97, 'function', 'forEach(', false],
-                        [114, 'bracket', '(', false],
-                        [120, 'bracket', ')', 114],
-                        [122, 'bracket', '{', false],
-                        [132, 'function', 'log(', false],
-                        [146, 'function', ')', 132],
-                        [152, 'bracket', '}', 122],
-                        [153, 'function', ')', 97],
-                        [156, 'bracket', '}', 12],
-                        [157, 'bracket', ')', 0],
-                        [158, 'bracket', '(', false],
-                        [159, 'bracket', ')', 158]
-                    ]
+                    shouldBe: fileParserInputs
                 }
             });
         }
@@ -182,82 +133,28 @@
 
     test({
         subject: createTextReplacer,
-        execute: function differentUsecases() {
-            const remove_a = createTextReplacer(["a", ""]);
-            const remove_aA = createTextReplacer(["a", ""], ["A", ""]);
-            const moveLetters = createTextReplacer(
-                ["a", "b"], ["b", "c"], ["c", "d"], ["d", "e"],
-                ["e", "f"], ["f", "g"], ["g", "h"], ["h", "i"],
-                ["i", "j"], ["j", "k"], ["k", "l"], ["l", "m"],
-            );
-            const ASCII = createTextReplacer([/./, function (found) {
-                return found[0].charCodeAt(0);
-            }]);
-
-            const HTML = '\
-<img data-testid="one" src="one.jpg" alt="one">\n\
-<img data-testid="two" src="two.test.jpg">\n\
-<img src="three.jpg">\n\
-<a data-testid="four" href="www.four.com">four</a>';
-
-            assertEquality({
-                "remove_a": {
-                    value: [remove_a("hallo"), remove_a("bcde"), remove_a("Saaler Aale")],
-                    shouldBe: ["hllo", "bcde", "Sler Ale"]
-                },
-                "remove_aA": {
-                    value: [remove_aA("hallo"), remove_aA("bcde"), remove_aA("Saaler Aale")],
-                    shouldBe: ["hllo", "bcde", "Sler le"]
-                },
-                "moveLetters": {
-                    value: [moveLetters("hallo")],
-                    shouldBe: ["ibmmo"]
-                },
-                "ASCII": {
-                    value: [ASCII("hallo"), ASCII("\n .\r")],
-                    shouldBe: ["10497108108111", "10324613"],
+        execute: function replaceLayered() {
+            const parser = createTextReplacer({
+                layerDefinition: layersJS,
+                parseClosings: function (
+                    RXResult, layerName
+                ):any {
+                    if (layerName === "import") {
+                        return '"hello"'
+                    }
                 },
             });
-
-
-            const removeIDs = createTextReplacer(
-                [createSimpleRX('data-testid="*"'), ""]
-            );
+            let result = parser(file);
             assertEquality({
-                "removeIDs": {
-                    value: removeIDs(HTML),
-                    shouldBe: '\
-<img  src="one.jpg" alt="one">\n\
-<img  src="two.test.jpg">\n\
-<img src="three.jpg">\n\
-<a  href="www.four.com">four</a>'
-                },
-            });
-
-            const RXSource = createSimpleRX('src="(*).*"');
-            const addAlt = createTextReplacer(
-                [createSimpleRX('<img*>'),
-                function (found) {
-                    let content = found[0];
-                    if (content.indexOf("alt=\"") !== -1) {
-                        return content;
-                    }
-
-                    const source = RXSource.exec(content);
-                    if (source !== null) {
-                        content = content.slice(0, -1) + " alt=\"" + source[1] + "\">";
-                    }
-                    return content;
-                }]
-            );
-            assertEquality({
-                "addAlt": {
-                    value: addAlt(HTML),
-                    shouldBe: '\
-<img data-testid="one" src="one.jpg" alt="one">\n\
-<img data-testid="two" src="two.test.jpg" alt="two">\n\
-<img src="three.jpg" alt="three">\n\
-<a data-testid="four" href="www.four.com">four</a>'
+                "result": {
+                    value: result, shouldBe: '\
+(function (){\n\
+    const data = "hello";\n\
+    //const data = require({a:1, b:2});\n\
+    [1,2,3].forEach(function (value) {\n\
+        log(555, value)\n\
+    });\n\
+})();'
                 }
             });
         }

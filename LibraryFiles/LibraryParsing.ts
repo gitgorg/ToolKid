@@ -3,34 +3,42 @@
 // s = to make . match really EVERY character...
 // v = to support all the new unicode stuff
 
-interface LibraryParsing_file {
+interface LibraryCore_file {
+    getCoreModule(name: "parsing"): LibraryParsing_file
+}
+
+type LibraryParsing_file = {
     createSimpleRX(
         pattern: string
     ): RegExp,
-    createSimpleRX(inputs: RegExpInputs & {
+    createSimpleRX(inputs: RXInputs & {
         isRepeatable?: true,
     }): RegExp,
-    createSimpleRX(inputs: RegExpInputs & {
+    createSimpleRX(inputs: RXInputs & {
         isFromStartToEnd?: true,
     }): RegExp,
 
-    createTextParser(
-        firstPattern: [TextMatcher, { (RXResult: RegExpExecArray): void }],
-        ...patterns: [TextMatcher, { (RXResult: RegExpExecArray): void }][]
-    ): { (text: string): void },
-    createTextParserLayered(inputs: {
-        layers: TextLayerDefinition,
-        parser(
-            RXResult: RegExpExecArray,
-            layerName: string,
-            RXOpening: undefined | RegExpExecArray,
-            layerDepth: number,
-        ): void
+    createTextParser(inputs: {
+        layerDefinition: TextLayerDefinition,
+        parseOpenings?: TextParserForOpenings,
+        parseClosings: TextParserForClosings
     }): { (text: string): void },
-    createTextReplacer(
-        firstPattern: [TextMatcher, TextGenerator],
-        ...patterns: [TextMatcher, TextGenerator][]
-    ): { (text: string): string },
+    createTextParser(inputs: {
+        layerDefinition: TextLayerDefinition,
+        parseOpenings: TextParserForOpenings,
+        parseClosings?: TextParserForClosings
+    }): { (text: string): void },
+
+    createTextReplacer(inputs: {
+        layerDefinition: TextLayerDefinition,
+        parseOpenings?: TextParserForOpenings,
+        parseClosings: TextParserForClosings
+    }): { (text: string): string },
+    createTextReplacer(inputs: {
+        layerDefinition: TextLayerDefinition,
+        parseOpenings: TextParserForOpenings,
+        parseClosings?: TextParserForClosings
+    }): { (text: string): string },
 
     getLayerDefinition(): TextLayerDefinition,
 }
@@ -49,7 +57,22 @@ type TextLayerDefinition = {
         isMAINLayer?: false
     }
 }
-type RegExpInputs = { pattern: string }
+type TextParserForOpenings = {
+    (
+        RXResult: RegExpExecArray,
+        layerName: string,
+        layerDepth: number,
+    ): void | string
+}
+type TextParserForClosings = {
+    (
+        RXResultClosing: RegExpExecArray,
+        layerName: string,
+        layerDepth: number,
+        RXResultOpening: RegExpExecArray,
+    ): void | string
+}
+type RXInputs = { pattern: string }
 
 
 
@@ -65,6 +88,12 @@ type RegExpInputs = { pattern: string }
         closings: (string | undefined)[],
         contains?: string[],
         signals: (string | undefined)[],
+    }
+    type StateForReplacing = {
+        parseTextLayered(text: string): void,
+        position: number,
+        result: string,
+        textInput: string,
     }
 
 
@@ -101,11 +130,9 @@ type RegExpInputs = { pattern: string }
         return new RegExp(pattern, flags);
     };
 
-    publicExports.createTextParser = function LibraryParsing_createTextParser(...patterns) {
-        return parseText.bind(null, ...setupPatternAndHandler(patterns));
-    };
+    const doNothing = function LibraryParsing_doNothing() { };
 
-    publicExports.createTextParserLayered = function LibraryParsing_createTextParserLayered(inputs) {
+    publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = <{ [key: string]: LayerData }>{
             MAIN: <LayerData><any>{
                 name: "MAIN",
@@ -114,13 +141,17 @@ type RegExpInputs = { pattern: string }
                 contains: []
             }
         };
-        Object.entries(inputs.layers).forEach(createTextParserLayer.bind(null, layers));
-        Object.values(layers).forEach(connectTextParserLayer.bind(null,layers));
-        Object.values(layers).forEach(cleanUpTextParserLayer);
-        return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
+        Object.entries(inputs.layerDefinition).forEach(a_createTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(b_connectTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(c_cleanUpTextParserLayer);
+        return d_parseTextLayered.bind(null,
+            layers.MAIN,
+            inputs.parseOpenings || doNothing,
+            inputs.parseClosings || doNothing
+        );
     };
 
-    const createTextParserLayer = function LibraryParsing_createTextParserLayer(
+    const a_createTextParserLayer = function LibraryParsing_createTextParserLayer(
         layers: { [key: string]: LayerData }, [key, layerData]: [string, Dictionary]
     ) {
         const layer = <any>{ name: key, openings: [], closings: [], contains: layerData.contains };
@@ -141,8 +172,8 @@ type RegExpInputs = { pattern: string }
         }
     };
 
-    const connectTextParserLayer = function LibraryParsing_connectTextParserLayer(
-        layers: { [key: string]: LayerData }, layer:LayerData
+    const b_connectTextParserLayer = function LibraryParsing_connectTextParserLayer(
+        layers: { [key: string]: LayerData }, layer: LayerData
     ) {
         layer.signals = layer.closings.slice(0);
         const directions = layer.directions = Array(layer.signals.length);
@@ -158,10 +189,11 @@ type RegExpInputs = { pattern: string }
                 }
             });
         }
+        // regExp flags explained on top /\
         layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
     };
 
-    const cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(
+    const c_cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(
         layer: Dictionary
     ) {
         delete layer.openings;
@@ -170,13 +202,125 @@ type RegExpInputs = { pattern: string }
         delete layer.contains;
     };
 
-
-
-    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
-        return replaceText.bind(null, ...setupPatternAndHandler(patterns));
+    const d_parseTextLayered = function LibraryParsing_parseTextLayered(
+        layer: LayerDataSlim,
+        parseOpenings: GenericFunction,
+        parseClosings: GenericFunction,
+        text: string,
+    ) {
+        let layerDepth = 0;
+        let RXResult = <RegExpExecArray>layer.pattern.exec(text);
+        const layerStack = new Array(20);
+        layerStack[0] = layer;
+        const resultStack = new Array(20);
+        resultStack[0] = RXResult;
+        let lastIndex = 0;
+        let resultString = "";
+        while (RXResult !== null) {
+            lastIndex = layer.pattern.lastIndex;
+            resultString = RXResult[0];
+            layer = <LayerData>layer.directions[
+                RXResult.indexOf(resultString, 1) - 1
+            ];
+            if (layer === undefined) {
+                if (resultString !== "") {
+                    parseClosings(RXResult, layerStack[layerDepth].name, layerDepth, resultStack[layerDepth]);
+                }
+                layerDepth -= 1;
+                layer = layerStack[layerDepth];
+            } else {
+                layerDepth += 1;
+                layerStack[layerDepth] = layer;
+                resultStack[layerDepth] = RXResult;
+                if (resultString !== "") {
+                    parseOpenings(RXResult, layer.name, layerDepth);
+                }
+            }
+            layer.pattern.lastIndex = lastIndex;
+            RXResult = <RegExpExecArray>layer.pattern.exec(text);
+        }
     };
 
-    publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition () {
+
+
+    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(
+        inputs
+    ) {
+        const state = <StateForReplacing>{ textInput: "", result: "", position: 0 };
+        state.parseTextLayered = publicExports.createTextParser({
+            layerDefinition: inputs.layerDefinition,
+            parseOpenings: (inputs.parseOpenings === undefined)
+                ? undefined
+                : replaceOpening.bind(null, state, inputs.parseOpenings),
+            parseClosings: (inputs.parseClosings === undefined)
+                ? undefined
+                : replaceClosing.bind(null, state, inputs.parseClosings)
+        });
+        return replaceTextLayered.bind(null, state);
+    };
+
+    const replaceOpening = function LibraryParsing_replaceOpening(
+        state: StateForReplacing,
+        parser: GenericFunction,
+        RXResult: RegExpExecArray,
+        layerName: string,
+        layerDepth: number,
+    ) {
+        const returned = parser(RXResult, layerName, layerDepth);
+        if (typeof returned !== "string") {
+            return;
+        }
+
+        state.result += state.textInput.slice(
+            state.position, RXResult.index
+        ) + returned;
+        state.position = RXResult.index + RXResult[0].length;
+    };
+
+    const replaceClosing = function LibraryParsing_replaceClosing(
+        state: StateForReplacing,
+        parser: GenericFunction,
+        RXResult: RegExpExecArray,
+        layerName: string,
+        layerDepth: number,
+        RXOpening: RegExpExecArray,
+    ) {
+        const returned = parser(RXResult, layerName, layerDepth, RXOpening);
+        if (typeof returned !== "string") {
+            return;
+        }
+
+        state.result += state.textInput.slice(
+            state.position, RXOpening.index
+        ) + returned;
+        state.position = RXResult.index + RXResult[0].length;
+    };
+
+    const replaceTextLayered = function LibraryParsing_replaceTextLayered(
+        state: StateForReplacing, textInput: string
+    ) {
+        state.position = 0;
+        state.textInput = textInput;
+        state.result = "";
+        state.parseTextLayered(textInput);
+        return state.result + textInput.slice(state.position);
+    };
+
+
+
+    // regExp flags explained on top /\
+    const escapeCharsRX = new RegExp("\\" + [
+        ".", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
+    ].join("|\\"), "g");
+    const escapeRX = function LibraryParsing_escapeRX(text: string) {
+        return text.replaceAll(escapeCharsRX, escapeRXReplacer);
+    };
+
+    const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match: string) {
+        return "\\" + match;
+    };
+
+    publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition() {
         return {
             comment: {
                 patterns: [
@@ -199,136 +343,16 @@ type RegExpInputs = { pattern: string }
                 ],
             },
         };
-    }
+    };
 
     const getTextFromRX = function LibraryParsing_getTextFromRX(value: string | RegExp) {
         if (value instanceof RegExp) {
             return value.source;
         } else if (typeof value === "string") {
-            return escapeRegExp(value);
+            return escapeRX(value);
         } else {
             return value;
         }
-    };
-
-    const parseText = function LibraryParsing_parseText(
-        pattern: RegExp,
-        handler: { (RXResult: RegExpExecArray): void },
-        text: string,
-    ) {
-        let RXResult = pattern.exec(text);
-        while (RXResult !== null) {
-            handler(RXResult);
-            if (RXResult[0].length === 0) {
-                throw pattern;
-            }
-            RXResult = pattern.exec(text);
-        }
-    };
-
-    const parseTextLayers = function LibraryParsing_parseTextLayers(
-        layer: LayerDataSlim,
-        parser: GenericFunction,
-        text: string,
-    ) {
-        let layerDepth = 0;
-        let RXResult = <RegExpExecArray>layer.pattern.exec(text);
-        const layerStack = new Array(20);
-        layerStack[0] = layer;
-        const resultStack = new Array(20);
-        resultStack[0] = RXResult;
-        let lastIndex = 0;
-        let resultString = "";
-        while (RXResult !== null) {
-            lastIndex = layer.pattern.lastIndex;
-            resultString = RXResult[0];
-            layer = <LayerData>layer.directions[
-                RXResult.indexOf(resultString, 1) - 1
-            ];
-            if (layer === undefined) {
-                if (resultString !== "") {
-                    parser(RXResult, layerStack[layerDepth].name, resultStack[layerDepth], layerDepth);
-                }
-                layerDepth -= 1;
-                layer = layerStack[layerDepth];
-            } else {
-                layerDepth += 1;
-                layerStack[layerDepth] = layer;
-                resultStack[layerDepth] = RXResult;
-                if (resultString !== "") {
-                    parser(RXResult, layer.name, undefined, layerDepth);
-                }
-            }
-            layer.pattern.lastIndex = lastIndex;
-            RXResult = <RegExpExecArray>layer.pattern.exec(text);
-        }
-    };
-
-    const replaceText = function LibraryParsing_replaceText(
-        pattern: RegExp,
-        handler: { (RXResult: RegExpExecArray): string },
-        text: string,
-    ) {
-        const parts = <string[]>[];
-        let position = 0;
-        parseText(pattern, function (RXResult) {
-            if (position !== RXResult.index) {
-                parts.push(text.slice(position, RXResult.index));
-            }
-            parts.push(handler(RXResult));
-            position = pattern.lastIndex;
-        }, text);
-        if (position !== text.length) {
-            parts.push(text.slice(position))
-        }
-        return parts.join("");
-    };
-
-    const escapesForRX = [
-        ".", "*", "+", "?", "{", "}", "(", ")", "\\"
-    ];
-    const RXescape = new RegExp("\\" + escapesForRX.join("|\\"), "g");
-    const escapeRegExp = replaceText.bind(null,
-        RXescape,
-        function (RXResult: RegExpExecArray) {
-            return "\\" + RXResult[0];
-        }
-    );
-
-    const returnText = function LibraryParsing_returnText(value: string) {
-        return value;
-    };
-
-    const setupPatternAndHandler = function (
-        patterns: [TextMatcher, { (expressionResult: RegExpExecArray): any } | string][]
-    ): [RegExp, { (expressionResult: RegExpExecArray): any }] {
-        let matchers = <string[]>new Array(patterns.length);
-        let handlers = <TextGenerator[]>new Array(patterns.length);
-        patterns.forEach(function LibraryParsing_createTextReplacerGenerator(pattern, index) {
-            matchers[index] = getTextFromRX(pattern[0]);
-            if (typeof pattern[1] === "function") {
-                handlers[index] = pattern[1];
-            } else {
-                handlers[index] = returnText.bind(null, pattern[1]);
-            }
-        });
-        return [
-            (handlers.length === 1)
-                ? new RegExp(matchers[0], "gsv")
-                : new RegExp("(" + matchers.join(")|(") + ")", "gsv"),
-            (patterns.length === 1)
-                ? handlers[0]
-                : useWantedHandler.bind(null, handlers)
-        ];
-    };
-
-    const useWantedHandler = function LibraryParsing_useWantedHandler(
-        handlers: { (expressionResult: RegExpExecArray): any }[],
-        RXResult: RegExpExecArray
-    ) {
-        return handlers[
-            RXResult.indexOf(RXResult[0], 1) - 1
-        ](RXResult);
     };
 
 

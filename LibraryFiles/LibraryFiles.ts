@@ -1,3 +1,7 @@
+interface LibraryCore_file {
+    getCoreModule(name: "files"): LibraryFiles_file
+}
+
 type LibraryFiles_file = {
     createStringChecker(inputs: {
         includes?: RegExp[],
@@ -215,7 +219,7 @@ type LibraryFiles_file = {
         if (checkExistance !== false) {
             if (!isUsedPath(path)) {
                 return { content: undefined };
-            } else if (ToolKid.nodeJS.isDirectory(path)) {
+            } else if (isDirectory(path)) {
                 throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
             }
         }

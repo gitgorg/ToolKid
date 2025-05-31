@@ -1,10 +1,12 @@
 "use strict";
-(function ToolKid_init() {
-    const registeredFiles = {};
-    (function LibraryCore_init() {
+(function Library_bundleFiles() {
+const fileCollection = new Map();
+
+(function LibraryCore_init() {
     const coreModuleNames = {
+        "building": "LibraryBuilding.js",
         "parsing": "LibraryParsing.js",
-        "files": "LibraryFiles.js"
+        "files": "LibraryFiles.js",
     };
     const coreModules = {};
     const publicExports = module.exports = {};
@@ -112,9 +114,10 @@
         return section;
     };
 })();
-    registeredFiles["LibraryCore.js"] = module.exports;
-    global.ToolKid = module.exports.createInstance();
-    (function LibraryFiles_init() {
+fileCollection.set("LibraryCore.js", module.exports);
+global.ToolKid = module.exports.createInstance();
+
+(function LibraryFiles_init() {
     const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
     const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
     const publicExports = module.exports = {};
@@ -234,7 +237,7 @@
             if (!isUsedPath(path)) {
                 return { content: undefined };
             }
-            else if (ToolKid.nodeJS.isDirectory(path)) {
+            else if (isDirectory(path)) {
                 throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
             }
         }
@@ -272,10 +275,12 @@
     };
     Object.freeze(publicExports);
 })();
-    registeredFiles["LibraryCore.js"].registerCoreModule({
-        name: "files", module: module.exports
-    });
-    // regExp flags:
+fileCollection.set("LibraryFiles.js", module.exports);
+fileCollection.get("LibraryCore.js").registerCoreModule({
+    name: "files", module: module.exports
+});
+
+// regExp flags:
 // g = to store .lastIndex inside the regExp
 // s = to make . match really EVERY character...
 // v = to support all the new unicode stuff
@@ -309,10 +314,8 @@
         }
         return new RegExp(pattern, flags);
     };
-    publicExports.createTextParser = function LibraryParsing_createTextParser(...patterns) {
-        return parseText.bind(null, ...setupPatternAndHandler(patterns));
-    };
-    publicExports.createTextParserLayered = function LibraryParsing_createTextParserLayered(inputs) {
+    const doNothing = function LibraryParsing_doNothing() { };
+    publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = {
             MAIN: {
                 name: "MAIN",
@@ -321,12 +324,12 @@
                 contains: []
             }
         };
-        Object.entries(inputs.layers).forEach(createTextParserLayer.bind(null, layers));
-        Object.values(layers).forEach(connectTextParserLayer.bind(null, layers));
-        Object.values(layers).forEach(cleanUpTextParserLayer);
-        return parseTextLayers.bind(null, layers.MAIN, inputs.parser);
+        Object.entries(inputs.layerDefinition).forEach(a_createTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(b_connectTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(c_cleanUpTextParserLayer);
+        return d_parseTextLayered.bind(null, layers.MAIN, inputs.parseOpenings || doNothing, inputs.parseClosings || doNothing);
     };
-    const createTextParserLayer = function LibraryParsing_createTextParserLayer(layers, [key, layerData]) {
+    const a_createTextParserLayer = function LibraryParsing_createTextParserLayer(layers, [key, layerData]) {
         const layer = { name: key, openings: [], closings: [], contains: layerData.contains };
         layers[key] = layer;
         layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(pattern) {
@@ -343,7 +346,7 @@
             layers.MAIN.contains.push(key);
         }
     };
-    const connectTextParserLayer = function LibraryParsing_connectTextParserLayer(layers, layer) {
+    const b_connectTextParserLayer = function LibraryParsing_connectTextParserLayer(layers, layer) {
         layer.signals = layer.closings.slice(0);
         const directions = layer.directions = Array(layer.signals.length);
         if (layer.contains instanceof Array) {
@@ -359,16 +362,92 @@
                 }
             });
         }
+        // regExp flags explained on top /\
         layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
     };
-    const cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(layer) {
+    const c_cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(layer) {
         delete layer.openings;
         delete layer.closings;
         delete layer.signals;
         delete layer.contains;
     };
-    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(...patterns) {
-        return replaceText.bind(null, ...setupPatternAndHandler(patterns));
+    const d_parseTextLayered = function LibraryParsing_parseTextLayered(layer, parseOpenings, parseClosings, text) {
+        let layerDepth = 0;
+        let RXResult = layer.pattern.exec(text);
+        const layerStack = new Array(20);
+        layerStack[0] = layer;
+        const resultStack = new Array(20);
+        resultStack[0] = RXResult;
+        let lastIndex = 0;
+        let resultString = "";
+        while (RXResult !== null) {
+            lastIndex = layer.pattern.lastIndex;
+            resultString = RXResult[0];
+            layer = layer.directions[RXResult.indexOf(resultString, 1) - 1];
+            if (layer === undefined) {
+                if (resultString !== "") {
+                    parseClosings(RXResult, layerStack[layerDepth].name, layerDepth, resultStack[layerDepth]);
+                }
+                layerDepth -= 1;
+                layer = layerStack[layerDepth];
+            }
+            else {
+                layerDepth += 1;
+                layerStack[layerDepth] = layer;
+                resultStack[layerDepth] = RXResult;
+                if (resultString !== "") {
+                    parseOpenings(RXResult, layer.name, layerDepth);
+                }
+            }
+            layer.pattern.lastIndex = lastIndex;
+            RXResult = layer.pattern.exec(text);
+        }
+    };
+    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
+        const state = { textInput: "", result: "", position: 0 };
+        state.parseTextLayered = publicExports.createTextParser({
+            layerDefinition: inputs.layerDefinition,
+            parseOpenings: (inputs.parseOpenings === undefined)
+                ? undefined
+                : replaceOpening.bind(null, state, inputs.parseOpenings),
+            parseClosings: (inputs.parseClosings === undefined)
+                ? undefined
+                : replaceClosing.bind(null, state, inputs.parseClosings)
+        });
+        return replaceTextLayered.bind(null, state);
+    };
+    const replaceOpening = function LibraryParsing_replaceOpening(state, parser, RXResult, layerName, layerDepth) {
+        const returned = parser(RXResult, layerName, layerDepth);
+        if (typeof returned !== "string") {
+            return;
+        }
+        state.result += state.textInput.slice(state.position, RXResult.index) + returned;
+        state.position = RXResult.index + RXResult[0].length;
+    };
+    const replaceClosing = function LibraryParsing_replaceClosing(state, parser, RXResult, layerName, layerDepth, RXOpening) {
+        const returned = parser(RXResult, layerName, layerDepth, RXOpening);
+        if (typeof returned !== "string") {
+            return;
+        }
+        state.result += state.textInput.slice(state.position, RXOpening.index) + returned;
+        state.position = RXResult.index + RXResult[0].length;
+    };
+    const replaceTextLayered = function LibraryParsing_replaceTextLayered(state, textInput) {
+        state.position = 0;
+        state.textInput = textInput;
+        state.result = "";
+        state.parseTextLayered(textInput);
+        return state.result + textInput.slice(state.position);
+    };
+    // regExp flags explained on top /\
+    const escapeCharsRX = new RegExp("\\" + [
+        ".", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
+    ].join("|\\"), "g");
+    const escapeRX = function LibraryParsing_escapeRX(text) {
+        return text.replaceAll(escapeCharsRX, escapeRXReplacer);
+    };
+    const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match) {
+        return "\\" + match;
     };
     publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition() {
         return {
@@ -399,113 +478,19 @@
             return value.source;
         }
         else if (typeof value === "string") {
-            return escapeRegExp(value);
+            return escapeRX(value);
         }
         else {
             return value;
         }
     };
-    const parseText = function LibraryParsing_parseText(pattern, handler, text) {
-        let RXResult = pattern.exec(text);
-        while (RXResult !== null) {
-            handler(RXResult);
-            if (RXResult[0].length === 0) {
-                throw pattern;
-            }
-            RXResult = pattern.exec(text);
-        }
-    };
-    const parseTextLayers = function LibraryParsing_parseTextLayers(layer, parser, text) {
-        let layerDepth = 0;
-        let RXResult = layer.pattern.exec(text);
-        const layerStack = new Array(20);
-        layerStack[0] = layer;
-        const resultStack = new Array(20);
-        resultStack[0] = RXResult;
-        let lastIndex = 0;
-        let resultString = "";
-        while (RXResult !== null) {
-            lastIndex = layer.pattern.lastIndex;
-            resultString = RXResult[0];
-            layer = layer.directions[RXResult.indexOf(resultString, 1) - 1];
-            if (layer === undefined) {
-                if (resultString !== "") {
-                    parser(RXResult, layerStack[layerDepth].name, resultStack[layerDepth], layerDepth);
-                }
-                layerDepth -= 1;
-                layer = layerStack[layerDepth];
-            }
-            else {
-                layerDepth += 1;
-                layerStack[layerDepth] = layer;
-                resultStack[layerDepth] = RXResult;
-                if (resultString !== "") {
-                    parser(RXResult, layer.name, undefined, layerDepth);
-                }
-            }
-            layer.pattern.lastIndex = lastIndex;
-            RXResult = layer.pattern.exec(text);
-        }
-    };
-    const replaceText = function LibraryParsing_replaceText(pattern, handler, text) {
-        const parts = [];
-        let position = 0;
-        parseText(pattern, function (RXResult) {
-            if (position !== RXResult.index) {
-                parts.push(text.slice(position, RXResult.index));
-            }
-            parts.push(handler(RXResult));
-            position = pattern.lastIndex;
-        }, text);
-        if (position !== text.length) {
-            parts.push(text.slice(position));
-        }
-        return parts.join("");
-    };
-    const escapesForRX = [
-        ".", "*", "+", "?", "{", "}", "(", ")", "\\"
-    ];
-    const RXescape = new RegExp("\\" + escapesForRX.join("|\\"), "g");
-    const escapeRegExp = replaceText.bind(null, RXescape, function (RXResult) {
-        return "\\" + RXResult[0];
-    });
-    const returnText = function LibraryParsing_returnText(value) {
-        return value;
-    };
-    const setupPatternAndHandler = function (patterns) {
-        let matchers = new Array(patterns.length);
-        let handlers = new Array(patterns.length);
-        patterns.forEach(function LibraryParsing_createTextReplacerGenerator(pattern, index) {
-            matchers[index] = getTextFromRX(pattern[0]);
-            if (typeof pattern[1] === "function") {
-                handlers[index] = pattern[1];
-            }
-            else {
-                handlers[index] = returnText.bind(null, pattern[1]);
-            }
-        });
-        return [
-            (handlers.length === 1)
-                ? new RegExp(matchers[0], "gsv")
-                : new RegExp("(" + matchers.join(")|(") + ")", "gsv"),
-            (patterns.length === 1)
-                ? handlers[0]
-                : useWantedHandler.bind(null, handlers)
-        ];
-    };
-    const useWantedHandler = function LibraryParsing_useWantedHandler(handlers, RXResult) {
-        return handlers[RXResult.indexOf(RXResult[0], 1) - 1](RXResult);
-    };
     Object.freeze(publicExports);
 })();
-    registeredFiles["LibraryCore.js"].registerCoreModule({
-        name: "parsing", module: module.exports
-    });
-    //#start imported extensions
-    //#end imported extensions
-    // (<Dictionary>global).log = ToolKid.debug.terminal.logImportant;
-    // module.exports = ToolKid;
-;
+fileCollection.set("LibraryParsing.js", module.exports);
+fileCollection.get("LibraryCore.js").registerCoreModule({
+    name: "parsing", module: module.exports
+});
+
 (function TK_NodeJSFile_init() {
     const publicExports = module.exports = {};
     const importSignals = {
@@ -534,9 +519,8 @@
         ToolKid.registerFunctions({ section: "code", functions: publicExports });
     }
 })();
-registeredFiles["TK_CodeParsing.js"] = module.exports;
+fileCollection.set("TK_CodeParsing.js", module.exports);
 
-;
 (function TK_ConnectionHTTPinit() {
     const publicExports = module.exports = {};
     publicExports.request = function TK_ConnectionHTTPRequest(inputs) {
@@ -618,9 +602,8 @@ registeredFiles["TK_CodeParsing.js"] = module.exports;
         ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();
-registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
+fileCollection.set("TK_ConnectionHTTP.js", module.exports);
 
-;
 (function TK_ConnectionHTTPFormats_init() {
     const publicExports = module.exports = {};
     publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType(path) {
@@ -661,9 +644,8 @@ registeredFiles["TK_ConnectionHTTP.js"] = module.exports;
         ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
     }
 })();
-registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
+fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 
-;
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
     publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
@@ -703,9 +685,8 @@ registeredFiles["TK_ConnectionHTTPFormats.js"] = module.exports;
         ToolKid.registerFunctions({ section: "dataTypes", subSection: "array", functions: publicExports });
     }
 })();
-registeredFiles["TK_DataTypesArray.js"] = module.exports;
+fileCollection.set("TK_DataTypesArray.js", module.exports);
 
-;
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
     publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
@@ -798,9 +779,8 @@ registeredFiles["TK_DataTypesArray.js"] = module.exports;
         ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
     }
 })();
-registeredFiles["TK_DataTypesChecks.js"] = module.exports;
+fileCollection.set("TK_DataTypesChecks.js", module.exports);
 
-;
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = {};
     publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(inputs) {
@@ -957,9 +937,8 @@ registeredFiles["TK_DataTypesChecks.js"] = module.exports;
         ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
     }
 })();
-registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
+fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 
-;
 (function TK_DataTypesList_init() {
     const publicExports = module.exports = {};
     publicExports.shortenList = function TK_DataTypesList_shortenList(inputs) {
@@ -982,9 +961,8 @@ registeredFiles["TK_DataTypesChecksEquality.js"] = module.exports;
         ToolKid.registerFunctions({ section: "dataTypes", subSection: "list", functions: publicExports });
     }
 })();
-registeredFiles["TK_DataTypesList.js"] = module.exports;
+fileCollection.set("TK_DataTypesList.js", module.exports);
 
-;
 (function TK_DataTypesNumber_init() {
     const publicExports = module.exports = {};
     publicExports.addUnderscores = function TK_DataTypesNuber_addUnderscores(value) {
@@ -1024,9 +1002,8 @@ registeredFiles["TK_DataTypesList.js"] = module.exports;
         ToolKid.registerFunctions({ section: "dataTypes", subSection: "number", functions: publicExports });
     }
 })();
-registeredFiles["TK_DataTypesNumber.js"] = module.exports;
+fileCollection.set("TK_DataTypesNumber.js", module.exports);
 
-;
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
@@ -1091,9 +1068,8 @@ registeredFiles["TK_DataTypesNumber.js"] = module.exports;
         ToolKid.registerFunctions({ section: "dataTypes", subSection: "promise", functions: publicExports });
     }
 })();
-registeredFiles["TK_DataTypesPromise.js"] = module.exports;
+fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
-;
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
     publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
@@ -1111,9 +1087,8 @@ registeredFiles["TK_DataTypesPromise.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "callstack", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugCallstack.js"] = module.exports;
+fileCollection.set("TK_DebugCallstack.js", module.exports);
 
-;
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
     const colorsServer = {
@@ -1222,9 +1197,8 @@ registeredFiles["TK_DebugCallstack.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "terminal", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
+fileCollection.set("TK_DebugTerminalLog.js", module.exports);
 
-;
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
     const resultGroups = new Map([["default", {
@@ -1372,9 +1346,8 @@ registeredFiles["TK_DebugTerminalLog.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTest.js"] = module.exports;
+fileCollection.set("TK_DebugTest.js", module.exports);
 
-;
 (function TK_DebugTestAssertFailure_init() {
     const { areEqual } = ToolKid.dataTypes.checks;
     const publicExports = module.exports = {};
@@ -1524,9 +1497,8 @@ registeredFiles["TK_DebugTest.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
+fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 
-;
 (function TK_DebugTestAssertion_init() {
     const publicExports = module.exports = {};
     publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
@@ -1559,9 +1531,8 @@ registeredFiles["TK_DebugTestAssertFailure.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
+fileCollection.set("TK_DebugTestAssertion.js", module.exports);
 
-;
 (function TK_DebugTestCondition_init() {
     const publicExports = module.exports = {};
     const registeredConditions = new Map();
@@ -1638,9 +1609,8 @@ registeredFiles["TK_DebugTestAssertion.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestCondition.js"] = module.exports;
+fileCollection.set("TK_DebugTestCondition.js", module.exports);
 
-;
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
@@ -1755,9 +1725,8 @@ registeredFiles["TK_DebugTestCondition.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestFull.js"] = module.exports;
+fileCollection.set("TK_DebugTestFull.js", module.exports);
 
-;
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
     const createValueChecker = function TD_DebugTestShouldPass_createValueChecker(mode, value) {
@@ -1823,9 +1792,8 @@ registeredFiles["TK_DebugTestFull.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
+fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 
-;
 (function TK_DebugTestSummary_init() {
     const publicExports = module.exports = {};
     const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(testResult) {
@@ -2032,9 +2000,8 @@ registeredFiles["TK_DebugTestShouldPass.js"] = module.exports;
         ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
     }
 })();
-registeredFiles["TK_DebugTestSummary.js"] = module.exports;
+fileCollection.set("TK_DebugTestSummary.js", module.exports);
 
-;
 (function TK_NodeJSFile_init() {
     const { appendFileSync: extendFile, existsSync: isUsedPath, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
@@ -2069,9 +2036,8 @@ registeredFiles["TK_DebugTestSummary.js"] = module.exports;
             } });
     }
 })();
-registeredFiles["TK_NodeJSFile.js"] = module.exports;
+fileCollection.set("TK_NodeJSFile.js", module.exports);
 
-;
 (function TK_NodeJSPath_init() {
     const { lstatSync: readPathStats } = require("fs");
     const publicExports = module.exports = {};
@@ -2083,7 +2049,8 @@ registeredFiles["TK_NodeJSFile.js"] = module.exports;
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
     }
 })();
-registeredFiles["TK_NodeJSPath.js"] = module.exports;
+fileCollection.set("TK_NodeJSPath.js", module.exports);
+
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
