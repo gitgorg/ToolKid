@@ -745,7 +745,8 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
         return typeof value === "number" && !Number.isNaN(value);
     };
     publicExports.isObject = function TK_DataTypesChecks_isObject(value) {
-        return typeof value === "object" && value !== null
+        return typeof value === "object"
+            && value !== null
             && !(value instanceof Array)
             && !(value instanceof Map);
     };
