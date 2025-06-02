@@ -8,16 +8,6 @@ interface LibraryCore_file {
 }
 
 type LibraryParsing_file = {
-    createSimpleRX(
-        pattern: string
-    ): RegExp,
-    createSimpleRX(inputs: RXInputs & {
-        isRepeatable?: true,
-    }): RegExp,
-    createSimpleRX(inputs: RXInputs & {
-        isFromStartToEnd?: true,
-    }): RegExp,
-
     createTextParser(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
@@ -72,7 +62,6 @@ type TextParserForClosings = {
         RXResultOpening: RegExpExecArray,
     ): void | string
 }
-type RXInputs = { pattern: string }
 
 
 
@@ -99,37 +88,6 @@ type RXInputs = { pattern: string }
 
 
     const publicExports = module.exports = <LibraryParsing_file>{};
-
-    const regExSimplify = /(\.|\?)|(\*\*)|(\*)/g;
-    publicExports.createSimpleRX = function LibraryParsing_createRegEx(inputs: any) {
-        if (typeof inputs === "string") {
-            inputs = { pattern: inputs };
-        }
-        let pattern = <string>inputs.pattern;
-        pattern = pattern.replaceAll(regExSimplify, function (
-            match, control, doubleStar, star, index
-        ) {
-            if (control !== undefined) {
-                return "\\" + match;
-            } else if (doubleStar !== undefined) {
-                return ".*";
-            } else if (star !== undefined) {
-                return ".*?";
-            }
-            return match;
-        });
-        if (inputs.isFromStartToEnd === true) {
-            pattern = "^" + pattern + "$";
-        }
-
-        // regExp flags explained on top /\
-        let flags = "sv";
-        if (inputs.isRepeatable === true) {
-            flags += "g";
-        }
-        return new RegExp(pattern, flags);
-    };
-
     const doNothing = function LibraryParsing_doNothing() { };
 
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {

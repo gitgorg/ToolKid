@@ -1,6 +1,6 @@
 (function TK_DataTypesChecks_test() {
     const { test, assertEquality, assertFailure } = ToolKid.debug.test;
-    const { getDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isPromise, isString, handleDataType } = ToolKid.dataTypes.checks;
+    const { getDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isObject, isPromise, isString, handleDataType } = ToolKid.dataTypes.checks;
 
 
 
@@ -268,6 +268,34 @@
             assertEquality({
                 "NaN": {
                     value: isNumber(NaN), shouldBe: false
+                }
+            });
+        }
+    });
+
+    test({
+        subject: isObject,
+        execute: function objectTests() {
+            assertEquality({
+                "empty": {
+                    value: isObject({}), shouldBe: true
+                }, "simple": {
+                    value: isObject({simple:true}), shouldBe: true
+                },
+            });
+        }
+    }, {
+        subject: isObject,
+        execute: function fail_objectTests() {
+            assertEquality({
+                "NaN": {
+                    value: isObject(null), shouldBe: false
+                },
+                "array": {
+                    value: isObject([1,2,3]), shouldBe: false
+                },
+                "map": {
+                    value: isObject(new Map([["a",1]])), shouldBe: false
                 }
             });
         }

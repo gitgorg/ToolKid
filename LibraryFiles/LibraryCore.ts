@@ -24,7 +24,7 @@ type GenericFunction = { (...parameters: any[]): any }
 
 (function LibraryCore_init() {
     const coreModuleNames = {
-        "building": "LibraryBuilding.js",
+        "building": "LibraryBuild.js",
         "parsing": "LibraryParsing.js",
         "files": "LibraryFiles.js",
     };

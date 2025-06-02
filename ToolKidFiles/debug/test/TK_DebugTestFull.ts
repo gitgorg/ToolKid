@@ -80,7 +80,7 @@ interface TK_DebugTest_file {
         return [readErrorName(errorMessage[0])].concat(...errorMessage.slice(1).map(getChangeDetail));
     };
 
-    const readErrorName = function (errorText:string) {
+    const readErrorName = function (errorText: string) {
         return errorText.slice(0, errorText.lastIndexOf("~") + 1);
     };
 
@@ -157,9 +157,13 @@ interface TK_DebugTest_file {
         if (typeof inputs.title === "string") {
             TKTest.switchResultGroup(inputs.title);
         }
+        const name = TKTest.getResultGroup().name;
+        console.log(colorText("positive",
+            "\n>> start testing " + name
+        ));
         let timeStart = Date.now();
         TKTest.setFailureHandler(
-            logFailure.bind(null, TKTest.getResultGroup().name)
+            logFailure.bind(null, name)
         );
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require

@@ -19,6 +19,7 @@ interface TK_DataTypesChecks_file {
     isInteger(value: any): boolean,
     isMap(value: any): boolean,
     isNumber(value: any): boolean,
+    isObject(value: any): boolean,
     isPromise(value: any): boolean,
     isString(value: any): boolean
 }
@@ -110,6 +111,13 @@ type DataTypeParsers = {
 
     publicExports.isNumber = function TK_DataTypesChecks_isNumber(value) {
         return typeof value === "number" && !Number.isNaN(value);
+    };
+
+    publicExports.isObject = function TK_DataTypesChecks_isObject(value) {
+        return typeof value === "object"
+            && value !== null
+            && !(value instanceof Array)
+            && !(value instanceof Map);
     };
 
     publicExports.isPromise = function TK_DataTypesChecks_isPromise(value) {

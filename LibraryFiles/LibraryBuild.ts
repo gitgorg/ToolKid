@@ -1,13 +1,14 @@
 interface LibraryCore_file {
-    getCoreModule(name: "building"): LibraryBuilding_file
+    getCoreModule(name: "building"): LibraryBuild_file
 }
 
-type LibraryBuilding_file = {
+type LibraryBuild_file = {
     bundleFiles(inputs: {
         fileList: Map<
             string, //importID
             { filePath: string } | { fileContent: string }
         >,
+
         header?: string,
         fileParser?(inputs: {
             importID: string,
@@ -19,7 +20,7 @@ type LibraryBuilding_file = {
 
 
 
-(function LibraryBuilding_init() {
+(function LibraryBuild_init() {
     const {
         existsSync: isUsedPath,
         lstatSync: readPathStats,
@@ -32,9 +33,9 @@ type LibraryBuilding_file = {
 
 
 
-    const publicExports = module.exports = <LibraryBuilding_file>{};
+    const publicExports = module.exports = <LibraryBuild_file>{};
 
-    publicExports.bundleFiles = function LibraryBuilding_bundleFiles(inputs) {
+    publicExports.bundleFiles = function LibraryBuild_bundleFiles(inputs) {
         if (!(typeof inputs.fileParser === "function")) {
             inputs.fileParser = defaultParser;
         }
@@ -51,23 +52,10 @@ type LibraryBuilding_file = {
         return result + (inputs.footer || defaultFooter);
     };
 
-    const defaultHeader = '"use strict";\n\
-(function Library_bundleFiles() {\n\
-const fileCollection = new Map();\n\n\
-';
-
-    const defaultParser = function (inputs: {
-        importID: string, fileContent: string
-    }) {
-        return removeStrictMode(inputs.fileContent) + '\n\
-fileCollection.set("' + inputs.importID + '", module.exports);\n\
-';
-    };
-
-    const bundleFilesAppend = function LibraryBuilding_bundleFilesAppend(
+    const bundleFilesAppend = function LibraryBuild_bundleFilesAppend(
         boundInputs: {
             fileList: Map<string, Dictionary>,
-            fileParser(inputs:{
+            fileParser(inputs: {
                 importID: string,
                 fileContent: string
             }): string
@@ -76,7 +64,7 @@ fileCollection.set("' + inputs.importID + '", module.exports);\n\
     ) {
         const data = boundInputs.fileList.get(importID);
         if (data === undefined) {
-            console.warn(["LibraryBuilding_bundleFiles - unknown importID:", importID]);
+            console.warn(["LibraryBuild_bundleFiles - unknown importID:", importID]);
             return "";
         }
 
@@ -89,11 +77,21 @@ fileCollection.set("' + inputs.importID + '", module.exports);\n\
 
             fileContent = readFile(filePath, "utf8");
         }
-        return boundInputs.fileParser({importID, fileContent});
+        return boundInputs.fileParser({ importID, fileContent });
     };
 
-    const defaultFooter = '\n\
-})();';
+    const defaultHeader = '"use strict";\n\
+(function Library_bundledFiles_init() {\n\
+const fileCollection = new Map();\n\n';
+
+    const defaultParser = function (inputs: {
+        importID: string, fileContent: string
+    }) {
+        return removeStrictMode(inputs.fileContent) + '\n\
+fileCollection.set("' + inputs.importID + '", module.exports);\n\n';
+    };
+
+    const defaultFooter = '\n\n})();';
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
         const firstPosition = fileContent.indexOf("use strict") - 1;

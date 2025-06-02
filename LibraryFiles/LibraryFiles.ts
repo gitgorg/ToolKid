@@ -3,6 +3,18 @@ interface LibraryCore_file {
 }
 
 type LibraryFiles_file = {
+    createSimpleRX(
+        pattern: string
+    ): RegExp,
+    createSimpleRX(inputs: {
+        pattern: string,
+        isRepeatable: true,
+    }): RegExp,
+    createSimpleRX(inputs: {
+        pattern: string,
+        isFromStartToEnd: true,
+    }): RegExp,
+
     createStringChecker(inputs: {
         includes?: RegExp[],
         excludes?: RegExp[]
@@ -98,21 +110,42 @@ type LibraryFiles_file = {
         return include.find(test) !== undefined;
     };
 
+    const regExSimplify = new RegExp("(\\*\\*)|(\\*)|\\" + [
+        ".", "+", "?", "{", "}", "[", "]", "\\"
+    ].join("|\\"), "g");
+    publicExports.createSimpleRX = function LibraryFiles_createSimpleRX(inputs: any) {
+        if (typeof inputs === "string") {
+            inputs = { pattern: inputs };
+        }
+        let pattern = <string>inputs.pattern;
+        pattern = pattern.replaceAll(regExSimplify, function LibraryFiles_createSimpleRXEscape(
+            match, doubleStar, star
+        ) {
+            if (doubleStar !== undefined) {
+                return ".*";
+            } else if (star !== undefined) {
+                return ".*?";
+            }
+            return "\\" + match;
+        });
+        if (inputs.isFromStartToEnd === true) {
+            pattern = "^" + pattern + "$";
+        }
+
+        // regExp flags explained on top /\
+        let flags = "sv";
+        if (inputs.isRepeatable === true) {
+            flags += "g";
+        }
+        return new RegExp(pattern, flags);
+    };
+
     // TODO: replacements more structured, maybe backwards compatible
     // const replacements = {
     //     "\\": "\\\\",
     //     ".": "\\.",
     //     "\*": ".+"
     // };
-    const createSimpleRegxp = function LibraryFiles_createSimpleRegxp(
-        expression: string
-    ) {
-        expression = expression.replaceAll("\\", "\\\\");
-        expression = expression.replaceAll(".", "\\.");
-        expression = expression.replaceAll("\*", ".+");
-        //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
-        return new RegExp("^" + expression + "$");
-    };
 
     publicExports.createStringChecker = function LibraryFiles_createStringChecker(inputs): any {
         const hasIncludes = isArray(inputs.includes);
@@ -152,13 +185,17 @@ type LibraryFiles_file = {
         validated: RegExp[], expression: any
     ) {
         if (typeof expression === "string") {
-            validated.push(createSimpleRegxp(normalizePath(expression)));
+            validated.push(publicExports.createSimpleRX({
+                pattern: normalizePath(expression),
+                isFromStartToEnd: true,
+            }));
         } else if (expression instanceof RegExp) {
             validated.push(expression);
         }
     };
 
     publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
+
         const checker = publicExports.createStringChecker({
             includes: collectPaths(inputs.includes),
             excludes: collectPaths(inputs.excludes),

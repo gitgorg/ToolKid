@@ -1,10 +1,10 @@
 "use strict";
-(function Library_bundleFiles() {
+(function ToolKid_bundle() {
 const fileCollection = new Map();
 
 (function LibraryCore_init() {
     const coreModuleNames = {
-        "building": "LibraryBuilding.js",
+        "building": "LibraryBuild.js",
         "parsing": "LibraryParsing.js",
         "files": "LibraryFiles.js",
     };
@@ -137,19 +137,39 @@ global.ToolKid = module.exports.createInstance();
         const test = checkString.bind(null, value);
         return include.find(test) !== undefined;
     };
+    const regExSimplify = new RegExp("(\\*\\*)|(\\*)|\\" + [
+        ".", "+", "?", "{", "}", "[", "]", "\\"
+    ].join("|\\"), "g");
+    publicExports.createSimpleRX = function LibraryFiles_createSimpleRX(inputs) {
+        if (typeof inputs === "string") {
+            inputs = { pattern: inputs };
+        }
+        let pattern = inputs.pattern;
+        pattern = pattern.replaceAll(regExSimplify, function LibraryFiles_createSimpleRXEscape(match, doubleStar, star) {
+            if (doubleStar !== undefined) {
+                return ".*";
+            }
+            else if (star !== undefined) {
+                return ".*?";
+            }
+            return "\\" + match;
+        });
+        if (inputs.isFromStartToEnd === true) {
+            pattern = "^" + pattern + "$";
+        }
+        // regExp flags explained on top /\
+        let flags = "sv";
+        if (inputs.isRepeatable === true) {
+            flags += "g";
+        }
+        return new RegExp(pattern, flags);
+    };
     // TODO: replacements more structured, maybe backwards compatible
     // const replacements = {
     //     "\\": "\\\\",
     //     ".": "\\.",
     //     "\*": ".+"
     // };
-    const createSimpleRegxp = function LibraryFiles_createSimpleRegxp(expression) {
-        expression = expression.replaceAll("\\", "\\\\");
-        expression = expression.replaceAll(".", "\\.");
-        expression = expression.replaceAll("\*", ".+");
-        //expression = expression.replace(replaceRegex, createSimpleRegxpReplacer);
-        return new RegExp("^" + expression + "$");
-    };
     publicExports.createStringChecker = function LibraryFiles_createStringChecker(inputs) {
         const hasIncludes = isArray(inputs.includes);
         const hasExcludes = isArray(inputs.excludes);
@@ -182,7 +202,10 @@ global.ToolKid = module.exports.createInstance();
     };
     const collectPathsFilter = function LibraryFiles_collectPathsFilter(validated, expression) {
         if (typeof expression === "string") {
-            validated.push(createSimpleRegxp(normalizePath(expression)));
+            validated.push(publicExports.createSimpleRX({
+                pattern: normalizePath(expression),
+                isFromStartToEnd: true,
+            }));
         }
         else if (expression instanceof RegExp) {
             validated.push(expression);
@@ -277,7 +300,7 @@ global.ToolKid = module.exports.createInstance();
 })();
 fileCollection.set("LibraryFiles.js", module.exports);
 fileCollection.get("LibraryCore.js").registerCoreModule({
-    name: "files", module: module.exports
+name: "files", module: module.exports
 });
 
 // regExp flags:
@@ -286,34 +309,6 @@ fileCollection.get("LibraryCore.js").registerCoreModule({
 // v = to support all the new unicode stuff
 (function LibraryParsing_init() {
     const publicExports = module.exports = {};
-    const regExSimplify = /(\.|\?)|(\*\*)|(\*)/g;
-    publicExports.createSimpleRX = function LibraryParsing_createRegEx(inputs) {
-        if (typeof inputs === "string") {
-            inputs = { pattern: inputs };
-        }
-        let pattern = inputs.pattern;
-        pattern = pattern.replaceAll(regExSimplify, function (match, control, doubleStar, star, index) {
-            if (control !== undefined) {
-                return "\\" + match;
-            }
-            else if (doubleStar !== undefined) {
-                return ".*";
-            }
-            else if (star !== undefined) {
-                return ".*?";
-            }
-            return match;
-        });
-        if (inputs.isFromStartToEnd === true) {
-            pattern = "^" + pattern + "$";
-        }
-        // regExp flags explained on top /\
-        let flags = "sv";
-        if (inputs.isRepeatable === true) {
-            flags += "g";
-        }
-        return new RegExp(pattern, flags);
-    };
     const doNothing = function LibraryParsing_doNothing() { };
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = {
@@ -488,7 +483,7 @@ fileCollection.get("LibraryCore.js").registerCoreModule({
 })();
 fileCollection.set("LibraryParsing.js", module.exports);
 fileCollection.get("LibraryCore.js").registerCoreModule({
-    name: "parsing", module: module.exports
+name: "parsing", module: module.exports
 });
 
 (function TK_NodeJSFile_init() {
@@ -748,6 +743,11 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
     };
     publicExports.isNumber = function TK_DataTypesChecks_isNumber(value) {
         return typeof value === "number" && !Number.isNaN(value);
+    };
+    publicExports.isObject = function TK_DataTypesChecks_isObject(value) {
+        return typeof value === "object" && value !== null
+            && !(value instanceof Array)
+            && !(value instanceof Map);
     };
     publicExports.isPromise = function TK_DataTypesChecks_isPromise(value) {
         return value instanceof Promise;
@@ -1698,8 +1698,10 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         if (typeof inputs.title === "string") {
             TKTest.switchResultGroup(inputs.title);
         }
+        const name = TKTest.getResultGroup().name;
+        console.log(colorText("positive", "\n>> start testing " + name));
         let timeStart = Date.now();
-        TKTest.setFailureHandler(logFailure.bind(null, TKTest.getResultGroup().name));
+        TKTest.setFailureHandler(logFailure.bind(null, name));
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
