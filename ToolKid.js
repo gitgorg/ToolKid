@@ -158,7 +158,7 @@ global.ToolKid = module.exports.createInstance();
             pattern = "^" + pattern + "$";
         }
         // regExp flags explained on top /\
-        let flags = "sv";
+        let flags = "s";
         if (inputs.isRepeatable === true) {
             flags += "g";
         }
@@ -358,7 +358,7 @@ name: "files", module: module.exports
             });
         }
         // regExp flags explained on top /\
-        layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
+        layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gs");
     };
     const c_cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(layer) {
         delete layer.openings;

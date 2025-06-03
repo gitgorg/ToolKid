@@ -133,7 +133,7 @@ type LibraryFiles_file = {
         }
 
         // regExp flags explained on top /\
-        let flags = "sv";
+        let flags = "s";
         if (inputs.isRepeatable === true) {
             flags += "g";
         }

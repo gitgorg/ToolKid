@@ -148,7 +148,7 @@ type TextParserForClosings = {
             });
         }
         // regExp flags explained on top /\
-        layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gsv");
+        layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gs");
     };
 
     const c_cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(
