@@ -1,11 +1,14 @@
 //combining all ToolKid parts
 type ToolKidBuild_file = {
     activateToolKid(
-        inputs?: ToolKidConfig
+        inputs?: ToolKidConfig & {
+            runTests?: true
+        }
     ): void,
     writeToolKid(
         inputs: ToolKidConfig & {
             exportPath?: string,
+            runTests?: false,
         }
     ): void,
 }
@@ -21,7 +24,6 @@ type ToolKidConfig = {
     rootLibraryFiles: string,
     include: string[],
     exclude: string[],
-    runTests?: false,
 }
 
 
@@ -38,6 +40,7 @@ type ToolKidConfig = {
             return;
         }
 
+        console.log(">> activate ToolKid");
         if (config === undefined) {
             config = readConfig();
         }
@@ -59,8 +62,9 @@ type ToolKidConfig = {
             excludes: config.exclude,
             execute: require
         });
-        if (config.runTests !== false) {
-            setTimeout(runTests.bind(null, config), 100);
+        console.log(">> ToolKid ready");
+        if (config.runTests === true) {
+            runTests(config);
         }
     };
 
@@ -125,7 +129,7 @@ module.exports = ToolKid;\n\
     const runTests = function ToolKidBuild_runTests(
         config: ToolKidConfig
     ) {
-        ToolKid.debug.test.testFull({
+        setTimeout(ToolKid.debug.test.testFull.bind(null, {
             title: "ToolKid",
             path: (typeof config.rootToolKidFiles === "string")
                 ? [config.rootToolKidFiles, config.rootLibraryFiles]
@@ -133,15 +137,14 @@ module.exports = ToolKid;\n\
             include: ["*.test.js"],
             exclude: config.exclude.slice(1),
             suspects: [ToolKid],
-        });
+        }), 100);
     };
 
     publicExports.writeToolKid = function ToolKidBuild_executeBuild(config) {
-        const library = (<LibraryCore_file>require(
+        const libraryCore = <LibraryCore_file>require(
             Path.resolve(config.rootLibraryFiles, "LibraryCore.js")
-        )).createInstance();
-        const coreModuleFiles = library.getCoreModule("files");
-
+        );
+        const coreModuleFiles = libraryCore.getCoreModule("files");
         const fileLocations = <{ [fileName: string]: string }>{};
         coreModuleFiles.loopFiles({
             path: config.rootToolKidFiles,
@@ -161,7 +164,7 @@ module.exports = ToolKid;\n\
 
         coreModuleFiles.writeFile({
             path: config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js"),
-            content: library.getCoreModule("building").bundleFiles({
+            content: libraryCore.getCoreModule("building").bundleFiles({
                 fileList: files,
                 header: bundleHeader,
                 fileParser: bundleParser,
@@ -169,7 +172,7 @@ module.exports = ToolKid;\n\
             })
         });
         if (config.runTests !== false) {
-            setTimeout(runTests.bind(null, config), 100);
+            runTests(config);
         }
     };
 
