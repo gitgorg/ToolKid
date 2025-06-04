@@ -118,7 +118,7 @@ type LibraryFiles_file = {
             inputs = { pattern: inputs };
         }
         let pattern = <string>inputs.pattern;
-        pattern = pattern.replaceAll(regExSimplify, function LibraryFiles_createSimpleRXEscape(
+        pattern = pattern.replace(regExSimplify, function LibraryFiles_createSimpleRXEscape(
             match, doubleStar, star
         ) {
             if (doubleStar !== undefined) {

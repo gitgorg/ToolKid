@@ -90,6 +90,7 @@ const fileCollection = new Map();\n\n';
     const bundleFooter = '\n\
 global.log = ToolKid.debug.terminal.logImportant;\n\
 module.exports = ToolKid;\n\
+console.log(">> ToolKid ready")\n\
 })();';
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {

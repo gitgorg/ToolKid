@@ -145,7 +145,7 @@ global.ToolKid = module.exports.createInstance();
             inputs = { pattern: inputs };
         }
         let pattern = inputs.pattern;
-        pattern = pattern.replaceAll(regExSimplify, function LibraryFiles_createSimpleRXEscape(match, doubleStar, star) {
+        pattern = pattern.replace(regExSimplify, function LibraryFiles_createSimpleRXEscape(match, doubleStar, star) {
             if (doubleStar !== undefined) {
                 return ".*";
             }
@@ -2057,4 +2057,5 @@ fileCollection.set("TK_NodeJSPath.js", module.exports);
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
+console.log(">> ToolKid ready")
 })();
