@@ -267,11 +267,11 @@ type TextParserForClosings = {
 
 
     // regExp flags explained on top /\
-    const escapeCharsRX = new RegExp("\\" + [
-        ".", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
+    const escapeCharsRX = new RegExp([
+        "\\.", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
     ].join("|\\"), "g");
     const escapeRX = function LibraryParsing_escapeRX(text: string) {
-        return text.replaceAll(escapeCharsRX, escapeRXReplacer);
+        return text.replace(escapeCharsRX, escapeRXReplacer);
     };
 
     const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match: string) {
