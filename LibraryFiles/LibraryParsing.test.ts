@@ -73,7 +73,7 @@
         execute: function parseLayered() {
             const inputList = <any[]>[];
             const register = <TextParserForOpenings & TextParserForClosings>function (
-                RXResult, layerName, layerDepth, RXOpening
+                RXResult, layerName, data, layerDepth, RXOpening
             ) {
                 inputList.push([
                     RXResult.index, layerName, RXResult[0],
@@ -105,7 +105,7 @@
                     RXResult, layerName
                 ): any {
                     if (layerName === "import") {
-                        return '"hello"'
+                        return '"hello"';
                     }
                 },
             });

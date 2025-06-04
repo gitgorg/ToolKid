@@ -366,7 +366,11 @@ name: "files", module: module.exports
         delete layer.signals;
         delete layer.contains;
     };
-    const d_parseTextLayered = function LibraryParsing_parseTextLayered(layer, parseOpenings, parseClosings, text) {
+    const d_parseTextLayered = function LibraryParsing_parseTextLayered(layer, parseOpenings, parseClosings, inputs) {
+        if (typeof inputs === "string") {
+            inputs = { text: inputs };
+        }
+        const text = inputs.text;
         let layerDepth = 0;
         let RXResult = layer.pattern.exec(text);
         const layerStack = new Array(20);
@@ -381,7 +385,7 @@ name: "files", module: module.exports
             layer = layer.directions[RXResult.indexOf(resultString, 1) - 1];
             if (layer === undefined) {
                 if (resultString !== "") {
-                    parseClosings(RXResult, layerStack[layerDepth].name, layerDepth, resultStack[layerDepth]);
+                    parseClosings(RXResult, layerStack[layerDepth].name, inputs, layerDepth, resultStack[layerDepth]);
                 }
                 layerDepth -= 1;
                 layer = layerStack[layerDepth];
@@ -391,7 +395,7 @@ name: "files", module: module.exports
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
                 if (resultString !== "") {
-                    parseOpenings(RXResult, layer.name, layerDepth);
+                    parseOpenings(RXResult, layer.name, inputs, layerDepth);
                 }
             }
             layer.pattern.lastIndex = lastIndex;
@@ -399,7 +403,7 @@ name: "files", module: module.exports
         }
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
-        const state = { textInput: "", result: "", position: 0 };
+        const state = { result: "", position: 0 };
         state.parseTextLayered = publicExports.createTextParser({
             layerDefinition: inputs.layerDefinition,
             parseOpenings: (inputs.parseOpenings === undefined)
@@ -411,25 +415,24 @@ name: "files", module: module.exports
         });
         return replaceTextLayered.bind(null, state);
     };
-    const replaceOpening = function LibraryParsing_replaceOpening(state, parser, RXResult, layerName, layerDepth) {
-        const returned = parser(RXResult, layerName, layerDepth);
+    const replaceOpening = function LibraryParsing_replaceOpening(state, parser, RXResult, inputs, layerName, layerDepth) {
+        const returned = parser(RXResult, layerName, inputs, layerDepth);
         if (typeof returned !== "string") {
             return;
         }
-        state.result += state.textInput.slice(state.position, RXResult.index) + returned;
+        state.result += inputs.text.slice(state.position, RXResult.index) + returned;
         state.position = RXResult.index + RXResult[0].length;
     };
-    const replaceClosing = function LibraryParsing_replaceClosing(state, parser, RXResult, layerName, layerDepth, RXOpening) {
-        const returned = parser(RXResult, layerName, layerDepth, RXOpening);
+    const replaceClosing = function LibraryParsing_replaceClosing(state, parser, RXResult, layerName, inputs, layerDepth, RXOpening) {
+        const returned = parser(RXResult, layerName, inputs, layerDepth, RXOpening);
         if (typeof returned !== "string") {
             return;
         }
-        state.result += state.textInput.slice(state.position, RXOpening.index) + returned;
+        state.result += inputs.text.slice(state.position, RXOpening.index) + returned;
         state.position = RXResult.index + RXResult[0].length;
     };
     const replaceTextLayered = function LibraryParsing_replaceTextLayered(state, textInput) {
         state.position = 0;
-        state.textInput = textInput;
         state.result = "";
         state.parseTextLayered(textInput);
         return state.result + textInput.slice(state.position);

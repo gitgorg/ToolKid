@@ -12,30 +12,27 @@ type LibraryParsing_file = {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
         parseClosings: TextParserForClosings
-    }): { (text: string): void },
+    }): { (inputs: TextParserInputs): void },
     createTextParser(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings: TextParserForOpenings,
         parseClosings?: TextParserForClosings
-    }): { (text: string): void },
+    }): { (inputs: TextParserInputs): void },
 
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
         parseClosings: TextParserForClosings
-    }): { (text: string): string },
+    }): { (inputs: TextParserInputs): string },
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings: TextParserForOpenings,
         parseClosings?: TextParserForClosings
-    }): { (text: string): string },
+    }): { (inputs: TextParserInputs): string },
 
     getLayerDefinition(): TextLayerDefinition,
 }
 
-type TextMatcher = string | RegExp
-type TextGenerator = string | TextGeneratorFunction
-type TextGeneratorFunction = { (RXResult: RegExpExecArray): string | number }
 type TextLayerDefinition = {
     [layerName: string]: {
         patterns: (
@@ -47,10 +44,16 @@ type TextLayerDefinition = {
         isMAINLayer?: false
     }
 }
+
+type TextParserInputs = string | { text: string, [key: string]: any }
 type TextParserForOpenings = {
     (
         RXResult: RegExpExecArray,
         layerName: string,
+        inputs: {
+            text: string,
+            [key: string]: any,
+        },
         layerDepth: number,
     ): void | string
 }
@@ -58,6 +61,10 @@ type TextParserForClosings = {
     (
         RXResultClosing: RegExpExecArray,
         layerName: string,
+        inputs: {
+            text: string,
+            [key: string]: any,
+        },
         layerDepth: number,
         RXResultOpening: RegExpExecArray,
     ): void | string
@@ -82,7 +89,6 @@ type TextParserForClosings = {
         parseTextLayered(text: string): void,
         position: number,
         result: string,
-        textInput: string,
     }
 
 
@@ -162,10 +168,14 @@ type TextParserForClosings = {
 
     const d_parseTextLayered = function LibraryParsing_parseTextLayered(
         layer: LayerDataSlim,
-        parseOpenings: GenericFunction,
-        parseClosings: GenericFunction,
-        text: string,
+        parseOpenings: TextParserForOpenings,
+        parseClosings: TextParserForClosings,
+        inputs: { text: string },
     ) {
+        if (typeof inputs === "string") {
+            inputs = { text: inputs }
+        }
+        const text = inputs.text;
         let layerDepth = 0;
         let RXResult = <RegExpExecArray>layer.pattern.exec(text);
         const layerStack = new Array(20);
@@ -182,7 +192,11 @@ type TextParserForClosings = {
             ];
             if (layer === undefined) {
                 if (resultString !== "") {
-                    parseClosings(RXResult, layerStack[layerDepth].name, layerDepth, resultStack[layerDepth]);
+                    parseClosings(
+                        RXResult, layerStack[layerDepth].name,
+                        inputs, layerDepth,
+                        resultStack[layerDepth],
+                    );
                 }
                 layerDepth -= 1;
                 layer = layerStack[layerDepth];
@@ -191,7 +205,10 @@ type TextParserForClosings = {
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
                 if (resultString !== "") {
-                    parseOpenings(RXResult, layer.name, layerDepth);
+                    parseOpenings(
+                        RXResult, layer.name,
+                        inputs, layerDepth,
+                    );
                 }
             }
             layer.pattern.lastIndex = lastIndex;
@@ -204,7 +221,7 @@ type TextParserForClosings = {
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(
         inputs
     ) {
-        const state = <StateForReplacing>{ textInput: "", result: "", position: 0 };
+        const state = <StateForReplacing>{ result: "", position: 0 };
         state.parseTextLayered = publicExports.createTextParser({
             layerDefinition: inputs.layerDefinition,
             parseOpenings: (inputs.parseOpenings === undefined)
@@ -219,17 +236,21 @@ type TextParserForClosings = {
 
     const replaceOpening = function LibraryParsing_replaceOpening(
         state: StateForReplacing,
-        parser: GenericFunction,
+        parser: TextParserForOpenings,
         RXResult: RegExpExecArray,
+        inputs: { text: string },
         layerName: string,
-        layerDepth: number,
+        layerDepth: number
     ) {
-        const returned = parser(RXResult, layerName, layerDepth);
+        const returned = parser(
+            RXResult, layerName,
+            inputs, layerDepth,
+        );
         if (typeof returned !== "string") {
             return;
         }
 
-        state.result += state.textInput.slice(
+        state.result += inputs.text.slice(
             state.position, RXResult.index
         ) + returned;
         state.position = RXResult.index + RXResult[0].length;
@@ -237,18 +258,23 @@ type TextParserForClosings = {
 
     const replaceClosing = function LibraryParsing_replaceClosing(
         state: StateForReplacing,
-        parser: GenericFunction,
+        parser: TextParserForClosings,
         RXResult: RegExpExecArray,
         layerName: string,
+        inputs: { text: string },
         layerDepth: number,
-        RXOpening: RegExpExecArray,
+        RXOpening: RegExpExecArray
     ) {
-        const returned = parser(RXResult, layerName, layerDepth, RXOpening);
+        const returned = parser(
+            RXResult, layerName,
+            inputs, layerDepth,
+            RXOpening
+        );
         if (typeof returned !== "string") {
             return;
         }
 
-        state.result += state.textInput.slice(
+        state.result += inputs.text.slice(
             state.position, RXOpening.index
         ) + returned;
         state.position = RXResult.index + RXResult[0].length;
@@ -258,7 +284,6 @@ type TextParserForClosings = {
         state: StateForReplacing, textInput: string
     ) {
         state.position = 0;
-        state.textInput = textInput;
         state.result = "";
         state.parseTextLayered(textInput);
         return state.result + textInput.slice(state.position);
