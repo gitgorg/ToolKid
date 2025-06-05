@@ -1005,6 +1005,39 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
 })();
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
 
+(function TK_DataTypesObject_init() {
+    const publicExports = module.exports = {};
+    publicExports.merge = function TK_DataTypesObject_merge(base, ...changes) {
+        const result = Object.assign({}, base);
+        const addToResult = mergeLayer.bind(null, result);
+        for (let i = 0; i < changes.length; i += 1) {
+            Object.entries(changes[i]).forEach(addToResult);
+        }
+        return result;
+    };
+    const mergeLayer = function TK_DataTypesObject_mergeLayer(result, [key, newValue]) {
+        if (newValue === undefined) {
+            delete result[key];
+            return;
+        }
+        const oldValue = result[key];
+        if (newValue !== oldValue && isObject(oldValue) && isObject(newValue)) {
+            const replacement = Object.assign({}, oldValue);
+            Object.entries(newValue).forEach(mergeLayer.bind(null, replacement));
+            newValue = replacement;
+        }
+        result[key] = newValue;
+    };
+    const isObject = function TK_DataTypesObject_isObject(value) {
+        return typeof value === "object" && !(value instanceof Array);
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.registerFunctions({ section: "dataTypes", subSection: "object", functions: publicExports });
+    }
+})();
+fileCollection.set("TK_DataTypesObject.js", module.exports);
+
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
