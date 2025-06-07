@@ -41,30 +41,25 @@ type TextLayerDefinition = {
             | RegExp
         )[],
         contains?: string[],
-        isMAINLayer?: false
+        isMAINLayer?: false,
+        layerData?: Dictionary,
     }
 }
 
-type TextParserInputs = string | { text: string, [key: string]: any }
+type TextParserInputs = string | ({ text: string } & Dictionary)
 type TextParserForOpenings = {
     (
         RXResult: RegExpExecArray,
-        layerName: string,
-        inputs: {
-            text: string,
-            [key: string]: any,
-        },
+        layerData: { name: string } & Dictionary,
+        inputs: { text: string } & Dictionary,
         layerDepth: number,
     ): void | string
 }
 type TextParserForClosings = {
     (
         RXResultClosing: RegExpExecArray,
-        layerName: string,
-        inputs: {
-            text: string,
-            [key: string]: any,
-        },
+        layerData: { name: string } & Dictionary,
+        inputs: { text: string } & Dictionary,
         layerDepth: number,
         RXResultOpening: RegExpExecArray,
     ): void | string
@@ -74,8 +69,13 @@ type TextParserForClosings = {
 
 (function LibraryParsing_init() {
     type LayerDataSlim = {
-        name: string,
-        directions: (LayerData | undefined)[],
+        data: {
+            name: string
+        } & Dictionary,
+        directions: (
+            [layer: LayerDataSlim, expectedID: number]
+            | undefined
+        )[],
         pattern: RegExp,
     }
     type LayerData = LayerDataSlim & {
@@ -99,14 +99,14 @@ type TextParserForClosings = {
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = <{ [key: string]: LayerData }>{
             MAIN: <LayerData><any>{
-                name: "MAIN",
+                data: { name: "MAIN" },
                 openings: [],
                 closings: [],
                 contains: []
             }
         };
         Object.entries(inputs.layerDefinition).forEach(a_createTextParserLayer.bind(null, layers));
-        Object.values(layers).forEach(b_connectTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(b_connectTextParserLayers.bind(null, layers));
         Object.values(layers).forEach(c_cleanUpTextParserLayer);
         return d_parseTextLayered.bind(null,
             layers.MAIN,
@@ -118,7 +118,14 @@ type TextParserForClosings = {
     const a_createTextParserLayer = function LibraryParsing_createTextParserLayer(
         layers: { [key: string]: LayerData }, [key, layerData]: [string, Dictionary]
     ) {
-        const layer = <any>{ name: key, openings: [], closings: [], contains: layerData.contains };
+        const layer = <any>{
+            openings: [],
+            closings: [],
+            contains: layerData.contains,
+            data: (typeof layerData.layerData === "object")
+                ? Object.assign({}, layerData.layerData, { name: key })
+                : { name: key }
+        };
         layers[key] = layer;
         layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(
             pattern: any
@@ -136,20 +143,24 @@ type TextParserForClosings = {
         }
     };
 
-    const b_connectTextParserLayer = function LibraryParsing_connectTextParserLayer(
+    const b_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(
         layers: { [key: string]: LayerData }, layer: LayerData
     ) {
         layer.signals = layer.closings.slice(0);
-        const directions = layer.directions = Array(layer.signals.length);
+        const count = layer.signals.length;
+        const directions = layer.directions = Array(count);
         if (layer.contains instanceof Array) {
-            layer.contains.forEach(function (key: string) {
+            layer.contains.forEach(function LibraryParsing_connectTextParserLayer(key: string) {
                 if (key === "MAIN") {
                     layer.signals.push(...layers.MAIN.signals);
                     directions.push(...layers.MAIN.directions);
                 } else {
                     const subLayer = layers[key];
                     layer.signals.push(...subLayer.openings);
-                    directions.push(...Array(subLayer.openings.length).fill(subLayer));
+                    let count = subLayer.openings.length;
+                    for (let i = 0; i < count; i += 1) {
+                        directions.push([subLayer, i]);
+                    }
                 }
             });
         }
@@ -164,6 +175,7 @@ type TextParserForClosings = {
         delete layer.closings;
         delete layer.signals;
         delete layer.contains;
+        Object.freeze(layer.data);
     };
 
     const d_parseTextLayered = function LibraryParsing_parseTextLayered(
@@ -177,42 +189,59 @@ type TextParserForClosings = {
         }
         const text = inputs.text;
         let layerDepth = 0;
-        let RXResult = <RegExpExecArray>layer.pattern.exec(text);
+        let RXResult = <RegExpExecArray & { wantedSignalID: number }>layer.pattern.exec(text);
         const layerStack = new Array(20);
         layerStack[0] = layer;
         const resultStack = new Array(20);
         resultStack[0] = RXResult;
         let lastIndex = 0;
         let resultString = "";
+        let resultID = 0;
+        let found: any;
         while (RXResult !== null) {
             lastIndex = layer.pattern.lastIndex;
             resultString = RXResult[0];
-            layer = <LayerData>layer.directions[
-                RXResult.indexOf(resultString, 1) - 1
-            ];
-            if (layer === undefined) {
-                if (resultString !== "") {
-                    parseClosings(
-                        RXResult, layerStack[layerDepth].name,
-                        inputs, layerDepth,
-                        resultStack[layerDepth],
-                    );
-                }
-                layerDepth -= 1;
-                layer = layerStack[layerDepth];
-            } else {
+            resultID = RXResult.indexOf(resultString, 1) - 1;
+            //opening
+            if (layer.directions[resultID] !== undefined) {
+                found = layer.directions[resultID]
+                layer = found[0];
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
+                RXResult.wantedSignalID = found[1];
                 if (resultString !== "") {
                     parseOpenings(
-                        RXResult, layer.name,
+                        RXResult, layer.data,
                         inputs, layerDepth,
                     );
                 }
+                layer.pattern.lastIndex = lastIndex;
+                RXResult = <any>layer.pattern.exec(text);
+                continue;
             }
+
+            //closing
+
+            //    unexpected
+            if (resultStack[layerDepth].wantedSignalID !== resultID) {
+                layer.pattern.lastIndex = lastIndex;
+                RXResult = <any>layer.pattern.exec(text);
+                continue;
+            }
+
+            //    expected
+            if (resultString !== "") {
+                parseClosings(
+                    RXResult, layerStack[layerDepth].data,
+                    inputs, layerDepth,
+                    resultStack[layerDepth],
+                );
+            }
+            layerDepth -= 1;
+            layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;
-            RXResult = <RegExpExecArray>layer.pattern.exec(text);
+            RXResult = <any>layer.pattern.exec(text);
         }
     };
 
@@ -238,12 +267,12 @@ type TextParserForClosings = {
         state: StateForReplacing,
         parser: TextParserForOpenings,
         RXResult: RegExpExecArray,
+        layerData: { name: string } & Dictionary,
         inputs: { text: string },
-        layerName: string,
         layerDepth: number
     ) {
         const returned = parser(
-            RXResult, layerName,
+            RXResult, layerData,
             inputs, layerDepth,
         );
         if (typeof returned !== "string") {
@@ -260,13 +289,13 @@ type TextParserForClosings = {
         state: StateForReplacing,
         parser: TextParserForClosings,
         RXResult: RegExpExecArray,
-        layerName: string,
+        layerData: { name: string } & Dictionary,
         inputs: { text: string },
         layerDepth: number,
         RXOpening: RegExpExecArray
     ) {
         const returned = parser(
-            RXResult, layerName,
+            RXResult, layerData,
             inputs, layerDepth,
             RXOpening
         );

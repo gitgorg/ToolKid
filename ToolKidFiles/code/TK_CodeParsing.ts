@@ -14,7 +14,7 @@ interface TK_Code_file {
 
 
 
-(function TK_NodeJSFile_init() {
+(function TK_CodeParsing_init() {
 
     const publicExports = module.exports = <TK_Code_file>{};
 

@@ -73,10 +73,10 @@
         execute: function parseLayered() {
             const inputList = <any[]>[];
             const register = <TextParserForOpenings & TextParserForClosings>function (
-                RXResult, layerName, data, layerDepth, RXOpening
+                RXResult, data, inputs, layerDepth, RXOpening
             ) {
                 inputList.push([
-                    RXResult.index, layerName, RXResult[0],
+                    RXResult.index, data.name, RXResult[0],
                     RXOpening === undefined ? false : RXOpening.index
                 ]);
             };
@@ -94,6 +94,107 @@
                 }
             });
         }
+    },{
+        subject: createTextParser,
+        execute: function deepLayers() {
+            const registered = <any[]>[];
+            const push = function (inputs:IArguments) {
+                const opening = inputs[4];
+                const closing = inputs[0];
+                registered.push([
+                    opening.index,
+                    opening[0],
+                    inputs[2].text.slice(opening.index + opening[0].length, closing.index),
+                    closing[0]
+                ]);
+            }
+            const parseClosings = <TextParserForClosings>function (
+                closing, layerData
+            ) {
+                if (layerData.name === "bracket" || layerData.name === "function") {
+                    push(arguments);
+                }
+            };
+            const parser = createTextParser({
+                layerDefinition: {
+                    bracket: {
+                        patterns: [["(",")"], ["[","]"], ["{","}"]],
+                        contains: ["MAIN"]
+                    },
+                    text: {
+                        patterns: [["'", "'"],],
+                        contains: ["escape"],
+                    },
+                    comment: {
+                        patterns: [["//", /\n|$/], ["/*", "*/"]],
+                    },
+                    escape: {
+                        isMAINLayer: false,
+                        patterns: [/\\./s],
+                    },
+                    function:{
+                        patterns: [[/\w+\(/, ")"]],
+                        contains: ["MAIN"]
+                    },
+                },
+                parseClosings,
+            });
+            parser("require(a);");
+            assertEquality({
+                "simple": {
+                    value: registered,
+                    toleranceDepth: 3,
+                    shouldBe: [[ 0, 'require(', 'a', ')' ]]
+                }
+            });
+            registered.length = 0;
+            parser("require((b));");
+            assertEquality({
+                "bracketed": {
+                    value: registered,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [ 8, '(', 'b', ')' ],
+                        [ 0, 'require(', '(b)', ')' ]
+                    ]
+                }
+            });
+            registered.length = 0;
+            parser("require(('b'));");
+            assertEquality({
+                "bracketed string": {
+                    value: registered,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [ 8, "(", "'b'", ")" ],
+                        [ 0, "require(", "('b')", ")" ]
+                    ]
+                }
+            });
+            registered.length = 0;
+            parser("a(b(c));");
+            assertEquality({
+                "call in call": {
+                    value: registered,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [ 2, "b(", "c", ")" ],
+                        [ 0, "a(", "b(c)", ")" ]
+                    ]
+                }
+            });
+            registered.length = 0;
+            parser("a(b[c)];");
+            assertEquality({
+                "broken bracket": {
+                    value: registered,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [ 3, '[', 'c)', ']' ]
+                    ]
+                }
+            });
+        }
     });
 
     test({
@@ -102,9 +203,9 @@
             const parser = createTextReplacer({
                 layerDefinition: layersJS,
                 parseClosings: function (
-                    RXResult, layerName
+                    RXResult, data
                 ): any {
-                    if (layerName === "import") {
+                    if (data.name === "import") {
                         return '"hello"';
                     }
                 },

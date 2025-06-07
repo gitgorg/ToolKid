@@ -313,19 +313,26 @@ name: "files", module: module.exports
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = {
             MAIN: {
-                name: "MAIN",
+                data: { name: "MAIN" },
                 openings: [],
                 closings: [],
                 contains: []
             }
         };
         Object.entries(inputs.layerDefinition).forEach(a_createTextParserLayer.bind(null, layers));
-        Object.values(layers).forEach(b_connectTextParserLayer.bind(null, layers));
+        Object.values(layers).forEach(b_connectTextParserLayers.bind(null, layers));
         Object.values(layers).forEach(c_cleanUpTextParserLayer);
         return d_parseTextLayered.bind(null, layers.MAIN, inputs.parseOpenings || doNothing, inputs.parseClosings || doNothing);
     };
     const a_createTextParserLayer = function LibraryParsing_createTextParserLayer(layers, [key, layerData]) {
-        const layer = { name: key, openings: [], closings: [], contains: layerData.contains };
+        const layer = {
+            openings: [],
+            closings: [],
+            contains: layerData.contains,
+            data: (typeof layerData.layerData === "object")
+                ? Object.assign({}, layerData.layerData, { name: key })
+                : { name: key }
+        };
         layers[key] = layer;
         layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(pattern) {
             if (pattern instanceof Array) {
@@ -341,11 +348,12 @@ name: "files", module: module.exports
             layers.MAIN.contains.push(key);
         }
     };
-    const b_connectTextParserLayer = function LibraryParsing_connectTextParserLayer(layers, layer) {
+    const b_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(layers, layer) {
         layer.signals = layer.closings.slice(0);
-        const directions = layer.directions = Array(layer.signals.length);
+        const count = layer.signals.length;
+        const directions = layer.directions = Array(count);
         if (layer.contains instanceof Array) {
-            layer.contains.forEach(function (key) {
+            layer.contains.forEach(function LibraryParsing_connectTextParserLayer(key) {
                 if (key === "MAIN") {
                     layer.signals.push(...layers.MAIN.signals);
                     directions.push(...layers.MAIN.directions);
@@ -353,7 +361,10 @@ name: "files", module: module.exports
                 else {
                     const subLayer = layers[key];
                     layer.signals.push(...subLayer.openings);
-                    directions.push(...Array(subLayer.openings.length).fill(subLayer));
+                    let count = subLayer.openings.length;
+                    for (let i = 0; i < count; i += 1) {
+                        directions.push([subLayer, i]);
+                    }
                 }
             });
         }
@@ -365,6 +376,7 @@ name: "files", module: module.exports
         delete layer.closings;
         delete layer.signals;
         delete layer.contains;
+        Object.freeze(layer.data);
     };
     const d_parseTextLayered = function LibraryParsing_parseTextLayered(layer, parseOpenings, parseClosings, inputs) {
         if (typeof inputs === "string") {
@@ -379,25 +391,40 @@ name: "files", module: module.exports
         resultStack[0] = RXResult;
         let lastIndex = 0;
         let resultString = "";
+        let resultID = 0;
+        let found;
         while (RXResult !== null) {
             lastIndex = layer.pattern.lastIndex;
             resultString = RXResult[0];
-            layer = layer.directions[RXResult.indexOf(resultString, 1) - 1];
-            if (layer === undefined) {
-                if (resultString !== "") {
-                    parseClosings(RXResult, layerStack[layerDepth].name, inputs, layerDepth, resultStack[layerDepth]);
-                }
-                layerDepth -= 1;
-                layer = layerStack[layerDepth];
-            }
-            else {
+            resultID = RXResult.indexOf(resultString, 1) - 1;
+            //opening
+            if (layer.directions[resultID] !== undefined) {
+                found = layer.directions[resultID];
+                layer = found[0];
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
+                RXResult.wantedSignalID = found[1];
                 if (resultString !== "") {
-                    parseOpenings(RXResult, layer.name, inputs, layerDepth);
+                    parseOpenings(RXResult, layer.data, inputs, layerDepth);
                 }
+                layer.pattern.lastIndex = lastIndex;
+                RXResult = layer.pattern.exec(text);
+                continue;
             }
+            //closing
+            //    unexpected
+            if (resultStack[layerDepth].wantedSignalID !== resultID) {
+                layer.pattern.lastIndex = lastIndex;
+                RXResult = layer.pattern.exec(text);
+                continue;
+            }
+            //    expected
+            if (resultString !== "") {
+                parseClosings(RXResult, layerStack[layerDepth].data, inputs, layerDepth, resultStack[layerDepth]);
+            }
+            layerDepth -= 1;
+            layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;
             RXResult = layer.pattern.exec(text);
         }
@@ -415,16 +442,16 @@ name: "files", module: module.exports
         });
         return replaceTextLayered.bind(null, state);
     };
-    const replaceOpening = function LibraryParsing_replaceOpening(state, parser, RXResult, inputs, layerName, layerDepth) {
-        const returned = parser(RXResult, layerName, inputs, layerDepth);
+    const replaceOpening = function LibraryParsing_replaceOpening(state, parser, RXResult, layerData, inputs, layerDepth) {
+        const returned = parser(RXResult, layerData, inputs, layerDepth);
         if (typeof returned !== "string") {
             return;
         }
         state.result += inputs.text.slice(state.position, RXResult.index) + returned;
         state.position = RXResult.index + RXResult[0].length;
     };
-    const replaceClosing = function LibraryParsing_replaceClosing(state, parser, RXResult, layerName, inputs, layerDepth, RXOpening) {
-        const returned = parser(RXResult, layerName, inputs, layerDepth, RXOpening);
+    const replaceClosing = function LibraryParsing_replaceClosing(state, parser, RXResult, layerData, inputs, layerDepth, RXOpening) {
+        const returned = parser(RXResult, layerData, inputs, layerDepth, RXOpening);
         if (typeof returned !== "string") {
             return;
         }
@@ -489,7 +516,7 @@ fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "parsing", module: module.exports
 });
 
-(function TK_NodeJSFile_init() {
+(function TK_CodeParsing_init() {
     const publicExports = module.exports = {};
     const importSignals = {
         requireStart: "require(\"",
