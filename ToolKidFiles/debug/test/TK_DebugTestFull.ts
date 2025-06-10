@@ -161,10 +161,10 @@ interface TK_DebugTest_file {
         console.log(colorText("positive",
             "\n>> start testing " + name
         ));
-        let timeStart = Date.now();
         TKTest.setFailureHandler(
             logFailure.bind(null, name)
         );
+        let timeStart = Date.now();
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));

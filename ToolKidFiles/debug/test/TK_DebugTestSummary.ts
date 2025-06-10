@@ -146,19 +146,28 @@ type TestSummary = {
         summary.pending.forEach(function TK_DebugTestSummary_watchPromise(
             promise
         ) {
-            promise.then(summaryCallback.bind(null, boundData));
+            promise.then(summaryCallbackCheck.bind(null, boundData));
         });
         return summary;
     };
 
-    const summaryCallback = function TK_DebugTestSummary_summaryCallback(
+    const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(
         boundData: Dictionary
     ) {
         boundData.pendingCount -= 1;
+        if (boundData.pendingCount === 0 && boundData.pendingCallback === undefined) {
+            boundData.pendingCallback = true;
+            setTimeout(summaryCallback.bind(null, boundData), 0);
+        }
+    };
+    const summaryCallback = function TK_DebugTestSummary_summaryCallback(
+        boundData: Dictionary
+    ) {
+        delete boundData.pendingCallback;
         if (boundData.pendingCount === 0) {
             publicExports.getSummary(boundData.inputs);
         }
-    }
+    };
 
     const createSummary = function (inputs: TKTestResultGroup & {
         missingSuspects: Set<any>

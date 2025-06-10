@@ -1792,8 +1792,8 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         }
         const name = TKTest.getResultGroup().name;
         console.log(colorText("positive", "\n>> start testing " + name));
-        let timeStart = Date.now();
         TKTest.setFailureHandler(logFailure.bind(null, name));
+        let timeStart = Date.now();
         ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
             execute: require
         }));
@@ -1991,12 +1991,19 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
             pendingCount: summary.pending.size
         };
         summary.pending.forEach(function TK_DebugTestSummary_watchPromise(promise) {
-            promise.then(summaryCallback.bind(null, boundData));
+            promise.then(summaryCallbackCheck.bind(null, boundData));
         });
         return summary;
     };
-    const summaryCallback = function TK_DebugTestSummary_summaryCallback(boundData) {
+    const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(boundData) {
         boundData.pendingCount -= 1;
+        if (boundData.pendingCount === 0 && boundData.pendingCallback === undefined) {
+            boundData.pendingCallback = true;
+            setTimeout(summaryCallback.bind(null, boundData), 0);
+        }
+    };
+    const summaryCallback = function TK_DebugTestSummary_summaryCallback(boundData) {
+        delete boundData.pendingCallback;
         if (boundData.pendingCount === 0) {
             publicExports.getSummary(boundData.inputs);
         }
