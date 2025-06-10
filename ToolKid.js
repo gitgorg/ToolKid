@@ -384,22 +384,22 @@ name: "files", module: module.exports
         }
         const text = inputs.text;
         let layerDepth = 0;
+        let lastIndex = layer.pattern.lastIndex = 0;
         let RXResult = layer.pattern.exec(text);
         const layerStack = new Array(20);
         layerStack[0] = layer;
         const resultStack = new Array(20);
         resultStack[0] = RXResult;
-        let lastIndex = 0;
         let resultString = "";
-        let resultID = 0;
+        let signalID = 0;
         let found;
         while (RXResult !== null) {
             lastIndex = layer.pattern.lastIndex;
             resultString = RXResult[0];
-            resultID = RXResult.indexOf(resultString, 1) - 1;
+            signalID = RXResult.indexOf(resultString, 1) - 1;
             //opening
-            if (layer.directions[resultID] !== undefined) {
-                found = layer.directions[resultID];
+            if (layer.directions[signalID] !== undefined) {
+                found = layer.directions[signalID];
                 layer = found[0];
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
@@ -408,14 +408,24 @@ name: "files", module: module.exports
                 if (resultString !== "") {
                     parseOpenings(RXResult, layer.data, inputs, layerDepth);
                 }
-                layer.pattern.lastIndex = lastIndex;
+                if (resultString === "") {
+                    layer.pattern.lastIndex += 1;
+                }
+                else {
+                    layer.pattern.lastIndex = lastIndex;
+                }
                 RXResult = layer.pattern.exec(text);
                 continue;
             }
             //closing
             //    unexpected
-            if (resultStack[layerDepth].wantedSignalID !== resultID) {
-                layer.pattern.lastIndex = lastIndex;
+            if (resultStack[layerDepth].wantedSignalID !== signalID) {
+                if (resultString === "") {
+                    layer.pattern.lastIndex += 1;
+                }
+                else {
+                    layer.pattern.lastIndex = lastIndex;
+                }
                 RXResult = layer.pattern.exec(text);
                 continue;
             }
@@ -427,6 +437,18 @@ name: "files", module: module.exports
             layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;
             RXResult = layer.pattern.exec(text);
+        }
+        if (layerDepth !== 0) {
+            const result = new Error("not all layers closed");
+            result.layerStack = layerStack.slice(1, layerDepth + 1);
+            result.resultStack = resultStack.slice(1, layerDepth + 1);
+            log(777, "not all layers closed inside:", inputs.text.slice(0, 50));
+            for (let i = 1; i <= layerDepth; i += 1) {
+                layer = layerStack[i];
+                RXResult = resultStack[i];
+                log("depth", i, layer.data.name, [RXResult[0]], RXResult.index, [inputs.text.slice(RXResult.index, RXResult.index + 23)]);
+            }
+            return result;
         }
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
@@ -508,6 +530,12 @@ name: "files", module: module.exports
         else {
             return value;
         }
+    };
+    publicExports.readLayerContent = function LibraryParsing_readLayerContent(inputs) {
+        if (typeof inputs[4] === undefined) {
+            throw ["LibraryParsing_readLayerContent - inputs missing 5. argument (opening)"];
+        }
+        return inputs[2].text.slice(inputs[4].index + inputs[4][0].length, inputs[0].index);
     };
     Object.freeze(publicExports);
 })();

@@ -12,12 +12,12 @@ type LibraryParsing_file = {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
         parseClosings: TextParserForClosings
-    }): { (inputs: TextParserInputs): void },
+    }): { (inputs: TextParserInputs): void | Error },
     createTextParser(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings: TextParserForOpenings,
         parseClosings?: TextParserForClosings
-    }): { (inputs: TextParserInputs): void },
+    }): { (inputs: TextParserInputs): void | Error },
 
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
@@ -31,6 +31,8 @@ type LibraryParsing_file = {
     }): { (inputs: TextParserInputs): string },
 
     getLayerDefinition(): TextLayerDefinition,
+
+    readLayerContent(inputs: IArguments): string
 }
 
 type TextLayerDefinition = {
@@ -183,28 +185,28 @@ type TextParserForClosings = {
         parseOpenings: TextParserForOpenings,
         parseClosings: TextParserForClosings,
         inputs: { text: string },
-    ) {
+    ): void | Error {
         if (typeof inputs === "string") {
             inputs = { text: inputs }
         }
         const text = inputs.text;
         let layerDepth = 0;
+        let lastIndex = layer.pattern.lastIndex = 0;
         let RXResult = <RegExpExecArray & { wantedSignalID: number }>layer.pattern.exec(text);
         const layerStack = new Array(20);
         layerStack[0] = layer;
         const resultStack = new Array(20);
         resultStack[0] = RXResult;
-        let lastIndex = 0;
         let resultString = "";
-        let resultID = 0;
+        let signalID = 0;
         let found: any;
         while (RXResult !== null) {
             lastIndex = layer.pattern.lastIndex;
             resultString = RXResult[0];
-            resultID = RXResult.indexOf(resultString, 1) - 1;
+            signalID = RXResult.indexOf(resultString, 1) - 1;
             //opening
-            if (layer.directions[resultID] !== undefined) {
-                found = layer.directions[resultID]
+            if (layer.directions[signalID] !== undefined) {
+                found = layer.directions[signalID]
                 layer = found[0];
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
@@ -216,7 +218,11 @@ type TextParserForClosings = {
                         inputs, layerDepth,
                     );
                 }
-                layer.pattern.lastIndex = lastIndex;
+                if (resultString === "") {
+                    layer.pattern.lastIndex += 1;
+                } else {
+                    layer.pattern.lastIndex = lastIndex;
+                }
                 RXResult = <any>layer.pattern.exec(text);
                 continue;
             }
@@ -224,8 +230,12 @@ type TextParserForClosings = {
             //closing
 
             //    unexpected
-            if (resultStack[layerDepth].wantedSignalID !== resultID) {
-                layer.pattern.lastIndex = lastIndex;
+            if (resultStack[layerDepth].wantedSignalID !== signalID) {
+                if (resultString === "") {
+                    layer.pattern.lastIndex += 1;
+                } else {
+                    layer.pattern.lastIndex = lastIndex;
+                }
                 RXResult = <any>layer.pattern.exec(text);
                 continue;
             }
@@ -242,6 +252,19 @@ type TextParserForClosings = {
             layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;
             RXResult = <any>layer.pattern.exec(text);
+        }
+        if (layerDepth !== 0) {
+            const result = new Error("not all layers closed");
+            (<Dictionary>result).layerStack = layerStack.slice(1, layerDepth + 1);
+            (<Dictionary>result).resultStack = resultStack.slice(1, layerDepth + 1);
+            log(777, "not all layers closed inside:", inputs.text.slice(0, 50))
+            for (let i = 1; i <= layerDepth; i += 1) {
+                layer = layerStack[i];
+                RXResult = resultStack[i];
+                log("depth", i, layer.data.name, [RXResult[0]], RXResult.index, [inputs.text.slice(RXResult.index, RXResult.index + 23)]
+                )
+            }
+            return result;
         }
     };
 
@@ -365,6 +388,16 @@ type TextParserForClosings = {
         } else {
             return value;
         }
+    };
+
+    publicExports.readLayerContent = function LibraryParsing_readLayerContent(inputs): string {
+        if (typeof inputs[4] === undefined) {
+            throw ["LibraryParsing_readLayerContent - inputs missing 5. argument (opening)"];
+        }
+        return inputs[2].text.slice(
+            inputs[4].index + inputs[4][0].length,
+            inputs[0].index
+        );
     };
 
 
