@@ -29,8 +29,7 @@ type ToolKidConfig = {
 
 
 (function ToolKidBuild_init() {
-    const FS = require("fs");
-    const Path = require("path");
+    const { basename, resolve } = require("path");
 
 
 
@@ -45,7 +44,7 @@ type ToolKidConfig = {
             config = readConfig();
         }
         const library = (<LibraryCore_file>require(
-            Path.resolve(config.rootLibraryFiles, "LibraryCore.js")
+            resolve(config.rootLibraryFiles, "LibraryCore.js")
         )).createInstance();
         const coreModuleFiles = library.getCoreModule("files");
         library.registerFunctions({
@@ -106,11 +105,14 @@ console.log(">> ToolKid ready")\n\
         pathsByFileName: Dictionary,
         path: string
     ) {
-        const alias = Path.basename(path);
-        if (pathsByFileName[alias] !== undefined) {
-            console.warn("duplicate file alias \"" + alias + "\" - second path is:", path, " and registered was:", pathsByFileName[alias]);
+        const fileName = basename(path);
+        if (pathsByFileName[fileName] !== undefined) {
+            console.warn(
+                "ToolKidBuild_registerExtensionFile - duplicate file name:",
+                [pathsByFileName[fileName], path]
+            );
         }
-        pathsByFileName[alias] = path;
+        pathsByFileName[fileName] = path;
     };
 
     const readConfig = function ToolKidBuild_readConfig() {
@@ -120,6 +122,7 @@ console.log(">> ToolKid ready")\n\
             include: ["*.js"],
             exclude: ["*.test.js"]
         };
+        const FS = require("fs");
         if (FS.existsSync("./ToolKidConfig.json")) {
             let content = FS.readFileSync("./ToolKidConfig.json", "utf8");
             result = JSON.parse(content);
@@ -143,7 +146,7 @@ console.log(">> ToolKid ready")\n\
 
     publicExports.writeToolKid = function ToolKidBuild_executeBuild(config) {
         const libraryCore = <LibraryCore_file>require(
-            Path.resolve(config.rootLibraryFiles, "LibraryCore.js")
+            resolve(config.rootLibraryFiles, "LibraryCore.js")
         );
         const coreModuleFiles = libraryCore.getCoreModule("files");
         const fileLocations = <{ [fileName: string]: string }>{};
@@ -181,7 +184,7 @@ console.log(">> ToolKid ready")\n\
 
     Object.freeze(module.exports);
 
-    const executionFile = Path.basename(process.argv[1]);
+    const executionFile = basename(process.argv[1]);
     const isExecutedViaTerminal = executionFile.slice(0, 12) === "ToolKidBuild";
     if (isExecutedViaTerminal) {
         module.exports();

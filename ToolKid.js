@@ -439,16 +439,17 @@ name: "files", module: module.exports
             RXResult = layer.pattern.exec(text);
         }
         if (layerDepth !== 0) {
-            const result = new Error("not all layers closed");
-            result.layerStack = layerStack.slice(1, layerDepth + 1);
-            result.resultStack = resultStack.slice(1, layerDepth + 1);
-            log(777, "not all layers closed inside:", inputs.text.slice(0, 50));
-            for (let i = 1; i <= layerDepth; i += 1) {
-                layer = layerStack[i];
-                RXResult = resultStack[i];
-                log("depth", i, layer.data.name, [RXResult[0]], RXResult.index, [inputs.text.slice(RXResult.index, RXResult.index + 23)]);
-            }
-            return result;
+            const error = new Error("not all layers closed");
+            error.layerStack = layerStack.slice(1, layerDepth + 1);
+            error.resultStack = resultStack.slice(1, layerDepth + 1);
+            // log(777, "not all layers closed inside:", inputs.text.slice(0, 50))
+            // for (let i = 1; i <= layerDepth; i += 1) {
+            //     layer = layerStack[i];
+            //     RXResult = resultStack[i];
+            //     log("depth", i, layer.data.name, [RXResult[0]], RXResult.index, [inputs.text.slice(RXResult.index, RXResult.index + 23)]
+            //     )
+            // }
+            return error;
         }
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
