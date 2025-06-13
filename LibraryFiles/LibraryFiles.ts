@@ -110,7 +110,7 @@ type LibraryFiles_file = {
         return include.find(test) !== undefined;
     };
 
-    const regExSimplify = new RegExp("(\\*\\*)|(\\*)|\\" + [
+    const escapeSimpleRX = new RegExp("(\\*\\*)|(\\*)|\\" + [
         ".", "+", "?", "{", "}", "[", "]", "\\"
     ].join("|\\"), "g");
     publicExports.createSimpleRX = function LibraryFiles_createSimpleRX(inputs: any) {
@@ -118,7 +118,7 @@ type LibraryFiles_file = {
             inputs = { pattern: inputs };
         }
         let pattern = <string>inputs.pattern;
-        pattern = pattern.replace(regExSimplify, function LibraryFiles_createSimpleRXEscape(
+        pattern = pattern.replace(escapeSimpleRX, function LibraryFiles_createSimpleRXEscape(
             match, doubleStar, star
         ) {
             if (doubleStar !== undefined) {

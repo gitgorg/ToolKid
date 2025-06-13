@@ -137,7 +137,7 @@ global.ToolKid = module.exports.createInstance();
         const test = checkString.bind(null, value);
         return include.find(test) !== undefined;
     };
-    const regExSimplify = new RegExp("(\\*\\*)|(\\*)|\\" + [
+    const escapeSimpleRX = new RegExp("(\\*\\*)|(\\*)|\\" + [
         ".", "+", "?", "{", "}", "[", "]", "\\"
     ].join("|\\"), "g");
     publicExports.createSimpleRX = function LibraryFiles_createSimpleRX(inputs) {
@@ -145,7 +145,7 @@ global.ToolKid = module.exports.createInstance();
             inputs = { pattern: inputs };
         }
         let pattern = inputs.pattern;
-        pattern = pattern.replace(regExSimplify, function LibraryFiles_createSimpleRXEscape(match, doubleStar, star) {
+        pattern = pattern.replace(escapeSimpleRX, function LibraryFiles_createSimpleRXEscape(match, doubleStar, star) {
             if (doubleStar !== undefined) {
                 return ".*";
             }

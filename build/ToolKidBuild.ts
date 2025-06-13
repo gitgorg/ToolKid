@@ -182,11 +182,11 @@ console.log(">> ToolKid ready")\n\
 
 
 
-    Object.freeze(module.exports);
+    Object.freeze(publicExports);
 
     const executionFile = basename(process.argv[1]);
     const isExecutedViaTerminal = executionFile.slice(0, 12) === "ToolKidBuild";
     if (isExecutedViaTerminal) {
-        module.exports();
+        publicExports.activateToolKid();
     }
 })();
