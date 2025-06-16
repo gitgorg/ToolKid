@@ -32,7 +32,9 @@ type LibraryParsing_file = {
 
     getLayerDefinition(): TextLayerDefinition,
 
-    readLayerContent(inputs: IArguments): string
+    readLayerContent(
+        inputs: IArguments | Parameters<TextParserForClosings>
+    ): string
 }
 
 type TextLayerDefinition = {

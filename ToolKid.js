@@ -254,10 +254,7 @@ global.ToolKid = module.exports.createInstance();
         }
     };
     publicExports.readFile = function LibraryFiles_readFile(inputs) {
-        if (typeof inputs === "string") {
-            inputs = { path: inputs };
-        }
-        const path = resolvePath(inputs.path);
+        let path = resolvePath(inputs.path);
         if (inputs.checkExistance !== false) {
             if (!isUsedPath(path)) {
                 return { content: undefined };

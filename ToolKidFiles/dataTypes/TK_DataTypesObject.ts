@@ -2,7 +2,15 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { object: TK_DataTypesObject_file }
 interface TK_DataTypesObject_file {
-    merge<type extends Object>(base:type, ...changes: type[]): type,
+    merge<
+        Base extends Dictionary,
+        Change extends Dictionary,
+        FurtherChange extends Dictionary
+    >(
+        base:Base,
+        change:Change,
+        ...changes: FurtherChange[]
+    ): Base & Change & FurtherChange,
 }
 
 
@@ -11,7 +19,7 @@ interface TK_DataTypesObject_file {
     const publicExports = module.exports = <TK_DataTypesObject_file>{};
 
     publicExports.merge = function TK_DataTypesObject_merge(
-        base, ...changes
+        base:any, ...changes
     ) {
         const result = Object.assign({}, base);
         const addToResult = mergeLayer.bind(null, result);
