@@ -254,9 +254,11 @@ global.ToolKid = module.exports.createInstance();
         }
     };
     publicExports.readFile = function LibraryFiles_readFile(inputs) {
-        let { path, checkExistance, encoding } = inputs;
-        path = resolvePath(path);
-        if (checkExistance !== false) {
+        if (typeof inputs === "string") {
+            inputs = { path: inputs };
+        }
+        const path = resolvePath(inputs.path);
+        if (inputs.checkExistance !== false) {
             if (!isUsedPath(path)) {
                 return { content: undefined };
             }
@@ -264,6 +266,7 @@ global.ToolKid = module.exports.createInstance();
                 throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
             }
         }
+        let { encoding } = inputs;
         if (typeof encoding !== "string") {
             const type = ToolKid.connection.HTTP.readMediaType(path);
             if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {

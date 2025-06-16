@@ -251,9 +251,8 @@ type LibraryFiles_file = {
     };
 
     publicExports.readFile = function LibraryFiles_readFile(inputs) {
-        let { path, checkExistance, encoding } = inputs;
-        path = resolvePath(path);
-        if (checkExistance !== false) {
+        let path = resolvePath(inputs.path);
+        if (inputs.checkExistance !== false) {
             if (!isUsedPath(path)) {
                 return { content: undefined };
             } else if (isDirectory(path)) {
@@ -261,6 +260,7 @@ type LibraryFiles_file = {
             }
         }
 
+        let { encoding } = inputs;
         if (typeof encoding !== "string") {
             const type = ToolKid.connection.HTTP.readMediaType(<string>path);
             if (type === undefined || type === "application/json" || type.slice(0, 5) === "text/") {
