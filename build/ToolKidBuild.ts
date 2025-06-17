@@ -46,16 +46,9 @@ type ToolKidConfig = {
         const library = (<LibraryCore_file>require(
             resolve(config.rootLibraryFiles, "LibraryCore.js")
         )).createInstance();
-        const coreModuleFiles = library.getCoreModule("files");
-        library.registerFunctions({
-            section: "core", functions: {
-                ...library.getCoreModule("parsing"),
-                ...coreModuleFiles
-            }
-        });
 
         (<Dictionary>global).ToolKid = library;
-        coreModuleFiles.loopFiles({
+        library.getCoreModule("files").loopFiles({
             path: config.rootToolKidFiles,
             includes: config.include,
             excludes: config.exclude,
