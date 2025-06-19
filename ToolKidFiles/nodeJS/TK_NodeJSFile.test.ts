@@ -10,7 +10,7 @@
             deleteFile("./TKTest.extendFile.txt");
             assertEquality({
                 "file not there yet": {
-                    value: readFile({ path: "./TKTest.extendFile.txt" }),
+                    value: readFile("./TKTest.extendFile.txt"),
                     shouldBe: { content: undefined }
                 }
             });
@@ -33,7 +33,7 @@
             });
             assertEquality({
                 "file changed": {
-                    value: readFile({ path: "./TKTest.extendFile.txt" }),
+                    value: readFile("./TKTest.extendFile.txt"),
                     shouldBe: {
                         encoding: "utf8",
                         content: "12"
@@ -65,7 +65,7 @@
             });
             assertEquality({
                 "file changed": {
-                    value: readFile({ path: "./TKTest.extendFileNew.txt" }),
+                    value: readFile("./TKTest.extendFileNew.txt"),
                     shouldBe: {
                         encoding: "utf8",
                         content: "2"
@@ -92,7 +92,7 @@
             });
             assertEquality({
                 "file changed": {
-                    value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
+                    value: readFile("./testFolder/TKTest.extendFileFolder.txt"),
                     shouldBe: {
                         encoding: "utf8",
                         content: "3"

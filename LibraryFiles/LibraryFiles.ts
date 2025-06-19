@@ -27,12 +27,20 @@ type LibraryFiles_file = {
         includes?: (string | RegExp)[],
         excludes?: (string | RegExp)[],
     }): void,
+    readFile(
+        path: string
+    ): {
+        encoding: string,
+        content: any
+    } | {
+        content: undefined
+    }
     readFile(inputs: {
         path: string,
         checkExistance?: false,
         encoding?: string,
     }): {
-        encoding: "directory" | string,
+        encoding: string,
         content: any
     } | {
         content: undefined
@@ -251,6 +259,9 @@ type LibraryFiles_file = {
     };
 
     publicExports.readFile = function LibraryFiles_readFile(inputs) {
+        if (typeof inputs === "string") {
+            inputs = { path: inputs };
+        }
         let path = resolvePath(inputs.path);
         if (inputs.checkExistance !== false) {
             if (!isUsedPath(path)) {

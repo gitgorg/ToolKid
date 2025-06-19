@@ -173,7 +173,7 @@ type LibraryFiles_test_file = {
     test({
         subject: readFile,
         execute: function basic() {
-            const fileResponse = <Dictionary>readFile({ path: paths.file });
+            const fileResponse = <Dictionary>readFile(paths.file);
 
             assertEquality({
                 "regular file response": {
@@ -198,7 +198,7 @@ type LibraryFiles_test_file = {
                     }
                 },
                 "non-existing file response": {
-                    value: readFile({ path: paths.fileNonExisting }),
+                    value: readFile(paths.fileNonExisting),
                     shouldBe: { content: undefined }
                 },
                 "non-esisting directory response": {
@@ -243,7 +243,7 @@ type LibraryFiles_test_file = {
         execute: function basic() {
             assertEquality({
                 "file not there yet": {
-                    value: readFile({ path: "./TKTest.txt" }),
+                    value: readFile("./TKTest.txt"),
                     shouldBe: { content: undefined }
                 }
             });
