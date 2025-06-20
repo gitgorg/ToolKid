@@ -52,7 +52,7 @@ type LibraryFiles_file = {
         path: string,
         content: any,
         encoding?: "utf-8" | "base64"
-    }): void,
+    }): void | Error,
 }
 
 
@@ -306,11 +306,16 @@ type LibraryFiles_file = {
     publicExports.writeFile = function LibraryFiles_writeFile(inputs) {
         const path = resolvePath(inputs.path);
         writeDirectory(directoryName(path));
-        createFile(
-            inputs.path,
-            inputs.content,
-            { encoding: inputs.encoding }
-        );
+        try {
+            createFile(
+                inputs.path,
+                inputs.content,
+                { encoding: inputs.encoding }
+            );
+        } catch (error) {
+            console.error(["LibraryFiles_writeFile failed - path:", path, "content:", inputs.content, "encoding:", inputs.encoding, "error:", error]);
+            return error;
+        }
     };
 
 
