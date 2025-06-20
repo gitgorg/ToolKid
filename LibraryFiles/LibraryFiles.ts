@@ -203,7 +203,6 @@ type LibraryFiles_file = {
     };
 
     publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
-
         const checker = publicExports.createStringChecker({
             includes: collectPaths(inputs.includes),
             excludes: collectPaths(inputs.excludes),

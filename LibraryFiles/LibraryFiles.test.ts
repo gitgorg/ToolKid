@@ -262,7 +262,7 @@ type LibraryFiles_test_file = {
             });
         },
         callback: function () {
-            ToolKid.nodeJS.deleteFile("./TKTest.txt");
+            ToolKid.nodeJS.deletePath("./TKTest.txt");
         }
     });
 

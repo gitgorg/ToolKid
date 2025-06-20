@@ -1,13 +1,14 @@
 (function TK_nodeJSFile_test() {
-    const { assertEquality, test } = ToolKid.debug.test;
-    const { deleteFile, extendFile, readFile, writeFile } = ToolKid.nodeJS;
+    const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.test.js"));
+    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const { deletePath, extendFile, isDirectory, readDirectory, readFile, writeFile } = ToolKid.nodeJS;
 
 
 
     test({
         subject: extendFile,
         execute: function regularFileExtension() {
-            deleteFile("./TKTest.extendFile.txt");
+            deletePath("./TKTest.extendFile.txt");
             assertEquality({
                 "file not there yet": {
                     value: readFile("./TKTest.extendFile.txt"),
@@ -43,16 +44,16 @@
         },
         callback: function () {
             test({
-                subject: deleteFile,
+                subject: deletePath,
                 execute: function simpleUsage() {
-                    deleteFile("./TKTest.extendFile.txt");
+                    deletePath("./TKTest.extendFile.txt");
                 }
             })
         }
     }, {
         subject: extendFile,
         execute: function newFileExtension() {
-            deleteFile("./TKTest.extendFileNew.txt");
+            deletePath("./TKTest.extendFileNew.txt");
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.extendFileNew.txt" }),
@@ -74,12 +75,12 @@
             });
         },
         callback: function () {
-            deleteFile("./TKTest.extendFileNew.txt");
+            deletePath("./TKTest.extendFileNew.txt");
         }
     }, {
         subject: extendFile,
         execute: function newFolderFileExtension() {
-            deleteFile("./testFolder");
+            deletePath("./testFolder");
             assertEquality({
                 "file not there yet": {
                     value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
@@ -101,7 +102,65 @@
             });
         },
         callback: function () {
-            deleteFile("./testFolder");
+            deletePath("./testFolder");
+        }
+    });
+
+    test({
+        subject: isDirectory,
+        execute: function basic() {
+            assertEquality({
+                "directory": {
+                    value: isDirectory(paths.directoryMixedContents),
+                    shouldBe: true
+                },
+                "empty directory": {
+                    value: isDirectory(paths.directoryEmpty),
+                    shouldBe: true
+                },
+                "file": {
+                    value: isDirectory(paths.file),
+                    shouldBe: false
+                }
+            });
+        }
+    }, {
+        subject: isDirectory,
+        execute: function crashes() {
+            assertFailure({
+                name: "'nonExistant' returns",
+                execute: isDirectory,
+                withInputs: "nonExistant",
+                shouldThrow: Error
+            });
+        }
+    });
+
+    test({
+        subject: readDirectory,
+        execute: function readingFiles() {
+            assertEquality({
+                "directory": {
+                    value: readDirectory(paths.directoryMixedContents),
+                    shouldBe: ['T_empty', 'T_empty.txt', 'T_file.json']
+                },
+                "empty directory": {
+                    value: readDirectory(paths.directoryEmpty),
+                    shouldBe: []
+                },
+                "file": {
+                    value: readDirectory(paths.file),
+                    shouldBe: []
+                },
+                "non existing directory": {
+                    value: readDirectory(paths.directoryNonExisting),
+                    shouldBe: []
+                },
+                "non existing file": {
+                    value: readDirectory(paths.fileNonExisting),
+                    shouldBe: []
+                }
+            });
         }
     });
 })();

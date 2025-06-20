@@ -297,7 +297,13 @@ global.ToolKid = module.exports.createInstance();
     publicExports.writeFile = function LibraryFiles_writeFile(inputs) {
         const path = resolvePath(inputs.path);
         writeDirectory(directoryName(path));
-        createFile(inputs.path, inputs.content, { encoding: inputs.encoding });
+        try {
+            createFile(inputs.path, inputs.content, { encoding: inputs.encoding });
+        }
+        catch (error) {
+            console.error(["LibraryFiles_writeFile failed - path:", path, "content:", inputs.content, "encoding:", inputs.encoding, "error:", error]);
+            return error;
+        }
     };
     Object.freeze(publicExports);
 })();
@@ -2108,9 +2114,9 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
 
 (function TK_NodeJSFile_init() {
-    const { appendFileSync: extendFile, existsSync: isUsedPath, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
+    const { appendFileSync: extendFile, existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
-    publicExports.deleteFile = function TK_NodeJSFile_deleteFile(path) {
+    publicExports.deletePath = function TK_NodeJSFile_deletePath(path) {
         if (!isUsedPath(path)) {
             return;
         }
@@ -2129,6 +2135,17 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
             ToolKid.nodeJS.writeFile(inputs);
         }
     };
+    publicExports.isDirectory = function TK_NodeJSPath_isDirectory(path) {
+        return readPathStats(path).isDirectory();
+    };
+    publicExports.readDirectory = function TK_NodeJSFile_readDirectory(path) {
+        if (!isUsedPath(path) || !publicExports.isDirectory(path)) {
+            return [];
+        }
+        else {
+            return readDirectory(path);
+        }
+    };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
@@ -2142,19 +2159,6 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
     }
 })();
 fileCollection.set("TK_NodeJSFile.js", module.exports);
-
-(function TK_NodeJSPath_init() {
-    const { lstatSync: readPathStats } = require("fs");
-    const publicExports = module.exports = {};
-    publicExports.isDirectory = function TK_NodeJSPath_isDirectory(path) {
-        return readPathStats(path).isDirectory();
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
-    }
-})();
-fileCollection.set("TK_NodeJSPath.js", module.exports);
 
 
 global.log = ToolKid.debug.terminal.logImportant;

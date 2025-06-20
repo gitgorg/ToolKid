@@ -1,16 +1,23 @@
 //file operations for nodeJS
 interface ToolKid_file { nodeJS: TK_nodeJS_file }
 interface TK_nodeJS_file {
-    loopFiles: LibraryFiles_file["loopFiles"],
-    readFile: LibraryFiles_file["readFile"],
-    resolvePath: LibraryFiles_file["resolvePath"],
-    writeFile: LibraryFiles_file["writeFile"],
-
-    deleteFile(path: string): void,
+    deletePath(
+        path: string
+    ): void,
     extendFile(inputs: {
         path: string,
         content: any,
     }): void,
+    isDirectory(
+        path: string
+    ): boolean,
+    loopFiles: LibraryFiles_file["loopFiles"],
+    readDirectory(
+        path: string
+    ): string[],
+    readFile: LibraryFiles_file["readFile"],
+    resolvePath: LibraryFiles_file["resolvePath"],
+    writeFile: LibraryFiles_file["writeFile"],
 }
 
 
@@ -19,6 +26,8 @@ interface TK_nodeJS_file {
     const {
         appendFileSync: extendFile,
         existsSync: isUsedPath,
+        lstatSync: readPathStats,
+        readdirSync: readDirectory,
         rmSync: deleteFolder,
         unlinkSync: deleteFile
     } = require("fs");
@@ -27,7 +36,7 @@ interface TK_nodeJS_file {
 
     const publicExports = module.exports = <TK_nodeJS_file>{};
 
-    publicExports.deleteFile = function TK_NodeJSFile_deleteFile(path) {
+    publicExports.deletePath = function TK_NodeJSFile_deletePath(path) {
         if (!isUsedPath(path)) {
             return;
         }
@@ -47,17 +56,32 @@ interface TK_nodeJS_file {
         }
     };
 
+    publicExports.isDirectory = function TK_NodeJSFile_isDirectory(path) {
+        return readPathStats(path).isDirectory();
+    };
+
+    publicExports.readDirectory = function TK_NodeJSFile_readDirectory(path) {
+        if (!isUsedPath(path) || !publicExports.isDirectory(path)) {
+            return [];
+        } else {
+            return readDirectory(path);
+        }
+    }
+
 
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
         const core = ToolKid.getCoreModule("files");
-        ToolKid.registerFunctions({ section: "nodeJS", functions: {
-            loopFiles: core.loopFiles,
-            readFile: core.readFile,
-            resolvePath: core.resolvePath,
-            writeFile: core.writeFile,
-        } });
+        ToolKid.registerFunctions({
+            section: "nodeJS",
+            functions: {
+                loopFiles: core.loopFiles,
+                readFile: core.readFile,
+                resolvePath: core.resolvePath,
+                writeFile: core.writeFile,
+            }
+        });
     }
 })();
