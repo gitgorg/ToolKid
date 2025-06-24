@@ -1,20 +1,20 @@
 (function TK_CodeParsing_test() {
-    const { assertEquality, test } = ToolKid.debug.test;
-    const { readJSImports } = ToolKid.code;
+    const { assert, test } = ToolKid.debug.test;
+    const { readJSImports, removeQuotes } = ToolKid.code;
 
 
 
     test({
         subject: readJSImports,
         execute: function importingFromJS() {
-            const parse = function (code:string) {
+            const parse = function (code: string) {
                 const tokens = <any[]>[];
                 const parser = tokens.push.bind(tokens);
                 readJSImports({ code, parser });
                 return tokens;
             };
 
-            assertEquality({
+            assert({
                 "no imports": {
                     value: parse("none"),
                     shouldBe: []
@@ -26,4 +26,15 @@
             });
         }
     });
+
+    test({
+        subject: removeQuotes,
+        execute: function basicQuotes() {
+            assert({
+                "double quotes": [removeQuotes('"a"'), "a"],
+                "single quotes": [removeQuotes("'a'"), "a"],
+                // "back tick": [removeQuotes("`a`"), "a"],
+            });
+        }
+    })
 })();

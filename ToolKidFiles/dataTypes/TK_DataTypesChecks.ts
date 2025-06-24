@@ -47,8 +47,8 @@ type DataTypeParsers = {
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
 
-    publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
-        return <any>dataTypeConverters[typeof value](value);
+    const getDataType = publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
+        return <DataType>dataTypeConverters[typeof value](value);
     };
 
     const dataTypeConverters = {
@@ -85,9 +85,13 @@ type DataTypeParsers = {
         }
     }
 
-    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
-        return value instanceof Array && value.length !== 0;
-    };
+    publicExports.isArray = (typeof Array.isArray === "function")
+        ? function TK_DataTypesChecks_isArray(value) {
+            return Array.isArray(value) && value.length !== 0;
+        }
+        : function TK_DataTypesChecks_isArrayLegacy(value) {
+            return value instanceof Array && value.length !== 0;
+        };
 
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
@@ -135,17 +139,15 @@ type DataTypeParsers = {
         }
 
         const { value } = inputs;
-        const type = publicExports.getDataType(value);
-        const handler = typeHandlers[type];
+        const handler = typeHandlers[getDataType(value)];
         if (handler === false) {
             return;
         }
 
-        const withInputs = inputs.withInputs || [value];
         if (typeof handler === "function") {
-            return handler(...withInputs);
+            return handler(...(inputs.withInputs || [value]));
         } else if (typeof typeHandlers.any === "function") {
-            return typeHandlers.any(...withInputs);
+            return typeHandlers.any(...(inputs.withInputs || [value]));
         }
     };
 

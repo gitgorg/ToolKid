@@ -560,7 +560,7 @@ name: "parsing", module: module.exports
         requireStart: "require(\"",
         requireEnd: "\")"
     };
-    publicExports.readJSImports = function TK_CodeParse_readJSImports(inputs) {
+    publicExports.readJSImports = function TK_CodeParsing_readJSImports(inputs) {
         const codeSections = inputs.code.split(importSignals.requireStart);
         if (codeSections.length === 1) {
             return;
@@ -576,6 +576,26 @@ name: "parsing", module: module.exports
             }
             position += codeSection.length + importSignals.requireStart.length;
         }
+    };
+    publicExports.removeQuotes = function TK_CodeParsing__removeQuotes(text) {
+        if (typeof text !== "string") {
+            return "";
+        }
+        text = text.trim();
+        if (text.length === 0) {
+            return "";
+        }
+        if (text[0] === "'") {
+            if (text[text.length - 1] === "'") {
+                return text.slice(1, -1);
+            }
+        }
+        else if (text[0] === "\"") {
+            if (text[text.length - 1] === "\"") {
+                return text.slice(1, -1);
+            }
+        }
+        return text;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -752,7 +772,7 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
 
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
-    publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
+    const getDataType = publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
         return dataTypeConverters[typeof value](value);
     };
     const dataTypeConverters = {
@@ -791,9 +811,13 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
             }
         };
     }
-    publicExports.isArray = function TK_DataTypesChecks_isArray(value) {
-        return value instanceof Array && value.length !== 0;
-    };
+    publicExports.isArray = (typeof Array.isArray === "function")
+        ? function TK_DataTypesChecks_isArray(value) {
+            return Array.isArray(value) && value.length !== 0;
+        }
+        : function TK_DataTypesChecks_isArrayLegacy(value) {
+            return value instanceof Array && value.length !== 0;
+        };
     publicExports.isBoolean = function TK_DataTypesChecks_isBoolean(value) {
         return typeof value === "boolean";
     };
@@ -830,17 +854,15 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
             throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeParsers passed:", typeHandlers];
         }
         const { value } = inputs;
-        const type = publicExports.getDataType(value);
-        const handler = typeHandlers[type];
+        const handler = typeHandlers[getDataType(value)];
         if (handler === false) {
             return;
         }
-        const withInputs = inputs.withInputs || [value];
         if (typeof handler === "function") {
-            return handler(...withInputs);
+            return handler(...(inputs.withInputs || [value]));
         }
         else if (typeof typeHandlers.any === "function") {
-            return typeHandlers.any(...withInputs);
+            return typeHandlers.any(...(inputs.withInputs || [value]));
         }
     };
     Object.freeze(publicExports);
@@ -1603,30 +1625,61 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 
 (function TK_DebugTestAssertion_init() {
     const publicExports = module.exports = {};
-    publicExports.assertEquality = function TK_Debug_assertEquality(...inputs) {
+    publicExports.assert = function TK_DebugTestAssertion_assert(...inputs) {
         const errors = [];
-        inputs.forEach(function TK_DebugTestAssertion_testForEquealityPerInput(inputs) {
-            Object.entries(inputs).forEach(assertEqualityPerName.bind(null, errors));
-        });
+        if (inputs.length === 3) {
+            assertEqualityPerName(errors, [inputs[0], { value: inputs[1], shouldBe: inputs[2] }]);
+            if (errors.length !== 0) {
+                throw errors;
+            }
+            return;
+        }
+        if (inputs.length !== 1) {
+            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
+        }
+        Object.entries(inputs[0]).forEach(assertMulti.bind(null, errors));
+        if (errors.length !== 0) {
+            throw errors;
+        }
+    };
+    const assertMulti = function TK_DebugTestAssertion_assertMultiple(errors, nameAndConfig) {
+        const [, config] = nameAndConfig;
+        if (isShortConfig(config)) {
+            assertEqualityPerName(errors, [
+                nameAndConfig[0], { value: config[0], shouldBe: config[1] }
+            ]);
+        }
+        else {
+            assertEqualityPerName(errors, [
+                nameAndConfig[0], nameAndConfig[1]
+            ]);
+        }
+    };
+    publicExports.assertEquality = function TK_Debug_assertEquality(inputs) {
+        const errors = [];
+        Object.entries(inputs).forEach(assertEqualityPerName.bind(null, errors));
         if (errors.length !== 0) {
             throw errors;
         }
     };
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndValue) {
-        const settings = Object.assign({}, nameAndValue[1]);
-        if (typeof settings.toleranceDepth !== "number") {
-            settings.toleranceDepth = 1;
+        const returned = ToolKid.dataTypes.checks.areEqual(nameAndValue[1]);
+        if (returned === true) {
+            return;
         }
-        const returned = ToolKid.dataTypes.checks.areEqual(settings);
-        if (returned !== true) {
-            const errorMessage = ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
-            if (typeof settings.catchFailure === "function") {
-                settings.catchFailure(errorMessage);
-            }
-            else {
-                errors.push(...errorMessage);
-            }
+        const errorMessage = ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
+        if (typeof nameAndValue[1].catchFailure === "function") {
+            nameAndValue[1].catchFailure(errorMessage);
         }
+        else {
+            errors.push(...errorMessage);
+        }
+    };
+    const isShortConfig = (typeof Array.isArray === "function")
+        ? function TK_DebugTestAssertion_isShortConfig(value) {
+            return Array.isArray(value) && value.length === 2;
+        } : function TK_DebugTestAssertion_isShortConfigLegacy(value) {
+        return value instanceof Array && value.length === 2;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -2135,7 +2188,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
             ToolKid.nodeJS.writeFile(inputs);
         }
     };
-    publicExports.isDirectory = function TK_NodeJSPath_isDirectory(path) {
+    publicExports.isDirectory = function TK_NodeJSFile_isDirectory(path) {
         return readPathStats(path).isDirectory();
     };
     publicExports.readDirectory = function TK_NodeJSFile_readDirectory(path) {
@@ -2150,12 +2203,15 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
         const core = ToolKid.getCoreModule("files");
-        ToolKid.registerFunctions({ section: "nodeJS", functions: {
+        ToolKid.registerFunctions({
+            section: "nodeJS",
+            functions: {
                 loopFiles: core.loopFiles,
                 readFile: core.readFile,
                 resolvePath: core.resolvePath,
                 writeFile: core.writeFile,
-            } });
+            }
+        });
     }
 })();
 fileCollection.set("TK_NodeJSFile.js", module.exports);

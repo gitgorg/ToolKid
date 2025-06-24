@@ -1,6 +1,39 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, test } = Debug.test;
+    const { assertFailure, assert, assertEquality, test } = Debug.test;
+
+
+
+    test({
+        subject: assert,
+        execute: function simpleValues() {
+            assert("short", 10, 10);
+            assert({
+                "short inside group": [10, 10],
+                "long inside group": {
+                    value: 10,
+                    shouldBe: 10
+                },
+                "full config inside group": {
+                    value: { a: { b: "c" }, d: true },
+                    shouldBe: { a: { b: "c" } },
+                    toleranceDepth: 2,
+                    allowAdditions: true,
+                },
+                "catch failure inside group": {
+                    value: { a: { b: "c" }, d: true },
+                    shouldBe: { a: { b: "c" } },
+                    catchFailure: function (error) {
+                        assert({
+                            "error is aray": [Array.isArray(error), true],
+                            "error length": [error.length, 3],
+                            "error[0] type": [typeof error[0], "string"],
+                        })
+                    }
+                }
+            });
+        }
+    });
 
 
 

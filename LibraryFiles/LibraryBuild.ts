@@ -40,13 +40,13 @@ type LibraryBuild_file = {
             inputs.fileParser = defaultParser;
         }
         let result = inputs.header || defaultHeader;
-        const registeredFiles = <Map<string, true>>new Map();
+        const registeredFiles = new Set();
         inputs.fileList.forEach(function (data: Dictionary, importID) {
-            if (registeredFiles.get(importID) === true) {
+            if (registeredFiles.has(importID) === true) {
                 return;
             }
 
-            registeredFiles.set(importID, true);
+            registeredFiles.add(importID);
             result += bundleFilesAppend(<any>inputs, importID);
         });
         return result + (inputs.footer || defaultFooter);
