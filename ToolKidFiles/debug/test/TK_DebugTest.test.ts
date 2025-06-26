@@ -84,7 +84,7 @@
         }
     });
 
-    switchResultGroup("TK_DebugTest");
+    switchResultGroup("TK_DebugTest_test");
 
     const failedResults = <any>[];
     setFailureHandler(failedResults.push.bind(failedResults));
@@ -96,7 +96,7 @@
                 "empty resultGroup": {
                     value: getResultGroup(),
                     shouldBe: {
-                        name: "TK_DebugTest",
+                        name: "TK_DebugTest_test",
                         results: []
                     },
                     toleranceDepth: 3,
