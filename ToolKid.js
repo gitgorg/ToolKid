@@ -1,5 +1,6 @@
 "use strict";
 (function ToolKid_bundle() {
+console.log(">>  activate ToolKid")
 const fileCollection = new Map();
 
 (function LibraryCore_init() {
@@ -2219,5 +2220,5 @@ fileCollection.set("TK_NodeJSFile.js", module.exports);
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
-console.log(">> ToolKid ready")
+console.log(">>  ToolKid ready")
 })();

@@ -39,7 +39,7 @@ type ToolKidConfig = {
             return;
         }
 
-        console.log(">> activate ToolKid");
+        console.log(">>  activate ToolKid");
         if (config === undefined) {
             config = readConfig();
         }
@@ -54,7 +54,7 @@ type ToolKidConfig = {
             excludes: config.exclude,
             execute: require
         });
-        console.log(">> ToolKid ready");
+        console.log(">>  ToolKid ready");
         if (config.runTests === true) {
             runTests(config);
         }
@@ -62,6 +62,7 @@ type ToolKidConfig = {
 
     const bundleHeader = '"use strict";\n\
 (function ToolKid_bundle() {\n\
+console.log(">>  activate ToolKid")\n\
 const fileCollection = new Map();\n\n';
 
     const bundleParser = function ToolKidBuild_bundleParser(inputs: {
@@ -82,7 +83,7 @@ const fileCollection = new Map();\n\n';
     const bundleFooter = '\n\
 global.log = ToolKid.debug.terminal.logImportant;\n\
 module.exports = ToolKid;\n\
-console.log(">> ToolKid ready")\n\
+console.log(">>  ToolKid ready")\n\
 })();';
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
@@ -138,6 +139,8 @@ console.log(">> ToolKid ready")\n\
     };
 
     publicExports.writeToolKid = function ToolKidBuild_executeBuild(config) {
+        const filePath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
+        console.log(">>  write Toolkid to " + filePath);
         const libraryCore = <LibraryCore_file><any>require(
             resolve(config.rootLibraryFiles, "LibraryCore.js")
         );
@@ -160,7 +163,7 @@ console.log(">> ToolKid ready")\n\
         });
 
         coreModuleFiles.writeFile({
-            path: config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js"),
+            path: filePath,
             content: libraryCore.getCoreModule("building").bundleFiles({
                 fileList: files,
                 header: bundleHeader,
