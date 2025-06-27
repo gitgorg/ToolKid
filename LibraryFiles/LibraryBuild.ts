@@ -10,12 +10,17 @@ type LibraryBuild_file = {
         >,
 
         header?: string,
-        fileParser?(inputs: {
+        fileParser?: LibraryBuild_file["bundlerDefaults"]["fileParser"],
+        footer?: string,
+    }): string,
+    bundlerDefaults: {
+        header: string,
+        fileParser(inputs: {
             importID: string,
             fileContent: string
         }): void | string,
-        footer?: string,
-    }): string,
+        footer: string,
+    }
 }
 
 
@@ -36,10 +41,11 @@ type LibraryBuild_file = {
     const publicExports = module.exports = <LibraryBuild_file>{};
 
     publicExports.bundleFiles = function LibraryBuild_bundleFiles(inputs) {
+        const defaults = publicExports.bundlerDefaults;
         if (!(typeof inputs.fileParser === "function")) {
-            inputs.fileParser = defaultParser;
+            inputs.fileParser = defaults.fileParser;
         }
-        let result = inputs.header || defaultHeader;
+        let result = inputs.header || defaults.header;
         const registeredFiles = new Set();
         inputs.fileList.forEach(function (data: Dictionary, importID) {
             if (registeredFiles.has(importID) === true) {
@@ -49,7 +55,7 @@ type LibraryBuild_file = {
             registeredFiles.add(importID);
             result += bundleFilesAppend(<any>inputs, importID);
         });
-        return result + (inputs.footer || defaultFooter);
+        return result + (inputs.footer || defaults.footer);
     };
 
     const bundleFilesAppend = function LibraryBuild_bundleFilesAppend(
@@ -80,18 +86,18 @@ type LibraryBuild_file = {
         return boundInputs.fileParser({ importID, fileContent });
     };
 
-    const defaultHeader = '"use strict";\n\
+    publicExports.bundlerDefaults = Object.freeze({
+        header: '"use strict";\n\
 (function Library_bundledFiles_init() {\n\
-const fileCollection = new Map();\n\n';
-
-    const defaultParser = function (inputs: {
-        importID: string, fileContent: string
-    }) {
-        return removeStrictMode(inputs.fileContent) + '\n\
+const fileCollection = new Map();\n\n',
+        fileParser: function LibraryBuild_defaultFileParser(inputs: {
+            importID: string, fileContent: string
+        }) {
+            return removeStrictMode(inputs.fileContent) + '\n\
 fileCollection.set("' + inputs.importID + '", module.exports);\n\n';
-    };
-
-    const defaultFooter = '\n\n})();';
+        },
+        footer: '\n\n})();'
+    });
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
         const firstPosition = fileContent.indexOf("use strict") - 1;

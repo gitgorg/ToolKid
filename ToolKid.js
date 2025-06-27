@@ -116,8 +116,8 @@ const fileCollection = new Map();
     };
 })();
 fileCollection.set("LibraryCore.js", module.exports);
-global.ToolKid = module.exports.createInstance();
 
+global.ToolKid = module.exports.createInstance();
 (function LibraryFiles_init() {
     const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
     const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
@@ -309,10 +309,10 @@ global.ToolKid = module.exports.createInstance();
     Object.freeze(publicExports);
 })();
 fileCollection.set("LibraryFiles.js", module.exports);
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "files", module: module.exports
 });
-
 // regExp flags:
 // g = to store .lastIndex inside the regExp
 // s = to make . match really EVERY character...
@@ -551,10 +551,10 @@ name: "files", module: module.exports
     Object.freeze(publicExports);
 })();
 fileCollection.set("LibraryParsing.js", module.exports);
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "parsing", module: module.exports
 });
-
 (function TK_CodeParsing_init() {
     const publicExports = module.exports = {};
     const importSignals = {

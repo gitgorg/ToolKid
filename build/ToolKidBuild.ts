@@ -65,11 +65,11 @@ type ToolKidConfig = {
 console.log(">>  activate ToolKid")\n\
 const fileCollection = new Map();\n\n';
 
-    const bundleParser = function ToolKidBuild_bundleParser(inputs: {
-        importID: string, fileContent: string
-    }) {
-        let result = removeStrictMode(inputs.fileContent);
-        result += '\nfileCollection.set("' + inputs.importID + '", module.exports);\n';
+    const bundleParser = function ToolKidBuild_bundleParser(
+        defaultBundler: { (inputs: any): string },
+        inputs: { importID: string, fileContent: string }
+    ) {
+        let result = defaultBundler(inputs);
         if (inputs.importID === "LibraryCore.js") {
             result += 'global.ToolKid = module.exports.createInstance();\n';
         } else if (inputs.importID.indexOf("Library") === 0) {
@@ -77,23 +77,14 @@ const fileCollection = new Map();\n\n';
                 + inputs.importID.slice(7, -3).toLocaleLowerCase()
                 + '", module: module.exports\n});\n';
         }
-        return result + '\n';
-    };
+        return result;
+    }
 
     const bundleFooter = '\n\
 global.log = ToolKid.debug.terminal.logImportant;\n\
 module.exports = ToolKid;\n\
 console.log(">>  ToolKid ready")\n\
 })();';
-
-    const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
-        const firstPosition = fileContent.indexOf("use strict") - 1;
-        if (firstPosition !== -2 && firstPosition < 20) {
-            return fileContent.slice(firstPosition + 13).trim();
-        } else {
-            return fileContent;
-        }
-    };
 
     const registerExtensionFile = function ToolKidBuild_registerExtensionFile(
         pathsByFileName: Dictionary,
@@ -162,12 +153,13 @@ console.log(">>  ToolKid ready")\n\
             files.set(importID, { filePath });
         });
 
+        const LibraryBuilding = libraryCore.getCoreModule("building");
         coreModuleFiles.writeFile({
             path: filePath,
-            content: libraryCore.getCoreModule("building").bundleFiles({
+            content: LibraryBuilding.bundleFiles({
                 fileList: files,
                 header: bundleHeader,
-                fileParser: bundleParser,
+                fileParser: bundleParser.bind(null, LibraryBuilding.bundlerDefaults.fileParser),
                 footer: bundleFooter,
             })
         });
