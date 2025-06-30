@@ -75,6 +75,6 @@ interface TK_DataTypesArray_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "array", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "array", entries: publicExports });
     }
 })();

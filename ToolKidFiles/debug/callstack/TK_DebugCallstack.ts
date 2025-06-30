@@ -35,6 +35,6 @@ interface TK_DebugCallstack_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "callstack", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
     }
 })();

@@ -2,13 +2,19 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { object: TK_DataTypesObject_file }
 interface TK_DataTypesObject_file {
+    filter<Data extends Dictionary, Key extends string>(
+        inputs: {
+            data: Data;
+            keys: Key[];
+        }
+    ): Pick<Data, Key>,
     merge<
         Base extends Dictionary,
         Change extends Dictionary,
         FurtherChange extends Dictionary
     >(
-        base:Base,
-        change:Change,
+        base: Base,
+        change: Change,
         ...changes: FurtherChange[]
     ): Base & Change & FurtherChange,
 }
@@ -18,8 +24,17 @@ interface TK_DataTypesObject_file {
 (function TK_DataTypesObject_init() {
     const publicExports = module.exports = <TK_DataTypesObject_file>{};
 
+    publicExports.filter = function TK_DataTypesObject_filter(inputs) {
+        const result = {} as any;
+        const { data, keys } = inputs;
+        for (let i = 0; i < keys.length; i += 1) {
+            result[keys[i]] = data[keys[i]]
+        }
+        return result;
+    };
+
     publicExports.merge = function TK_DataTypesObject_merge(
-        base:any, ...changes
+        base: any, ...changes
     ) {
         const result = Object.assign({}, base);
         const addToResult = mergeLayer.bind(null, result);
@@ -54,6 +69,6 @@ interface TK_DataTypesObject_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "object", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
     }
 })();

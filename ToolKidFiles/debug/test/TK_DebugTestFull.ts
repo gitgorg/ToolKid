@@ -145,7 +145,7 @@ interface TK_DebugTest_file {
     };
 
     const shortenData = function TK_DebugTestFull_shortenValue(list: any) {
-        return ToolKid.dataTypes.list.shortenList({
+        return ToolKid.dataTypes.list.shorten({
             list,
             maxLength: (typeof list === "string" ? 200 : 20),
             omissionSignal
@@ -190,6 +190,6 @@ interface TK_DebugTest_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();

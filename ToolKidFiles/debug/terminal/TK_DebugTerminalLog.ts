@@ -174,6 +174,6 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "terminal", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
     }
 })();

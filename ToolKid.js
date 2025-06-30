@@ -15,8 +15,8 @@ const fileCollection = new Map();
         const result = {};
         addAsReadOnly({
             container: result,
-            key: "registerFunctions",
-            value: registerFunction.bind(null, result)
+            key: "register",
+            value: register.bind(null, result)
         });
         addAsReadOnly({
             container: result,
@@ -38,6 +38,16 @@ const fileCollection = new Map();
             value: inputs.value,
             writable: false
         });
+    };
+    publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
+        if (Object.isFrozen(object)) {
+            return object;
+        }
+        Object.freeze(object);
+        for (let key in object) {
+            publicExports.freezeDeep(object[key]);
+        }
+        return object;
     };
     publicExports.getCoreModule = function LibraryCore_getCoreModule(moduleName) {
         if (coreModules[moduleName] !== undefined) {
@@ -63,7 +73,7 @@ const fileCollection = new Map();
             ];
         }
     };
-    const registerFunction = function LibraryCore_registerFunction(library, inputs) {
+    const register = function LibraryCore_register(library, inputs) {
         let section = registerSection({
             container: library,
             name: inputs.section
@@ -74,31 +84,29 @@ const fileCollection = new Map();
                 name: inputs.subSection
             });
         }
-        registerHelperToSectionLoop({
-            section: section,
-            helpers: inputs.functions
-        });
-    };
-    const registerHelperToSectionLoop = function LibraryCore_registerHelperToSectionLoop(inputs) {
-        const { section, helpers } = inputs;
-        for (let name in helpers) {
-            registerHelperToSection({
-                section, name, helperFunction: helpers[name]
+        const { entries } = inputs;
+        for (let name in entries) {
+            registerEntryToSection({
+                section, name, entry: entries[name]
             });
         }
     };
-    const registerHelperToSection = function LibraryCore_registerHelperToSection(inputs) {
-        if (typeof inputs.name !== "string" || typeof inputs.helperFunction !== "function") {
-            throw ["LibraryCore_registerHelperToSection - invalid inputs:", inputs];
+    const registerEntryToSection = function LibraryCore_registerEntryToSection(inputs) {
+        if (typeof inputs.name !== "string") {
+            throw ["LibraryCore_registerEntryToSection - invalid name: ", inputs.name, "inside: ", inputs];
+        }
+        const { entry } = inputs;
+        if (entry === null || ["function", "object"].indexOf(typeof entry) === -1) {
+            throw ["LibraryCore_registerEntryToSection - invalid helper: ", entry, "inside: ", inputs];
         }
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", inputs.helperFunction];
+            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", entry];
         }
         addAsReadOnlyEnumerable({
             container: section,
             key: name,
-            value: inputs.helperFunction
+            value: publicExports.freezeDeep(entry),
         });
     };
     const registerSection = function LibraryCore_registerSection(inputs) {
@@ -555,29 +563,41 @@ fileCollection.set("LibraryParsing.js", module.exports);
 fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "parsing", module: module.exports
 });
+(function TK_CodeJS_init() {
+    const publicExports = module.exports = {};
+    publicExports.textLayerDefinition = {
+        js_comment: {
+            patterns: [["//", /\n|$/], ["/*", "*/"]],
+        },
+        js_text: {
+            patterns: [["\"", "\""], ["'", "'"], ["`", "`"]],
+            contains: ["js_escape"],
+        },
+        js_escape: {
+            patterns: [/\\./s],
+            isMAINLayer: false,
+        },
+        js_import: {
+            patterns: [["re" + "quire(", ")"]],
+        },
+        js_bracket: {
+            patterns: [["(", ")"], ["{", "}"]],
+            contains: ["MAIN"],
+        },
+        js_RX: {
+            patterns: [[/[=|:|\(]\s*\//, "/"]],
+            contains: ["js_escape"]
+        },
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "code", subSection: "JS", entries: publicExports });
+    }
+})();
+fileCollection.set("TK_CodeJS.js", module.exports);
+
 (function TK_CodeParsing_init() {
     const publicExports = module.exports = {};
-    const importSignals = {
-        requireStart: "require(\"",
-        requireEnd: "\")"
-    };
-    publicExports.readJSImports = function TK_CodeParsing_readJSImports(inputs) {
-        const codeSections = inputs.code.split(importSignals.requireStart);
-        if (codeSections.length === 1) {
-            return;
-        }
-        let position = codeSections[0].length;
-        let codeSection, content;
-        const { length } = codeSections;
-        for (let i = 1; i < length; i += 1) {
-            codeSection = codeSections[i];
-            content = codeSection.slice(0, codeSection.indexOf(importSignals.requireEnd));
-            if (content !== "fs" && content !== "path") {
-                inputs.parser(position, content);
-            }
-            position += codeSection.length + importSignals.requireStart.length;
-        }
-    };
     publicExports.removeQuotes = function TK_CodeParsing__removeQuotes(text) {
         if (typeof text !== "string") {
             return "";
@@ -600,7 +620,7 @@ name: "parsing", module: module.exports
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "code", functions: publicExports });
+        ToolKid.register({ section: "code", entries: publicExports });
     }
 })();
 fileCollection.set("TK_CodeParsing.js", module.exports);
@@ -683,7 +703,7 @@ fileCollection.set("TK_CodeParsing.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
+        ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
 fileCollection.set("TK_ConnectionHTTP.js", module.exports);
@@ -725,7 +745,7 @@ fileCollection.set("TK_ConnectionHTTP.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "connection", subSection: "HTTP", functions: publicExports });
+        ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
 fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
@@ -766,7 +786,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "array", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "array", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesArray.js", module.exports);
@@ -868,7 +888,7 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesChecks.js", module.exports);
@@ -1026,14 +1046,14 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "checks", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 
 (function TK_DataTypesList_init() {
     const publicExports = module.exports = {};
-    publicExports.shortenList = function TK_DataTypesList_shortenList(inputs) {
+    publicExports.shorten = function TK_DataTypesList_shorten(inputs) {
         const { list } = inputs;
         if ((typeof list !== "string" && !(list instanceof Array))
             || list.length <= inputs.maxLength) {
@@ -1050,7 +1070,7 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "list", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "list", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesList.js", module.exports);
@@ -1091,13 +1111,21 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "number", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "number", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
 
 (function TK_DataTypesObject_init() {
     const publicExports = module.exports = {};
+    publicExports.filter = function TK_DataTypesObject_filter(inputs) {
+        const result = {};
+        const { data, keys } = inputs;
+        for (let i = 0; i < keys.length; i += 1) {
+            result[keys[i]] = data[keys[i]];
+        }
+        return result;
+    };
     publicExports.merge = function TK_DataTypesObject_merge(base, ...changes) {
         const result = Object.assign({}, base);
         const addToResult = mergeLayer.bind(null, result);
@@ -1124,7 +1152,7 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "object", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesObject.js", module.exports);
@@ -1190,7 +1218,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "promise", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "promise", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
@@ -1209,7 +1237,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     ;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "callstack", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugCallstack.js", module.exports);
@@ -1319,7 +1347,7 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
     publicExports.logBasic = logWithLevel.bind(null, "basic");
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "terminal", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTerminalLog.js", module.exports);
@@ -1468,7 +1496,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTest.js", module.exports);
@@ -1619,7 +1647,7 @@ fileCollection.set("TK_DebugTest.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
@@ -1684,7 +1712,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTestAssertion.js", module.exports);
@@ -1762,7 +1790,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTestCondition.js", module.exports);
@@ -1843,7 +1871,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         return "[ ... " + omitted.length + " ... ]";
     };
     const shortenData = function TK_DebugTestFull_shortenValue(list) {
-        return ToolKid.dataTypes.list.shortenList({
+        return ToolKid.dataTypes.list.shorten({
             list,
             maxLength: (typeof list === "string" ? 200 : 20),
             omissionSignal
@@ -1880,7 +1908,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTestFull.js", module.exports);
@@ -1947,7 +1975,7 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
@@ -2162,7 +2190,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "debug", subSection: "test", functions: publicExports });
+        ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
@@ -2202,11 +2230,11 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
+        ToolKid.register({ section: "nodeJS", entries: publicExports });
         const core = ToolKid.getCoreModule("files");
-        ToolKid.registerFunctions({
+        ToolKid.register({
             section: "nodeJS",
-            functions: {
+            entries: {
                 loopFiles: core.loopFiles,
                 readFile: core.readFile,
                 resolvePath: core.resolvePath,

@@ -72,11 +72,11 @@ interface TK_nodeJS_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "nodeJS", functions: publicExports });
+        ToolKid.register({ section: "nodeJS", entries: publicExports });
         const core = ToolKid.getCoreModule("files");
-        ToolKid.registerFunctions({
+        ToolKid.register({
             section: "nodeJS",
-            functions: {
+            entries: {
                 loopFiles: core.loopFiles,
                 readFile: core.readFile,
                 resolvePath: core.resolvePath,

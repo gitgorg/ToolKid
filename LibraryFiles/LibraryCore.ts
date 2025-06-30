@@ -1,6 +1,9 @@
 //core functionality for custom Library
 interface LibraryCore_file {
     createInstance(): Library,
+    freezeDeep<Type extends Dictionary>(
+        object: Type
+    ): Type,
     registerCoreModule(inputs: {
         name: string,
         module: Dictionary,
@@ -9,10 +12,12 @@ interface LibraryCore_file {
 
 type Library = {
     getCoreModule: LibraryCore_file["getCoreModule"],
-    registerFunctions(inputs: {
+    register(inputs: {
         section: string,
         subSection?: string,
-        functions: Dictionary
+        entries: {
+            [key: string]: Exclude<any, undefined | null>
+        }
     }): void
 }
 type Dictionary = {
@@ -37,8 +42,8 @@ type GenericFunction = { (...parameters: any[]): any }
         const result = <Library>{};
         addAsReadOnly({
             container: result,
-            key: "registerFunctions",
-            value: registerFunction.bind(null, result)
+            key: "register",
+            value: register.bind(null, result)
         });
         addAsReadOnly({
             container: result,
@@ -74,6 +79,18 @@ type GenericFunction = { (...parameters: any[]): any }
         });
     };
 
+    publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
+        if (Object.isFrozen(object)) {
+            return object;
+        }
+
+        Object.freeze(object);
+        for (let key in object) {
+            publicExports.freezeDeep(object[key]);
+        }
+        return object;
+    };
+
     publicExports.getCoreModule = function LibraryCore_getCoreModule(moduleName) {
         if (coreModules[moduleName] !== undefined) {
             return coreModules[moduleName];
@@ -103,13 +120,9 @@ type GenericFunction = { (...parameters: any[]): any }
         }
     };
 
-    const registerFunction = function LibraryCore_registerFunction(
-        library: Dictionary,
-        inputs: {
-            section: string,
-            subSection?: string,
-            functions: Dictionary
-        }
+    const register = function LibraryCore_register(
+        library: Library,
+        inputs: Parameters<Library["register"]>[0]
     ) {
         let section = registerSection({
             container: library,
@@ -121,42 +134,37 @@ type GenericFunction = { (...parameters: any[]): any }
                 name: inputs.subSection
             });
         }
-        registerHelperToSectionLoop({
-            section: section,
-            helpers: inputs.functions
-        });
-    };
-
-    const registerHelperToSectionLoop = function LibraryCore_registerHelperToSectionLoop(inputs: {
-        section: Dictionary,
-        helpers: Dictionary
-    }) {
-        const { section, helpers } = inputs;
-        for (let name in helpers) {
-            registerHelperToSection({
-                section, name, helperFunction: helpers[name]
+        const { entries } = inputs;
+        for (let name in entries) {
+            registerEntryToSection({
+                section, name, entry: entries[name]
             });
         }
     };
 
-    const registerHelperToSection = function LibraryCore_registerHelperToSection(inputs: {
+    const registerEntryToSection = function LibraryCore_registerEntryToSection(inputs: {
         section: Dictionary,
         name: string,
-        helperFunction: GenericFunction
+        entry: GenericFunction | Dictionary
     }) {
-        if (typeof inputs.name !== "string" || typeof inputs.helperFunction !== "function") {
-            throw ["LibraryCore_registerHelperToSection - invalid inputs:", inputs];
+        if (typeof inputs.name !== "string") {
+            throw ["LibraryCore_registerEntryToSection - invalid name: ", inputs.name, "inside: ", inputs];
+        }
+
+        const { entry } = inputs;
+        if (entry === null || ["function", "object"].indexOf(typeof entry) === -1) {
+            throw ["LibraryCore_registerEntryToSection - invalid helper: ", entry, "inside: ", inputs];
         }
 
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", inputs.helperFunction];
+            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", entry];
         }
 
         addAsReadOnlyEnumerable({
             container: section,
             key: name,
-            value: inputs.helperFunction
+            value: publicExports.freezeDeep(entry),
         });
     };
 

@@ -1,7 +1,7 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { list: TK_DataTypesList_file }
 interface TK_DataTypesList_file {
-    shortenList(inputs: {
+    shorten(inputs: {
         list: string,
         maxLength: number,
         omissionSignal: string | {
@@ -10,15 +10,15 @@ interface TK_DataTypesList_file {
             ): string
         }
     }): string,
-    shortenList<entryType, singalType>(inputs: {
-        list: entryType[],
+    shorten<Entry, Signal>(inputs: {
+        list: Entry[],
         maxLength: number,
-        omissionSignal: singalType | {
+        omissionSignal: Signal | {
             (
-                omittedText: entryType[]
-            ): singalType
+                omittedText: Entry[]
+            ): Signal
         }
-    }): (entryType | singalType)[],
+    }): (Entry | Signal)[],
 }
 
 
@@ -26,7 +26,7 @@ interface TK_DataTypesList_file {
 (function TK_DataTypesList_init() {
     const publicExports = module.exports = <TK_DataTypesList_file>{};
 
-    publicExports.shortenList = function TK_DataTypesList_shortenList(
+    publicExports.shorten = function TK_DataTypesList_shorten(
         inputs: any
     ) {
         const { list } = inputs;
@@ -51,6 +51,6 @@ interface TK_DataTypesList_file {
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
-        ToolKid.registerFunctions({ section: "dataTypes", subSection: "list", functions: publicExports });
+        ToolKid.register({ section: "dataTypes", subSection: "list", entries: publicExports });
     }
 })();
