@@ -3,12 +3,9 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     testFull(inputs: {
-        path: string | string[],
-        include?: string | string[],
-        exclude?: string | string[],
         title?: string
         suspects?: any | any[]
-    }): void,
+    } & Omit<Parameters<LibraryFiles_file["loopFiles"]>[0], "execute">): void,
 }
 
 
@@ -147,7 +144,7 @@ interface TK_DebugTest_file {
     const shortenData = function TK_DebugTestFull_shortenValue(list: any) {
         return ToolKid.dataTypes.list.shorten({
             list,
-            maxLength: (typeof list === "string" ? 200 : 20),
+            maxLength: (typeof list === "string" ? 200 : 30),
             omissionSignal
         });
     };
@@ -159,15 +156,13 @@ interface TK_DebugTest_file {
         }
         const name = TKTest.getResultGroup().name;
         console.log(colorText("positive",
-            "\n>> start testing " + name
+            "\n>>  testing " + name
         ));
         TKTest.setFailureHandler(
             logFailure.bind(null, name)
         );
         let timeStart = Date.now();
-        ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
-            execute: require
-        }));
+        ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, { execute: require }));
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
         const summary = TKTest.getSummary({

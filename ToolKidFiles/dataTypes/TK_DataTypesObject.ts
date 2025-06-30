@@ -5,7 +5,7 @@ interface TK_DataTypesObject_file {
     filter<Data extends Dictionary, Key extends string>(
         inputs: {
             data: Data;
-            keys: Key[];
+            byKeys: Key[];
         }
     ): Pick<Data, Key>,
     merge<
@@ -26,9 +26,9 @@ interface TK_DataTypesObject_file {
 
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
         const result = {} as any;
-        const { data, keys } = inputs;
-        for (let i = 0; i < keys.length; i += 1) {
-            result[keys[i]] = data[keys[i]]
+        const { data, byKeys } = inputs;
+        for (let i = 0; i < byKeys.length; i += 1) {
+            result[byKeys[i]] = data[byKeys[i]]
         }
         return result;
     };

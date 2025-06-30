@@ -3,6 +3,7 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     getSummary(inputs?: {
+        name?: string,
         suspects?: any[],
         callback?(
             summary: TestSummary
@@ -126,8 +127,9 @@ type TestSummary = {
         if (suspects !== undefined) {
             suspects.forEach(registerSuspect.bind(null, missingSuspects));
         }
+        const resultGroup = <TKTestResultGroup>ToolKid.debug.test.getResultGroup(<string>inputs.name);
         const summary = createSummary(Object.assign({},
-            ToolKid.debug.test.getResultGroup(),
+            resultGroup,
             { missingSuspects }
         ));
         if (typeof callback !== "function") {
@@ -140,6 +142,7 @@ type TestSummary = {
         }
 
         const boundData = {
+            name: resultGroup.name,
             inputs,
             pendingCount: summary.pending.size
         };
@@ -165,7 +168,9 @@ type TestSummary = {
     ) {
         delete boundData.pendingCallback;
         if (boundData.pendingCount === 0) {
-            publicExports.getSummary(boundData.inputs);
+            publicExports.getSummary(Object.assign({},boundData.inputs,{
+                name: boundData.name
+            }));
         }
     };
 

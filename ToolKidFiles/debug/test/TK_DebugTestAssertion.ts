@@ -16,6 +16,7 @@ interface TK_DebugTest_file {
                     errorMessage: [description: string, ...details: any[]]
                 ): void
             },
+            logValue?: true,
             toleranceDepth?: number,
         }
     }): void,
@@ -54,13 +55,13 @@ interface TK_DebugTest_file {
             throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
         }
 
-        Object.entries(inputs[0]).forEach(assertMulti.bind(null, errors));
+        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors));
         if (errors.length !== 0) {
             throw errors;
         }
     };
 
-    const assertMulti = function TK_DebugTestAssertion_assertMultiple(
+    const assertComplex = function TK_DebugTestAssertion_assertComplex(
         errors: (string | EqualityDifference)[],
         nameAndConfig: [string, Dictionary]
     ) {
@@ -85,16 +86,20 @@ interface TK_DebugTest_file {
     };
 
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(
-        errors: (string | EqualityDifference)[], nameAndValue: [testName: string, config: any]
+        errors: (string | EqualityDifference)[], nameAndConfig: [testName: string, config: any]
     ) {
-        const returned = ToolKid.dataTypes.checks.areEqual(nameAndValue[1]);
+        const [, config] = nameAndConfig;
+        if (config.logValue === true) {
+            console.log("~ " + nameAndConfig[0] + " ~ value is:", config.value);
+        }
+        const returned = ToolKid.dataTypes.checks.areEqual(config);
         if (returned === true) {
             return;
         }
 
-        const errorMessage = ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
-        if (typeof nameAndValue[1].catchFailure === "function") {
-            nameAndValue[1].catchFailure(errorMessage);
+        const errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+        if (typeof config.catchFailure === "function") {
+            config.catchFailure(errorMessage);
         } else {
             errors.push(...errorMessage);
         }

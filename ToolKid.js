@@ -1120,9 +1120,9 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
     const publicExports = module.exports = {};
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
         const result = {};
-        const { data, keys } = inputs;
-        for (let i = 0; i < keys.length; i += 1) {
-            result[keys[i]] = data[keys[i]];
+        const { data, byKeys } = inputs;
+        for (let i = 0; i < byKeys.length; i += 1) {
+            result[byKeys[i]] = data[byKeys[i]];
         }
         return result;
     };
@@ -1381,10 +1381,10 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
                 results: currentResultGroup.results
             };
         }
-        const results = resultGroups.get(name);
-        return (results === undefined)
+        const group = resultGroups.get(name);
+        return (group === undefined)
             ? undefined
-            : { name, results };
+            : { name, results: group.results };
     };
     publicExports.setFailureHandler = function TK_DebugTest_setFailureHandler(handler) {
         currentResultGroup.failureHandler = handler;
@@ -1666,12 +1666,12 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         if (inputs.length !== 1) {
             throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
         }
-        Object.entries(inputs[0]).forEach(assertMulti.bind(null, errors));
+        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors));
         if (errors.length !== 0) {
             throw errors;
         }
     };
-    const assertMulti = function TK_DebugTestAssertion_assertMultiple(errors, nameAndConfig) {
+    const assertComplex = function TK_DebugTestAssertion_assertComplex(errors, nameAndConfig) {
         const [, config] = nameAndConfig;
         if (isShortConfig(config)) {
             assertEqualityPerName(errors, [
@@ -1691,14 +1691,18 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
             throw errors;
         }
     };
-    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndValue) {
-        const returned = ToolKid.dataTypes.checks.areEqual(nameAndValue[1]);
+    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndConfig) {
+        const [, config] = nameAndConfig;
+        if (config.logValue === true) {
+            console.log("~ " + nameAndConfig[0] + " ~ value is:", config.value);
+        }
+        const returned = ToolKid.dataTypes.checks.areEqual(config);
         if (returned === true) {
             return;
         }
-        const errorMessage = ["~ " + nameAndValue[0] + " ~ value did not meet expectations:", ...returned];
-        if (typeof nameAndValue[1].catchFailure === "function") {
-            nameAndValue[1].catchFailure(errorMessage);
+        const errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+        if (typeof config.catchFailure === "function") {
+            config.catchFailure(errorMessage);
         }
         else {
             errors.push(...errorMessage);
@@ -1873,7 +1877,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const shortenData = function TK_DebugTestFull_shortenValue(list) {
         return ToolKid.dataTypes.list.shorten({
             list,
-            maxLength: (typeof list === "string" ? 200 : 20),
+            maxLength: (typeof list === "string" ? 200 : 30),
             omissionSignal
         });
     };
@@ -1883,12 +1887,10 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             TKTest.switchResultGroup(inputs.title);
         }
         const name = TKTest.getResultGroup().name;
-        console.log(colorText("positive", "\n>> start testing " + name));
+        console.log(colorText("positive", "\n>>  testing " + name));
         TKTest.setFailureHandler(logFailure.bind(null, name));
         let timeStart = Date.now();
-        ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, {
-            execute: require
-        }));
+        ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, { execute: require }));
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
         const summary = TKTest.getSummary({
@@ -2070,7 +2072,8 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         if (suspects !== undefined) {
             suspects.forEach(registerSuspect.bind(null, missingSuspects));
         }
-        const summary = createSummary(Object.assign({}, ToolKid.debug.test.getResultGroup(), { missingSuspects }));
+        const resultGroup = ToolKid.debug.test.getResultGroup(inputs.name);
+        const summary = createSummary(Object.assign({}, resultGroup, { missingSuspects }));
         if (typeof callback !== "function") {
             return summary;
         }
@@ -2079,6 +2082,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
             return summary;
         }
         const boundData = {
+            name: resultGroup.name,
             inputs,
             pendingCount: summary.pending.size
         };
@@ -2097,7 +2101,9 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
     const summaryCallback = function TK_DebugTestSummary_summaryCallback(boundData) {
         delete boundData.pendingCallback;
         if (boundData.pendingCount === 0) {
-            publicExports.getSummary(boundData.inputs);
+            publicExports.getSummary(Object.assign({}, boundData.inputs, {
+                name: boundData.name
+            }));
         }
     };
     const createSummary = function (inputs) {

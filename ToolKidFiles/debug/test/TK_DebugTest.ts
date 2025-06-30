@@ -86,10 +86,10 @@ type TKTestResultGroup = {
             };
         }
 
-        const results = resultGroups.get(name);
-        return (results === undefined)
+        const group = resultGroups.get(name);
+        return (group === undefined)
             ? undefined
-            : { name, results }
+            : { name, results: group.results }
     };
 
     publicExports.setFailureHandler = function TK_DebugTest_setFailureHandler(handler) {

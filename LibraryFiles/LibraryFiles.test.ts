@@ -18,7 +18,7 @@ type LibraryFiles_test_file = {
 
     const FS = require("fs");
     const { resolve } = require("path");
-    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const { assert, assertEquality, assertFailure, test } = ToolKid.debug.test;
 
 
 
@@ -111,14 +111,17 @@ type LibraryFiles_test_file = {
         subject: loopFiles,
         execute: function basicFileLoop() {
             const fileDirectory = __dirname;
-            let found = <string[]>[];
-            loopFiles({
-                path: fileDirectory,
-                execute: found.push.bind(found)
-            });
-            assertEquality({
+            const collect = function (inputs: any) {
+                const collected = <string[]>[];
+                const register = collected.push.bind(collected);
+                loopFiles(Object.assign({}, inputs, { execute: register }));
+                return collected;
+            }
+            assert({
                 "siblingFiles": {
-                    value: found,
+                    value: collect({
+                        path: fileDirectory
+                    }),
                     shouldBe: [
                         resolve(fileDirectory, "LibraryBuild.js"),
                         resolve(fileDirectory, "LibraryCore.js"),
@@ -129,10 +132,31 @@ type LibraryFiles_test_file = {
                     ]
                 }
             });
+            assert({
+                "exclude parsing files": {
+                    value: collect({
+                        path: fileDirectory,
+                        excludes: ["*Parsing*"]
+                    }),
+                    shouldBe: [
+                        resolve(fileDirectory, "LibraryBuild.js"),
+                        resolve(fileDirectory, "LibraryCore.js"),
+                        resolve(fileDirectory, "LibraryFiles.js"),
+                        resolve(fileDirectory, "LibraryFiles.test.js"),
+                    ]
+                }
+            });
+            assert({
+                "exclude core files": {
+                    value: collect({
+                        path: fileDirectory,
+                        excludes: ["*/core/*"]
+                    }),
+                    shouldBe: []
+                }
+            });
         }
-    });
-
-    test({
+    }, {
         subject: loopFiles,
         execute: function loopingDirectory() {
             let fileList = <any[]>[];
@@ -152,7 +176,7 @@ type LibraryFiles_test_file = {
         }
     }, {
         subject: loopFiles,
-        execute: function loopingFiles() {
+        execute: function loopingFile() {
             let fileList = <any[]>[];
             loopFiles({
                 path: paths.file,
