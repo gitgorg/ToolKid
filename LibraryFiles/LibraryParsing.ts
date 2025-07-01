@@ -90,7 +90,7 @@ type TextParserForClosings = {
         signals: (string | undefined)[],
     }
     type StateForReplacing = {
-        parseTextLayered(text: string): void,
+        parseTextLayered(text: TextParserInputs): void,
         position: number,
         result: string,
     }
@@ -191,7 +191,7 @@ type TextParserForClosings = {
         if (typeof inputs === "string") {
             inputs = { text: inputs }
         }
-        const text = inputs.text;
+        const { text } = inputs;
         let layerDepth = 0;
         let lastIndex = layer.pattern.lastIndex = 0;
         let RXResult = <RegExpExecArray & { wantedSignalID: number }>layer.pattern.exec(text);
@@ -338,12 +338,15 @@ type TextParserForClosings = {
     };
 
     const replaceTextLayered = function LibraryParsing_replaceTextLayered(
-        state: StateForReplacing, textInput: string
+        state: StateForReplacing, inputs: TextParserInputs
     ) {
         state.position = 0;
         state.result = "";
-        state.parseTextLayered(textInput);
-        return state.result + textInput.slice(state.position);
+        if (typeof inputs === "string") {
+            inputs = {text: inputs};
+        }
+        state.parseTextLayered(inputs);
+        return state.result + inputs.text.slice(state.position);
     };
 
 

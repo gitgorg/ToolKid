@@ -22,7 +22,7 @@ interface TK_CodeJS_file {
             isMAINLayer: false,
         },
         js_import: {
-            patterns: [["re" + "quire(", ")"]],
+            patterns: [["require(", ")"]],
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],

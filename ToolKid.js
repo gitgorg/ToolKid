@@ -400,7 +400,7 @@ name: "files", module: module.exports
         if (typeof inputs === "string") {
             inputs = { text: inputs };
         }
-        const text = inputs.text;
+        const { text } = inputs;
         let layerDepth = 0;
         let lastIndex = layer.pattern.lastIndex = 0;
         let RXResult = layer.pattern.exec(text);
@@ -499,11 +499,14 @@ name: "files", module: module.exports
         state.result += inputs.text.slice(state.position, RXOpening.index) + returned;
         state.position = RXResult.index + RXResult[0].length;
     };
-    const replaceTextLayered = function LibraryParsing_replaceTextLayered(state, textInput) {
+    const replaceTextLayered = function LibraryParsing_replaceTextLayered(state, inputs) {
         state.position = 0;
         state.result = "";
-        state.parseTextLayered(textInput);
-        return state.result + textInput.slice(state.position);
+        if (typeof inputs === "string") {
+            inputs = { text: inputs };
+        }
+        state.parseTextLayered(inputs);
+        return state.result + inputs.text.slice(state.position);
     };
     // regExp flags explained on top /\
     const escapeCharsRX = new RegExp([
@@ -578,7 +581,7 @@ name: "parsing", module: module.exports
             isMAINLayer: false,
         },
         js_import: {
-            patterns: [["re" + "quire(", ")"]],
+            patterns: [["require(", ")"]],
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],
@@ -1904,8 +1907,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             }
         });
         if (summary.pending.size !== 0) {
-            console.log(summarizeFazitSync({ summary, timeInitial })
-                + " ... waiting for at least " + summary.pending.size + " more tests");
+            console.log(colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)");
         }
     };
     Object.freeze(publicExports);

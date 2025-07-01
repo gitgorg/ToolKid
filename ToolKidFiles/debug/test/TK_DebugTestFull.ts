@@ -177,8 +177,7 @@ interface TK_DebugTest_file {
         });
         if (summary.pending.size !== 0) {
             console.log(
-                summarizeFazitSync({ summary, timeInitial })
-                + " ... waiting for at least " + summary.pending.size + " more tests"
+                colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)"
             );
         }
     };

@@ -28,18 +28,13 @@ type LibraryFiles_file = {
         excludes?: (string | RegExp)[],
     }): void,
     readFile(
-        path: string
+        path: string | {
+            path: string,
+            checkExistance?: false,
+            encoding?: string,
+            useCache?: false,
+        }
     ): {
-        encoding: string,
-        content: any
-    } | {
-        content: undefined
-    }
-    readFile(inputs: {
-        path: string,
-        checkExistance?: false,
-        encoding?: string,
-    }): {
         encoding: string,
         content: any
     } | {
