@@ -20,10 +20,9 @@ interface ToolKid_file extends Library {
 }
 
 type ToolKidConfig = {
-    rootToolKidFiles: string | string[],
-    rootLibraryFiles: string,
-    include: string[],
-    exclude: string[],
+    fileRoot: string,
+    include?: string[],
+    exclude?: string[],
 }
 
 
@@ -44,16 +43,11 @@ type ToolKidConfig = {
             config = readConfig();
         }
         const library = (<LibraryCore_file><any>require(
-            resolve(config.rootLibraryFiles, "LibraryCore.js")
+            resolve(config.fileRoot, "modules/core/LibraryCore.js")
         )).createInstance();
 
         (<Dictionary>global).ToolKid = library;
-        library.getCoreModule("files").loopFiles({
-            path: config.rootToolKidFiles,
-            includes: config.include,
-            excludes: config.exclude,
-            execute: require
-        });
+        loopFiles({library, config, execute: require});
         console.log(">>  ToolKid ready");
         if (config.runTests === true) {
             runTests(config);
@@ -86,6 +80,23 @@ module.exports = ToolKid;\n\
 console.log(">>  ToolKid ready")\n\
 })();';
 
+    const loopFiles = function ToolKidBuild_loopFiles(inputs:{
+        library: Library | LibraryCore_file,
+        config: ToolKidConfig,
+        execute: Parameters<LibraryFiles_file["loopFiles"]>[0]["execute"]
+    }) {
+        const {config} = inputs;
+        inputs.library.getCoreModule("files").loopFiles({
+            path: resolve(config.fileRoot, "modules"),
+            includes: ["*.js", ...(config.include || [])],
+            excludes: [
+                "*.test.js", resolve(config.fileRoot, "modules/core/*"),
+                ...(config.exclude || [])
+            ],
+            execute: inputs.execute
+        });
+    }
+
     const registerExtensionFile = function ToolKidBuild_registerExtensionFile(
         pathsByFileName: Dictionary,
         path: string
@@ -102,10 +113,7 @@ console.log(">>  ToolKid ready")\n\
 
     const readConfig = function ToolKidBuild_readConfig() {
         let result = <ToolKidConfig>{
-            rootToolKidFiles: "../ToolKidFiles",
-            rootLibraryFiles: "../LibraryFiles",
-            include: ["*.js"],
-            exclude: ["*.test.js"]
+            fileRoot: "./"
         };
         const FS = require("fs");
         if (FS.existsSync("./ToolKidConfig.json")) {
@@ -120,11 +128,8 @@ console.log(">>  ToolKid ready")\n\
     ) {
         setTimeout(ToolKid.debug.test.testFull.bind(null, {
             title: "ToolKid",
-            path: (typeof config.rootToolKidFiles === "string")
-                ? [config.rootToolKidFiles, config.rootLibraryFiles]
-                : [...config.rootToolKidFiles, config.rootLibraryFiles],
+            path: [config.fileRoot],
             include: ["*.test.js"],
-            exclude: config.exclude.slice(1),
             suspects: [ToolKid],
         }), 100);
     };
@@ -133,21 +138,20 @@ console.log(">>  ToolKid ready")\n\
         const filePath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
         console.log(">>  write Toolkid to " + filePath);
         const libraryCore = <LibraryCore_file><any>require(
-            resolve(config.rootLibraryFiles, "LibraryCore.js")
+            resolve(config.fileRoot, "modules/core/LibraryCore.js")
         );
         const coreModuleFiles = libraryCore.getCoreModule("files");
         const fileLocations = <{ [fileName: string]: string }>{};
-        coreModuleFiles.loopFiles({
-            path: config.rootToolKidFiles,
-            includes: config.include,
-            excludes: config.exclude,
+        loopFiles({
+            library: libraryCore,
+            config,
             execute: registerExtensionFile.bind(null, fileLocations)
         });
         const { resolvePath } = coreModuleFiles;
         const files = new Map([
-            ["LibraryCore.js", { filePath: resolvePath(__dirname, "../LibraryFiles/LibraryCore.js") }],
-            ["LibraryFiles.js", { filePath: resolvePath(__dirname, "../LibraryFiles/LibraryFiles.js") }],
-            ["LibraryParsing.js", { filePath: resolvePath(__dirname, "../LibraryFiles/LibraryParsing.js") }]
+            ["LibraryCore.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryCore.js") }],
+            ["LibraryFiles.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryFiles.js") }],
+            ["LibraryParsing.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryParsing.js") }]
         ]);
         Object.entries(fileLocations).forEach(function ([importID, filePath]) {
             files.set(importID, { filePath });
