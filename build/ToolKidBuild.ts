@@ -1,11 +1,11 @@
 //combining all ToolKid parts
 type ToolKidBuild_file = {
-    activateToolKid(
+    activate(
         inputs?: ToolKidConfig & {
             runTests?: true
         }
     ): void,
-    writeToolKid(
+    write(
         inputs: ToolKidConfig & {
             exportPath?: string,
             runTests?: false,
@@ -34,7 +34,7 @@ type ToolKidConfig = {
 
 
     const publicExports = module.exports = <ToolKidBuild_file>{};
-    publicExports.activateToolKid = function ToolKidBuild_activateToolKid(config) {
+    publicExports.activate = function ToolKidBuild_activate(config) {
         if (typeof ToolKid !== "undefined") {
             return;
         }
@@ -129,7 +129,7 @@ console.log(">>  ToolKid ready")\n\
         }), 100);
     };
 
-    publicExports.writeToolKid = function ToolKidBuild_executeBuild(config) {
+    publicExports.write = function ToolKidBuild_executeBuild(config) {
         const filePath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
         console.log(">>  write Toolkid to " + filePath);
         const libraryCore = <LibraryCore_file><any>require(
@@ -175,6 +175,6 @@ console.log(">>  ToolKid ready")\n\
     const executionFile = basename(process.argv[1]);
     const isExecutedViaTerminal = executionFile.slice(0, 12) === "ToolKidBuild";
     if (isExecutedViaTerminal) {
-        publicExports.activateToolKid();
+        publicExports.activate();
     }
 })();

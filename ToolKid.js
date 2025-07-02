@@ -610,16 +610,16 @@ fileCollection.set("TK_CodeJS.js", module.exports);
             return "";
         }
         if (text[0] === "'") {
-            if (text[text.length - 1] === "'") {
-                return text.slice(1, -1);
-            }
+            return (text[text.length - 1] === "'")
+                ? text.slice(1, -1) : text;
         }
         else if (text[0] === "\"") {
-            if (text[text.length - 1] === "\"") {
-                return text.slice(1, -1);
-            }
+            return (text[text.length - 1] === "\"")
+                ? text.slice(1, -1) : text;
         }
-        return text;
+        else {
+            return text;
+        }
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -1124,8 +1124,12 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
         const result = {};
         const { data, byKeys } = inputs;
+        let value;
         for (let i = 0; i < byKeys.length; i += 1) {
-            result[byKeys[i]] = data[byKeys[i]];
+            value = data[byKeys[i]];
+            if (value !== undefined) {
+                result[byKeys[i]] = value;
+            }
         }
         return result;
     };
@@ -2203,6 +2207,23 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 })();
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
 
+(function TK_File_init() {
+    const publicExports = module.exports = {};
+    publicExports.getExtension = function TK_File_getExtension(filePath) {
+        let parts = filePath.trim().split(/\/|\\/);
+        const fileName = parts[parts.length - 1];
+        parts = fileName.split(".");
+        return (parts.length === 1)
+            ? ""
+            : parts[parts.length - 1].toLocaleLowerCase();
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "file", entries: publicExports });
+    }
+})();
+fileCollection.set("TK_File.js", module.exports);
+
 (function TK_NodeJSFile_init() {
     const { appendFileSync: extendFile, existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
@@ -2210,7 +2231,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
         if (!isUsedPath(path)) {
             return;
         }
-        if (ToolKid.nodeJS.isDirectory(path)) {
+        if (publicExports.isDirectory(path)) {
             deleteFolder(path, { recursive: true });
         }
         else {

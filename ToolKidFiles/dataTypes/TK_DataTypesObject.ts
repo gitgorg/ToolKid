@@ -27,8 +27,12 @@ interface TK_DataTypesObject_file {
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
         const result = {} as any;
         const { data, byKeys } = inputs;
+        let value:any;
         for (let i = 0; i < byKeys.length; i += 1) {
-            result[byKeys[i]] = data[byKeys[i]]
+            value = data[byKeys[i]];
+            if (value !== undefined) {
+                result[byKeys[i]] = value
+            }
         }
         return result;
     };

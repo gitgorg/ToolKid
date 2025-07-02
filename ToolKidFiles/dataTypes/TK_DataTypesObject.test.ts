@@ -1,13 +1,13 @@
 (function TK_DataTypesObject_test() {
-    const { test, assertEquality } = ToolKid.debug.test;
-    const { merge } = ToolKid.dataTypes.object;
+    const { test, assert, assertFailure } = ToolKid.debug.test;
+    const { merge, filter } = ToolKid.dataTypes.object;
 
 
 
     test({
         subject: merge,
-        execute: function simpleCombinations() {
-            assertEquality({
+        execute: function objectMerge() {
+            assert({
                 "add": {
                     value: merge({ a: 1 }, { b: 2 }),
                     shouldBe: { a: 1, b: 2 }
@@ -25,7 +25,7 @@
     }, {
         subject: merge,
         execute: function complexCombinations() {
-            assertEquality({
+            assert({
                 "multiple objects": {
                     toleranceDepth: 4,
                     value: merge(
@@ -46,4 +46,20 @@
             });
         }
     });
+
+    test({
+        subject: filter,
+        execute: function objectFilter () {
+            const filtered = filter({data: {a:true, b:false, c:null}, byKeys:["b","d"]});
+            assert({
+                "filtered": [filtered, {b:false}],
+                "filtered keys": [Object.keys(filtered), ["b"]]
+            });
+            assertFailure({
+                name:"missingKeys",
+                execute: filter,
+                withInputs: [{data: {a:true, b:false}}]
+            });
+        }
+    })
 })();

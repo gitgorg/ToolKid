@@ -1,6 +1,6 @@
 (function TK_nodeJSFile_test() {
-    const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.test.js"));
-    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "../../LibraryFiles/LibraryFiles.test.js"));
+    const { assert, assertFailure, test } = ToolKid.debug.test;
     const { deletePath, extendFile, isDirectory, readDirectory, readFile, writeFile } = ToolKid.nodeJS;
 
 
@@ -9,7 +9,7 @@
         subject: extendFile,
         execute: function regularFileExtension() {
             deletePath("./TKTest.extendFile.txt");
-            assertEquality({
+            assert({
                 "file not there yet": {
                     value: readFile("./TKTest.extendFile.txt"),
                     shouldBe: { content: undefined }
@@ -19,7 +19,7 @@
                 path: "./TKTest.extendFile.txt",
                 content: "1"
             });
-            assertEquality({
+            assert({
                 "file ready": {
                     value: readFile({ path: "./TKTest.extendFile.txt" }),
                     shouldBe: {
@@ -32,7 +32,7 @@
                 path: "./TKTest.extendFile.txt",
                 content: "2"
             });
-            assertEquality({
+            assert({
                 "file changed": {
                     value: readFile("./TKTest.extendFile.txt"),
                     shouldBe: {
@@ -54,7 +54,7 @@
         subject: extendFile,
         execute: function newFileExtension() {
             deletePath("./TKTest.extendFileNew.txt");
-            assertEquality({
+            assert({
                 "file not there yet": {
                     value: readFile({ path: "./TKTest.extendFileNew.txt" }),
                     shouldBe: { content: undefined }
@@ -64,7 +64,7 @@
                 path: "./TKTest.extendFileNew.txt",
                 content: "2"
             });
-            assertEquality({
+            assert({
                 "file changed": {
                     value: readFile("./TKTest.extendFileNew.txt"),
                     shouldBe: {
@@ -81,7 +81,7 @@
         subject: extendFile,
         execute: function newFolderFileExtension() {
             deletePath("./testFolder");
-            assertEquality({
+            assert({
                 "file not there yet": {
                     value: readFile({ path: "./testFolder/TKTest.extendFileFolder.txt" }),
                     shouldBe: { content: undefined }
@@ -91,7 +91,7 @@
                 path: "./testFolder/TKTest.extendFileFolder.txt",
                 content: "3"
             });
-            assertEquality({
+            assert({
                 "file changed": {
                     value: readFile("./testFolder/TKTest.extendFileFolder.txt"),
                     shouldBe: {
@@ -109,7 +109,7 @@
     test({
         subject: isDirectory,
         execute: function basic() {
-            assertEquality({
+            assert({
                 "directory": {
                     value: isDirectory(paths.directoryMixedContents),
                     shouldBe: true
@@ -139,7 +139,7 @@
     test({
         subject: readDirectory,
         execute: function readingFiles() {
-            assertEquality({
+            assert({
                 "directory": {
                     value: readDirectory(paths.directoryMixedContents),
                     shouldBe: ['T_empty', 'T_empty.txt', 'T_file.json']

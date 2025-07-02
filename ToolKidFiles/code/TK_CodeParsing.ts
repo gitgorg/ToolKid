@@ -25,16 +25,14 @@ interface TK_Code_file {
         }
 
         if (text[0] === "'") {
-            if (text[text.length - 1] === "'") {
-                return text.slice(1, -1);
-            }
+            return (text[text.length - 1] === "'")
+                ? text.slice(1, -1) :text;
         } else if (text[0] === "\"") {
-            if (text[text.length - 1] === "\"") {
-                return text.slice(1, -1);
-            }
+            return (text[text.length - 1] === "\"")
+                ? text.slice(1, -1) :text;
+        } else {
+            return text;
         }
-
-        return text;
     };
 
 

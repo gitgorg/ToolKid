@@ -41,7 +41,7 @@ interface TK_nodeJS_file {
             return;
         }
 
-        if (ToolKid.nodeJS.isDirectory(path)) {
+        if (publicExports.isDirectory(path)) {
             deleteFolder(path, { recursive: true });
         } else {
             deleteFile(path);
