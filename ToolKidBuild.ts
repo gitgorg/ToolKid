@@ -40,14 +40,21 @@ type ToolKidConfig = {
 
         console.log(">>  activate ToolKid");
         if (config === undefined) {
-            config = readConfig();
+            const FS = require("fs");
+            if (FS.existsSync(resolve("./ToolKidConfig.json"))) {
+                config = <ToolKidConfig>JSON.parse(
+                    FS.readFileSync("./ToolKidConfig.json", "utf8")
+                );
+            } else {
+                config = { fileRoot: "./" }
+            }
         }
         const library = (<LibraryCore_file><any>require(
             resolve(config.fileRoot, "modules/core/LibraryCore.js")
         )).createInstance();
 
         (<Dictionary>global).ToolKid = library;
-        loopFiles({library, config, execute: require});
+        loopFiles({ library, config, execute: require });
         console.log(">>  ToolKid ready");
         if (config.runTests === true) {
             runTests(config);
@@ -77,15 +84,15 @@ const fileCollection = new Map();\n\n';
     const bundleFooter = '\n\
 global.log = ToolKid.debug.terminal.logImportant;\n\
 module.exports = ToolKid;\n\
-console.log(">>  ToolKid ready")\n\
+console.log(">>  ToolKid ready");\n\
 })();';
 
-    const loopFiles = function ToolKidBuild_loopFiles(inputs:{
+    const loopFiles = function ToolKidBuild_loopFiles(inputs: {
         library: Library | LibraryCore_file,
         config: ToolKidConfig,
         execute: Parameters<LibraryFiles_file["loopFiles"]>[0]["execute"]
     }) {
-        const {config} = inputs;
+        const { config } = inputs;
         inputs.library.getCoreModule("files").loopFiles({
             path: resolve(config.fileRoot, "modules"),
             includes: ["*.js", ...(config.include || [])],
@@ -109,18 +116,6 @@ console.log(">>  ToolKid ready")\n\
             );
         }
         pathsByFileName[fileName] = path;
-    };
-
-    const readConfig = function ToolKidBuild_readConfig() {
-        let result = <ToolKidConfig>{
-            fileRoot: "./"
-        };
-        const FS = require("fs");
-        if (FS.existsSync("./ToolKidConfig.json")) {
-            let content = FS.readFileSync("./ToolKidConfig.json", "utf8");
-            result = JSON.parse(content);
-        }
-        return result;
     };
 
     const runTests = function ToolKidBuild_runTests(
@@ -150,9 +145,15 @@ console.log(">>  ToolKid ready")\n\
         const { resolvePath } = coreModuleFiles;
         const files = new Map([
             ["LibraryCore.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryCore.js") }],
-            ["LibraryFiles.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryFiles.js") }],
-            ["LibraryParsing.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryParsing.js") }]
         ]);
+        libraryCore.getCoreModule("files").loopFiles({
+            path: resolve(config.fileRoot, "modules/core"),
+            includes: ["*.js", ...(config.include || [])],
+            excludes: ["*.test.js", "*LibraryCore.js", ...(config.exclude || [])],
+            execute: function (filePath) {
+                files.set(basename(filePath), { filePath });
+            }
+        });
         Object.entries(fileLocations).forEach(function ([importID, filePath]) {
             files.set(importID, { filePath });
         });

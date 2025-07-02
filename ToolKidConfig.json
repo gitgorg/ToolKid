@@ -1,11 +1,4 @@
 {
-    "rootToolKidFiles": "../ToolKidFiles",
-    "rootLibraryFiles": "../LibraryFiles",
-    "include": [
-        "*.js"
-    ],
-    "exclude": [
-        "*.test.js"
-    ],
+    "fileRoot": "./",
     "runTests": true
 }
