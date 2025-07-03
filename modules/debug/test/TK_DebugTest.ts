@@ -20,17 +20,17 @@ interface TK_DebugTest_file {
 
 type TKTestConfig = {
     subject: GenericFunction | string,
-    execute(
-        scope: Dictionary
-    ): any | Promise<any>,
     callback?(inputs: {
         scope: Dictionary,
         testResult: TKTestResult
     }): void
+} & ({
+    execute(
+        scope: Dictionary
+    ): any | Promise<any>,
 } | {
-    subject: GenericFunction | string,
     assert: Parameters<TK_DebugTest_file["assert"]>[0],
-}
+})
 type TKTestResult = {
     subject: any,
     name: string,
@@ -59,14 +59,14 @@ type TKTestResultGroup = {
 
 
 
-    const executeAssert = function assert(inputs:Dictionary) {
+    const executeAssert = function assert(inputs: Dictionary) {
         ToolKid.debug.test.assert(inputs);
     }
     const createResultBase = function TK_DebugTest_createResultBase(
-        config: TKTestConfig & { execute: GenericFunction },
+        config: TKTestConfig & { assert: any, execute: any },
     ) {
-        if ((<any>config).assert !== undefined) {
-            config.execute = executeAssert.bind(null, (<any>config).assert);
+        if (config.assert !== undefined) {
+            config.execute = executeAssert.bind(null, config.assert);
         }
         return <TKTestResult>{
             subject: config.subject,
@@ -147,7 +147,7 @@ type TKTestResultGroup = {
 
         return testExecute({
             config,
-            testResult: createResultBase(config),
+            testResult: createResultBase(<any>config),
             resultGroup
         });
     };
@@ -163,7 +163,7 @@ type TKTestResultGroup = {
         const startTime = Date.now();
         const scope = {};
         try {
-            const returned = inputs.config.execute(scope);
+            const returned = (<Dictionary>inputs.config).execute(scope);
             if (returned instanceof Promise) {
                 const promise = testWatchPromise({
                     testResult,

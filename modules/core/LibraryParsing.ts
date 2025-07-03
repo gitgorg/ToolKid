@@ -45,7 +45,7 @@ type TextLayerDefinition = {
             | RegExp
         )[],
         contains?: string[],
-        isMAINLayer?: false,
+        isROOTLayer?: false,
         layerData?: Dictionary,
     }
 }
@@ -103,7 +103,7 @@ type TextParserForClosings = {
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = <{ [key: string]: LayerData }>{
             MAIN: <LayerData><any>{
-                data: { name: "MAIN" },
+                data: { name: "ROOT" },
                 openings: [],
                 closings: [],
                 contains: []
@@ -142,7 +142,7 @@ type TextParserForClosings = {
                 layer.closings.push(undefined);
             }
         });
-        if (layerData.isMAINLayer !== false) {
+        if (layerData.isROOTLayer !== false) {
             (<string[]>layers.MAIN.contains).push(key);
         }
     };
@@ -155,7 +155,7 @@ type TextParserForClosings = {
         const directions = layer.directions = Array(count);
         if (layer.contains instanceof Array) {
             layer.contains.forEach(function LibraryParsing_connectTextParserLayer(key: string) {
-                if (key === "MAIN") {
+                if (key === "ROOT") {
                     layer.signals.push(...layers.MAIN.signals);
                     directions.push(...layers.MAIN.directions);
                 } else {
@@ -380,7 +380,7 @@ type TextParserForClosings = {
                 contains: ["escape"],
             },
             escape: {
-                isMAINLayer: false,
+                isROOTLayer: false,
                 patterns: [
                     /\\./s
                 ],

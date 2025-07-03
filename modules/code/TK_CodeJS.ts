@@ -19,14 +19,14 @@ interface TK_CodeJS_file {
         },
         js_escape: {
             patterns: [/\\./s],
-            isMAINLayer: false,
+            isROOTLayer: false,
         },
         js_import: {
             patterns: [["require(", ")"]],
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],
-            contains: ["MAIN"],
+            contains: ["ROOT"],
         },
         js_RX: {
             patterns: [[/[=|:|\(]\s*\//, "/"]],

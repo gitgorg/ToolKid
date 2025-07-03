@@ -15,19 +15,19 @@
                 ["{", "}"],
                 ["[", "]"]
             ],
-            contains: ["MAIN"]
+            contains: ["ROOT"]
         },
         import: {
             patterns: [
                 ["require(", ")"]
             ],
-            contains: ["MAIN"]
+            contains: ["ROOT"]
         },
         function: {
             patterns: [
                 [/\w+\(/, ")"]
             ],
-            contains: ["MAIN"]
+            contains: ["ROOT"]
         },
     });
 
@@ -128,7 +128,7 @@
                 layerDefinition: {
                     bracket: {
                         patterns: [["(", ")"], ["[", "]"], ["{", "}"]],
-                        contains: ["MAIN"]
+                        contains: ["ROOT"]
                     },
                     text: {
                         patterns: [["'", "'"],],
@@ -138,12 +138,12 @@
                         patterns: [["//", /\n|$/], ["/*", "*/"]],
                     },
                     escape: {
-                        isMAINLayer: false,
+                        isROOTLayer: false,
                         patterns: [/\\./s],
                     },
                     function: {
                         patterns: [[/\w+\(/, ")"]],
-                        contains: ["MAIN"]
+                        contains: ["ROOT"]
                     },
                 },
                 parseClosings,
@@ -209,7 +209,7 @@
                         contains: ["escape"]
                     },
                     escape: {
-                        isMAINLayer: false,
+                        isROOTLayer: false,
                         patterns: [
                             /\\./s
                         ],

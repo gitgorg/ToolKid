@@ -331,7 +331,7 @@ name: "files", module: module.exports
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
         const layers = {
             MAIN: {
-                data: { name: "MAIN" },
+                data: { name: "ROOT" },
                 openings: [],
                 closings: [],
                 contains: []
@@ -362,7 +362,7 @@ name: "files", module: module.exports
                 layer.closings.push(undefined);
             }
         });
-        if (layerData.isMAINLayer !== false) {
+        if (layerData.isROOTLayer !== false) {
             layers.MAIN.contains.push(key);
         }
     };
@@ -372,7 +372,7 @@ name: "files", module: module.exports
         const directions = layer.directions = Array(count);
         if (layer.contains instanceof Array) {
             layer.contains.forEach(function LibraryParsing_connectTextParserLayer(key) {
-                if (key === "MAIN") {
+                if (key === "ROOT") {
                     layer.signals.push(...layers.MAIN.signals);
                     directions.push(...layers.MAIN.directions);
                 }
@@ -535,7 +535,7 @@ name: "files", module: module.exports
                 contains: ["escape"],
             },
             escape: {
-                isMAINLayer: false,
+                isROOTLayer: false,
                 patterns: [
                     /\\./s
                 ],
@@ -578,14 +578,14 @@ name: "parsing", module: module.exports
         },
         js_escape: {
             patterns: [/\\./s],
-            isMAINLayer: false,
+            isROOTLayer: false,
         },
         js_import: {
             patterns: [["require(", ")"]],
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],
-            contains: ["MAIN"],
+            contains: ["ROOT"],
         },
         js_RX: {
             patterns: [[/[=|:|\(]\s*\//, "/"]],
