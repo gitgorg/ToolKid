@@ -1171,7 +1171,13 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
                 results: []
             }]]);
     let currentResultGroup = resultGroups.get("default");
+    const executeAssert = function assert(inputs) {
+        ToolKid.debug.test.assert(inputs);
+    };
     const createResultBase = function TK_DebugTest_createResultBase(config) {
+        if (config.assert !== undefined) {
+            config.execute = executeAssert.bind(null, config.assert);
+        }
         return {
             subject: config.subject,
             name: config.execute.name,

@@ -27,6 +27,9 @@ type TKTestConfig = {
         scope: Dictionary,
         testResult: TKTestResult
     }): void
+} | {
+    subject: GenericFunction | string,
+    assert: Parameters<TK_DebugTest_file["assert"]>[0],
 }
 type TKTestResult = {
     subject: any,
@@ -56,9 +59,15 @@ type TKTestResultGroup = {
 
 
 
+    const executeAssert = function assert(inputs:Dictionary) {
+        ToolKid.debug.test.assert(inputs);
+    }
     const createResultBase = function TK_DebugTest_createResultBase(
-        config: TKTestConfig,
+        config: TKTestConfig & { execute: GenericFunction },
     ) {
+        if ((<any>config).assert !== undefined) {
+            config.execute = executeAssert.bind(null, (<any>config).assert);
+        }
         return <TKTestResult>{
             subject: config.subject,
             name: config.execute.name,
