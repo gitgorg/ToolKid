@@ -11,7 +11,6 @@ interface TK_nodeJS_file {
     isDirectory(
         path: string
     ): boolean,
-    loopFiles: LibraryFiles_file["loopFiles"],
     readDirectory(
         path: string
     ): string[],
@@ -77,7 +76,6 @@ interface TK_nodeJS_file {
         ToolKid.register({
             section: "nodeJS",
             entries: {
-                loopFiles: core.loopFiles,
                 readFile: core.readFile,
                 resolvePath: core.resolvePath,
                 writeFile: core.writeFile,

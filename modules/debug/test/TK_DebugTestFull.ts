@@ -5,7 +5,7 @@ interface TK_DebugTest_file {
     testFull(inputs: {
         title?: string
         suspects?: any | any[]
-    } & Omit<Parameters<LibraryFiles_file["loopFiles"]>[0], "execute">): void,
+    } & Omit<Parameters<TK_file_file["loopFiles"]>[0], "execute">): void,
 }
 
 
@@ -162,7 +162,7 @@ interface TK_DebugTest_file {
             logFailure.bind(null, name)
         );
         let timeStart = Date.now();
-        ToolKid.nodeJS.loopFiles(Object.assign({}, inputs, { execute: require }));
+        ToolKid.file.loopFiles(Object.assign({}, inputs, { execute: require }));
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
         const summary = TKTest.getSummary({
