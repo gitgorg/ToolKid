@@ -1790,20 +1790,14 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
         return result;
     };
     const watchPromiseDuration = function TK_DebugTestCondition_watchPromiseDuration(inputs, promise) {
-        if (typeof inputs.timeToResolve === "number") {
-            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
-                if (promise.done !== true) {
-                    promise.resolve(inputs.overTimeMessage || "timeout");
-                }
-            }, inputs.timeToResolve);
-        }
-        else {
-            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
-                if (promise.done !== true) {
-                    promise.reject(inputs.overTimeMessage || "timeout");
-                }
-            }, inputs.timeToReject);
-        }
+        const config = (typeof inputs.timeToResolve === "number")
+            ? ["resolve", inputs.timeToResolve]
+            : ["reject", inputs.timeToReject];
+        setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
+            if (promise.done !== true) {
+                promise[config[0]](inputs.timeoutMessage || "timeout");
+            }
+        }, config[1]);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -2215,13 +2209,15 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
 
 (function TK_File_init() {
     const publicExports = module.exports = {};
-    publicExports.getExtension = function TK_File_getExtension(filePath) {
-        let parts = filePath.trim().split(/\/|\\/);
-        const fileName = parts[parts.length - 1];
-        parts = fileName.split(".");
+    publicExports.getExtension = function TK_File_getExtension(path) {
+        const parts = publicExports.getName(path).split(".");
         return (parts.length === 1)
             ? ""
             : parts[parts.length - 1].toLocaleLowerCase();
+    };
+    publicExports.getName = function TK_File_getName(path) {
+        let parts = path.trim().split(/\/|\\/);
+        return parts[parts.length - 1];
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

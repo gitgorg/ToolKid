@@ -1,7 +1,8 @@
 //file operations for nodeJS
 interface ToolKid_file { file: TK_file_file }
 interface TK_file_file {
-    getExtension(filePath:string): string
+    getExtension(path: string): string,
+    getName(path: string): string,
 }
 
 
@@ -9,13 +10,16 @@ interface TK_file_file {
 (function TK_File_init() {
     const publicExports = module.exports = <TK_file_file>{};
 
-    publicExports.getExtension = function TK_File_getExtension(filePath) {
-        let parts = filePath.trim().split(/\/|\\/);
-        const fileName = parts[parts.length -1];
-        parts = fileName.split(".");
+    publicExports.getExtension = function TK_File_getExtension(path) {
+        const parts = publicExports.getName(path).split(".");
         return (parts.length === 1)
             ? ""
-            : parts[parts.length-1].toLocaleLowerCase();
+            : parts[parts.length - 1].toLocaleLowerCase();
+    };
+
+    publicExports.getName = function TK_File_getName(path) {
+        let parts = path.trim().split(/\/|\\/);
+        return parts[parts.length - 1];
     };
 
     Object.freeze(publicExports);

@@ -5,16 +5,13 @@ interface TK_DebugTest_file {
     condition(
         timeToResolve?: number
     ): Condition,
-    condition(inputs: {
-        timeToResolve: number,
-        overTimeMessage?: any,
+    condition(inputs: (
+        { timeToResolve: number }
+        | { timeToReject: number }
+    ) & {
+        timeoutMessage?: any,
         registerWithName?: string,
-    }): Condition,
-    condition(inputs: {
-        timeToReject: number,
-        overTimeMessage?: any,
-        registerWithName?: string,
-    }): Condition,
+    } ): Condition,
     condition(
         name: string
     ): Condition
@@ -99,21 +96,17 @@ type Condition = Promise<any> & {
     const watchPromiseDuration = function TK_DebugTestCondition_watchPromiseDuration(inputs: {
         timeToResolve?: number,
         timeToReject?: number,
-        overTimeMessage: string,
+        timeoutMessage: string,
     }, promise: Condition) {
-        if (typeof inputs.timeToResolve === "number") {
-            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
-                if (promise.done !== true) {
-                    promise.resolve(inputs.overTimeMessage || "timeout");
-                }
-            }, inputs.timeToResolve);
-        } else {
-            setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
-                if (promise.done !== true) {
-                    promise.reject(inputs.overTimeMessage || "timeout");
-                }
-            }, inputs.timeToReject);
-        }
+        const config = (typeof inputs.timeToResolve === "number")
+            ? ["resolve", inputs.timeToResolve] as ["resolve", number]
+            : ["reject", inputs.timeToReject] as ["reject", number];
+        setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
+            if (promise.done !== true) {
+                promise[config[0]](inputs.timeoutMessage || "timeout");
+            }
+        }, config[1]);
+
     };
 
     Object.freeze(publicExports);
