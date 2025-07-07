@@ -966,10 +966,10 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
             return differentiators.set(path, value, shouldBe);
         }
         let reader = readProperty.basic;
-        if (shouldBe instanceof Map) {
+        if (value instanceof Map) {
             reader = readProperty.Map;
         }
-        else if (shouldBe instanceof Set) {
+        else if (value instanceof Set) {
             reader = readProperty.Set;
         }
         return equalLoop(path, value, shouldBe, toleranceDepth, allowAdditions, reader);
@@ -1537,6 +1537,7 @@ fileCollection.set("TK_DebugTest.js", module.exports);
 fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 
 (function TK_DebugTestAssertion_init() {
+    const defaultConfig = {};
     const publicExports = module.exports = {};
     publicExports.assert = function TK_DebugTestAssertion_assert(...inputs) {
         const errors = [];
@@ -1550,21 +1551,28 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         if (inputs.length !== 1) {
             throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
         }
-        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors));
+        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors, inputs[0].CONFIG || defaultConfig));
         if (errors.length !== 0) {
             throw errors;
         }
     };
-    const assertComplex = function TK_DebugTestAssertion_assertComplex(errors, nameAndConfig) {
+    const assertComplex = function TK_DebugTestAssertion_assertComplex(errors, baseConfig, nameAndConfig) {
         const [, config] = nameAndConfig;
         if (isShortConfig(config)) {
             assertEqualityPerName(errors, [
-                nameAndConfig[0], { value: config[0], shouldBe: config[1] }
+                nameAndConfig[0], {
+                    ...baseConfig,
+                    value: config[0],
+                    shouldBe: config[1]
+                }
             ]);
         }
         else {
             assertEqualityPerName(errors, [
-                nameAndConfig[0], nameAndConfig[1]
+                nameAndConfig[0], {
+                    ...baseConfig,
+                    ...nameAndConfig[1]
+                }
             ]);
         }
     };
@@ -1579,6 +1587,17 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         const [, config] = nameAndConfig;
         if (config.logValue === true) {
             console.log("~ " + nameAndConfig[0] + " ~ value is:", config.value);
+        }
+        if (config.shouldBe === Error) {
+            let returned;
+            try {
+                returned = config.value();
+            }
+            catch (error) {
+                return;
+            }
+            errors.push(...["~ " + nameAndConfig[0] + " ~ value did not fail - it returned:", returned]);
+            return;
         }
         const returned = ToolKid.dataTypes.checks.areEqual(config);
         if (returned === true) {
@@ -2221,7 +2240,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
     };
     if (typeof Element !== "undefined") {
         publicExports.loopFiles = function TK_File_loopFiles(inputs) {
-            log(2345, inputs);
+            // log(2345, inputs);
         };
     }
     if (typeof ToolKid !== "undefined") {

@@ -3,42 +3,52 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     assert(
-        label: string, value: any, shouldBe: any
+        label: string,
+        value: GenericFunction,
+        shouldBe: typeof Error
+    ): void,
+    assert(
+        label: string,
+        value: any,
+        shouldBe: any
     ): void,
     assert(inputs: {
-        [label: string]: [value: any, shouldBe: any] | {
+        [label: string]: [value: any, shouldBe: any] | ({
             value: any,
             shouldBe: any,
-
-            allowAdditions?: true,
-            catchFailure?: {
-                (
-                    errorMessage: [description: string, ...details: any[]]
-                ): void
-            },
-            logValue?: true,
-            toleranceDepth?: number,
-        }
+        } & TK_AssertConfig),
+    }): void,
+    assert(inputs: {
+        CONFIG?: TK_AssertConfig,
+    } & {
+        [label: string]: [value: any, shouldBe: any] | ({
+            value: any,
+            shouldBe: any,
+        } & TK_AssertConfig) | TK_AssertConfig,
     }): void,
     assertEquality(inputs: {
         [name: string]: {
             value: any,
             shouldBe: any,
-
-            allowAdditions?: true,
-            catchFailure?: {
-                (
-                    errorMessage: [description: string, ...details: any[]]
-                ): void
-            },
-            toleranceDepth?: number,
-        }
+        } & TK_AssertConfig
     }): void
+}
+
+type TK_AssertConfig = {
+    allowAdditions?: true,
+    catchFailure?: {
+        (
+            errorMessage: [description: string, ...details: any[]]
+        ): void
+    },
+    logValue?: true,
+    toleranceDepth?: number,
 }
 
 
 
 (function TK_DebugTestAssertion_init() {
+    const defaultConfig = {};
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     publicExports.assert = function TK_DebugTestAssertion_assert(...inputs: any[]) {
@@ -55,7 +65,9 @@ interface TK_DebugTest_file {
             throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
         }
 
-        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors));
+        Object.entries(inputs[0]).forEach(assertComplex.bind(null,
+            errors, inputs[0].CONFIG || defaultConfig
+        ));
         if (errors.length !== 0) {
             throw errors;
         }
@@ -63,16 +75,24 @@ interface TK_DebugTest_file {
 
     const assertComplex = function TK_DebugTestAssertion_assertComplex(
         errors: (string | EqualityDifference)[],
-        nameAndConfig: [string, Dictionary]
+        baseConfig: TK_AssertConfig,
+        nameAndConfig: [string, Dictionary],
     ) {
         const [, config] = nameAndConfig;
         if (isShortConfig(config)) {
             assertEqualityPerName(errors, [
-                nameAndConfig[0], { value: config[0], shouldBe: config[1] }
+                nameAndConfig[0], {
+                    ...baseConfig,
+                    value: config[0],
+                    shouldBe: config[1]
+                }
             ]);
         } else {
             assertEqualityPerName(errors, [
-                nameAndConfig[0], nameAndConfig[1]
+                nameAndConfig[0], {
+                    ...baseConfig,
+                    ...nameAndConfig[1]
+                }
             ]);
         }
     };
@@ -86,12 +106,24 @@ interface TK_DebugTest_file {
     };
 
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(
-        errors: (string | EqualityDifference)[], nameAndConfig: [testName: string, config: any]
+        errors: (string | EqualityDifference)[],
+        nameAndConfig: [testName: string, config: any]
     ) {
         const [, config] = nameAndConfig;
         if (config.logValue === true) {
             console.log("~ " + nameAndConfig[0] + " ~ value is:", config.value);
         }
+        if (config.shouldBe === Error) {
+            let returned;
+            try {
+                returned = config.value();
+            } catch (error) {
+                return;
+            }
+            errors.push(...["~ " + nameAndConfig[0] + " ~ value did not fail - it returned:", returned]);
+            return;
+        }
+
         const returned = ToolKid.dataTypes.checks.areEqual(config);
         if (returned === true) {
             return;

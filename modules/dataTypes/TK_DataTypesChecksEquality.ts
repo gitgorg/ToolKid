@@ -33,7 +33,7 @@ type EqualityDifference = {
         } else {
             return assertEqualityLoose(
                 [], inputs.value, inputs.shouldBe,
-                (typeof inputs.toleranceDepth === "number") ? inputs.toleranceDepth: 1,
+                (typeof inputs.toleranceDepth === "number") ? inputs.toleranceDepth : 1,
                 inputs.allowAdditions === true
             );
         }
@@ -107,9 +107,9 @@ type EqualityDifference = {
         }
 
         let reader = readProperty.basic;
-        if (shouldBe instanceof Map) {
+        if (value instanceof Map) {
             reader = readProperty.Map;
-        } else if (shouldBe instanceof Set) {
+        } else if (value instanceof Set) {
             reader = readProperty.Set;
         }
         return equalLoop(
