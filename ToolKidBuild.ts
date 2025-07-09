@@ -54,7 +54,7 @@ type ToolKidConfig = {
         )).createInstance();
 
         (<Dictionary>global).ToolKid = library;
-        loopFiles({ library, config, execute: require });
+        executeFiles({ library, config, execute: require });
         console.log(">>  ToolKid ready");
         if (config.runTests === true) {
             runTests(config);
@@ -63,7 +63,7 @@ type ToolKidConfig = {
 
     const bundleHeader = '"use strict";\n\
 (function ToolKid_bundle() {\n\
-console.log(">>  activate ToolKid")\n\
+console.log(">>  activate ToolKid");\n\
 const fileCollection = new Map();\n\n';
 
     const bundleParser = function ToolKidBuild_bundleParser(
@@ -74,8 +74,10 @@ const fileCollection = new Map();\n\n';
         if (inputs.importID === "LibraryCore.js") {
             result += 'global.ToolKid = module.exports.createInstance();\n';
         } else if (inputs.importID.indexOf("Library") === 0) {
+            let importID = inputs.importID.slice(7, -3);
+            importID = importID[0].toLocaleLowerCase() + importID.slice(1);
             result += 'fileCollection.get("LibraryCore.js").registerCoreModule({\nname: "'
-                + inputs.importID.slice(7, -3).toLocaleLowerCase()
+                + importID
                 + '", module: module.exports\n});\n';
         }
         return result;
@@ -87,7 +89,7 @@ module.exports = ToolKid;\n\
 console.log(">>  ToolKid ready");\n\
 })();';
 
-    const loopFiles = function ToolKidBuild_loopFiles(inputs: {
+    const executeFiles = function ToolKidBuild_executeFiles(inputs: {
         library: Library | LibraryCore_file,
         config: ToolKidConfig,
         execute: Parameters<LibraryFiles_file["loopFiles"]>[0]["execute"]
@@ -135,22 +137,30 @@ console.log(">>  ToolKid ready");\n\
         const libraryCore = <LibraryCore_file><any>require(
             resolve(config.fileRoot, "modules/core/LibraryCore.js")
         );
-        const coreModuleFiles = libraryCore.getCoreModule("files");
+        const { loopFiles, resolvePath, writeFile } = libraryCore.getCoreModule("files");
         const fileLocations = <{ [fileName: string]: string }>{};
-        loopFiles({
+        executeFiles({
             library: libraryCore,
             config,
             execute: registerExtensionFile.bind(null, fileLocations)
         });
-        const { resolvePath } = coreModuleFiles;
         const files = new Map([
-            ["LibraryCore.js", { filePath: resolvePath(__dirname, "./modules/core/LibraryCore.js") }],
+            ["LibraryCore.js", {
+                filePath: resolvePath(
+                    __dirname, "./modules/core/LibraryCore.js"
+                )
+            }],
+            ["LibraryRegularExpression.js", {
+                filePath: resolvePath(
+                    __dirname, "./modules/core/LibraryRegularExpression.js"
+                )
+            }],
         ]);
-        libraryCore.getCoreModule("files").loopFiles({
+        loopFiles({
             path: resolve(config.fileRoot, "modules/core"),
             includes: ["*.js", ...(config.include || [])],
             excludes: ["*.test.js", "*LibraryCore.js", ...(config.exclude || [])],
-            execute: function (filePath) {
+            execute: function ToolKidBuil_executeBuildCoreModules(filePath) {
                 files.set(basename(filePath), { filePath });
             }
         });
@@ -159,7 +169,7 @@ console.log(">>  ToolKid ready");\n\
         });
 
         const LibraryBuilding = libraryCore.getCoreModule("building");
-        coreModuleFiles.writeFile({
+        writeFile({
             path: filePath,
             content: LibraryBuilding.bundleFiles({
                 fileList: files,

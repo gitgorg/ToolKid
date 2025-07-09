@@ -2,6 +2,9 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
+    setupTests(inputs: {
+        title?: string
+    }): void,
     testFull(inputs: {
         title?: string
         suspects?: any | any[]
@@ -141,15 +144,7 @@ interface TK_DebugTest_file {
         return "[ ... " + omitted.length + " ... ]";
     };
 
-    const shortenData = function TK_DebugTestFull_shortenValue(list: any) {
-        return ToolKid.dataTypes.list.shorten({
-            list,
-            maxLength: (typeof list === "string" ? 200 : 30),
-            omissionSignal
-        });
-    };
-
-    publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
+    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
         const TKTest = ToolKid.debug.test;
         if (typeof inputs.title === "string") {
             TKTest.switchResultGroup(inputs.title);
@@ -161,11 +156,26 @@ interface TK_DebugTest_file {
         TKTest.setFailureHandler(
             logFailure.bind(null, name)
         );
+    };
+
+    const shortenData = function TK_DebugTestFull_shortenValue(list: any) {
+        return ToolKid.dataTypes.list.shorten({
+            list,
+            maxLength: (typeof list === "string" ? 200 : 30),
+            omissionSignal
+        });
+    };
+
+    publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
+        publicExports.setupTests(inputs);
         let timeStart = Date.now();
-        ToolKid.file.loopFiles(Object.assign({}, inputs, { execute: require }));
+        ToolKid.file.loopFiles({
+            ...inputs,
+            execute: require
+        });
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
-        const summary = TKTest.getSummary({
+        const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
             callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
                 // TODO: real test for .testFull
@@ -181,6 +191,8 @@ interface TK_DebugTest_file {
             );
         }
     };
+
+
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

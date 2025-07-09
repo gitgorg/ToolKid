@@ -3,22 +3,6 @@ interface LibraryCore_file {
 }
 
 type LibraryFiles_file = {
-    createSimpleRX(
-        pattern: string
-    ): RegExp,
-    createSimpleRX(inputs: {
-        pattern: string,
-        isRepeatable: true,
-    }): RegExp,
-    createSimpleRX(inputs: {
-        pattern: string,
-        isFromStartToEnd: true,
-    }): RegExp,
-
-    createStringChecker(inputs: {
-        includes?: RegExp[],
-        excludes?: RegExp[]
-    }): { (value: string): boolean },
     loopFiles(inputs: {
         path: string | string[],
         execute(
@@ -80,92 +64,9 @@ type LibraryFiles_file = {
 
 
 
-    const publicExports = module.exports = <LibraryFiles_file>{};
-
-    const checkString = function LibraryFiles_checkString(
-        value: string, expression: RegExp
-    ) {
-        return expression.test(value);
-    };
-
-    const checkStringConditions = function LibraryFiles_checkStringConditions(
-        conditions: {
-            includes: RegExp[], excludes: RegExp[]
-        },
-        value: string
-    ) {
-        const test = checkString.bind(null, value);
-        return conditions.includes.find(test) !== undefined
-            && conditions.excludes.find(test) === undefined;
-    };
-
-    const checkStringExclusion = function checkStringExclusion(
-        exclude: RegExp[], value: string
-    ) {
-        const test = checkString.bind(null, value);
-        return exclude.find(test) === undefined;
-    };
-
-    const checkStringInclusion = function checkStringInclusion(
-        include: RegExp[], value: string
-    ) {
-        const test = checkString.bind(null, value);
-        return include.find(test) !== undefined;
-    };
-
-    const escapeSimpleRX = new RegExp("(\\*\\*)|(\\*)|\\" + [
-        ".", "+", "?", "{", "}", "[", "]", "\\"
-    ].join("|\\"), "g");
-    publicExports.createSimpleRX = function LibraryFiles_createSimpleRX(inputs: any) {
-        if (typeof inputs === "string") {
-            inputs = { pattern: inputs };
-        }
-        let pattern = <string>inputs.pattern;
-        pattern = pattern.replace(escapeSimpleRX, function LibraryFiles_createSimpleRXEscape(
-            match, doubleStar, star
-        ) {
-            if (doubleStar !== undefined) {
-                return ".*";
-            } else if (star !== undefined) {
-                return ".*?";
-            }
-            return "\\" + match;
-        });
-        if (inputs.isFromStartToEnd === true) {
-            pattern = "^" + pattern + "$";
-        }
-
-        // regExp flags explained on top /\
-        let flags = "s";
-        if (inputs.isRepeatable === true) {
-            flags += "g";
-        }
-        return new RegExp(pattern, flags);
-    };
-
-    // TODO: replacements more structured, maybe backwards compatible
-    // const replacements = {
-    //     "\\": "\\\\",
-    //     ".": "\\.",
-    //     "\*": ".+"
-    // };
-
-    publicExports.createStringChecker = function LibraryFiles_createStringChecker(inputs): any {
-        const hasIncludes = isArray(inputs.includes);
-        const hasExcludes = isArray(inputs.excludes);
-        if (hasIncludes && hasExcludes) {
-            return checkStringConditions.bind(null, inputs);
-        } else if (hasIncludes) {
-            return checkStringInclusion.bind(null, inputs.includes);
-        } else if (hasExcludes) {
-            return checkStringExclusion.bind(null, inputs.excludes);
-        } else {
-            return function LibraryFiles_checkNothing() { return true };
-        }
-    };
-
-    const isArray = function LibraryFiles_isArray(value: any) {
-        return value instanceof Array && value.length !== 0;
+    let { createSimpleRX, createStringChecker } = <LibraryRegularExpression_file>{};
+    const publicExports = module.exports = <LibraryFiles_file><any>function LibraryFiles_setup(core: LibraryCore_file) {
+        ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
     };
 
     const isDirectory = function LibraryFiles_isDirectory(path: string) {
@@ -188,7 +89,7 @@ type LibraryFiles_file = {
         validated: RegExp[], expression: any
     ) {
         if (typeof expression === "string") {
-            validated.push(publicExports.createSimpleRX({
+            validated.push(createSimpleRX({
                 pattern: normalizePath(expression),
                 isFromStartToEnd: true,
             }));
@@ -198,7 +99,7 @@ type LibraryFiles_file = {
     };
 
     publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
-        const checker = publicExports.createStringChecker({
+        const checker = createStringChecker({
             includes: collectPaths(inputs.includes),
             excludes: collectPaths(inputs.excludes),
         });

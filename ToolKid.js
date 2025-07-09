@@ -1,13 +1,14 @@
 "use strict";
 (function ToolKid_bundle() {
-console.log(">>  activate ToolKid")
+console.log(">>  activate ToolKid");
 const fileCollection = new Map();
 
 (function LibraryCore_init() {
     const coreModuleNames = {
         "building": "LibraryBuild.js",
-        "parsing": "LibraryParsing.js",
         "files": "LibraryFiles.js",
+        "regularExpression": "LibraryRegularExpression.js",
+        "parsing": "LibraryParsing.js",
     };
     const coreModules = {};
     const publicExports = module.exports = {};
@@ -21,7 +22,7 @@ const fileCollection = new Map();
         addAsReadOnly({
             container: result,
             key: "getCoreModule",
-            value: publicExports.getCoreModule
+            value: getCoreModule.bind(null, result)
         });
         return result;
     };
@@ -49,7 +50,7 @@ const fileCollection = new Map();
         }
         return object;
     };
-    publicExports.getCoreModule = function LibraryCore_getCoreModule(moduleName) {
+    const getCoreModule = function LibraryCore_getCoreModule(core, moduleName) {
         if (coreModules[moduleName] !== undefined) {
             return coreModules[moduleName];
         }
@@ -60,12 +61,20 @@ const fileCollection = new Map();
                 "allowed extensions are:", Object.keys(coreModuleNames)
             ];
         }
-        return coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
+        const module = coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
+        if (typeof module === "function") {
+            module(core);
+        }
+        return module;
     };
+    publicExports.getCoreModule = getCoreModule.bind(null, publicExports);
     publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
-        const { name } = inputs;
+        const { name, module } = inputs;
         if (coreModules[name] === undefined) {
-            coreModules[name] = inputs.module;
+            coreModules[name] = module;
+            if (typeof module === "function") {
+                module(publicExports);
+            }
         }
         else {
             throw [
@@ -126,14 +135,12 @@ const fileCollection = new Map();
 fileCollection.set("LibraryCore.js", module.exports);
 
 global.ToolKid = module.exports.createInstance();
-(function LibraryFiles_init() {
-    const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
-    const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
+(function LibraryRegularExpression_init() {
     const publicExports = module.exports = {};
-    const checkString = function LibraryFiles_checkString(value, expression) {
+    const checkString = function LibraryRegularExpression_checkString(value, expression) {
         return expression.test(value);
     };
-    const checkStringConditions = function LibraryFiles_checkStringConditions(conditions, value) {
+    const checkStringConditions = function LibraryRegularExpression_checkStringConditions(conditions, value) {
         const test = checkString.bind(null, value);
         return conditions.includes.find(test) !== undefined
             && conditions.excludes.find(test) === undefined;
@@ -149,12 +156,12 @@ global.ToolKid = module.exports.createInstance();
     const escapeSimpleRX = new RegExp("(\\*\\*)|(\\*)|\\" + [
         ".", "+", "?", "{", "}", "[", "]", "\\"
     ].join("|\\"), "g");
-    publicExports.createSimpleRX = function LibraryFiles_createSimpleRX(inputs) {
+    publicExports.createSimpleRX = function LibraryRegularExpression_createSimpleRX(inputs) {
         if (typeof inputs === "string") {
             inputs = { pattern: inputs };
         }
         let pattern = inputs.pattern;
-        pattern = pattern.replace(escapeSimpleRX, function LibraryFiles_createSimpleRXEscape(match, doubleStar, star) {
+        pattern = pattern.replace(escapeSimpleRX, function LibraryRegularExpression_createSimpleRXEscape(match, doubleStar, star) {
             if (doubleStar !== undefined) {
                 return ".*";
             }
@@ -179,7 +186,7 @@ global.ToolKid = module.exports.createInstance();
     //     ".": "\\.",
     //     "\*": ".+"
     // };
-    publicExports.createStringChecker = function LibraryFiles_createStringChecker(inputs) {
+    publicExports.createStringChecker = function LibraryRegularExpression_createStringChecker(inputs) {
         const hasIncludes = isArray(inputs.includes);
         const hasExcludes = isArray(inputs.excludes);
         if (hasIncludes && hasExcludes) {
@@ -192,11 +199,25 @@ global.ToolKid = module.exports.createInstance();
             return checkStringExclusion.bind(null, inputs.excludes);
         }
         else {
-            return function LibraryFiles_checkNothing() { return true; };
+            return function LibraryRegularExpression_checkNothing() { return true; };
         }
     };
-    const isArray = function LibraryFiles_isArray(value) {
+    const isArray = function LibraryRegularExpression_isArray(value) {
         return value instanceof Array && value.length !== 0;
+    };
+    Object.freeze(publicExports);
+})();
+fileCollection.set("LibraryRegularExpression.js", module.exports);
+
+fileCollection.get("LibraryCore.js").registerCoreModule({
+name: "regularExpression", module: module.exports
+});
+(function LibraryFiles_init() {
+    const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
+    const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
+    let { createSimpleRX, createStringChecker } = {};
+    const publicExports = module.exports = function LibraryFiles_setup(core) {
+        ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
     };
     const isDirectory = function LibraryFiles_isDirectory(path) {
         return readPathStats(path).isDirectory();
@@ -211,7 +232,7 @@ global.ToolKid = module.exports.createInstance();
     };
     const collectPathsFilter = function LibraryFiles_collectPathsFilter(validated, expression) {
         if (typeof expression === "string") {
-            validated.push(publicExports.createSimpleRX({
+            validated.push(createSimpleRX({
                 pattern: normalizePath(expression),
                 isFromStartToEnd: true,
             }));
@@ -221,7 +242,7 @@ global.ToolKid = module.exports.createInstance();
         }
     };
     publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
-        const checker = publicExports.createStringChecker({
+        const checker = createStringChecker({
             includes: collectPaths(inputs.includes),
             excludes: collectPaths(inputs.excludes),
         });
@@ -1779,18 +1800,15 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         });
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
-        const TKTest = ToolKid.debug.test;
-        if (typeof inputs.title === "string") {
-            TKTest.switchResultGroup(inputs.title);
-        }
-        const name = TKTest.getResultGroup().name;
-        console.log(colorText("positive", "\n>>  testing " + name));
-        TKTest.setFailureHandler(logFailure.bind(null, name));
+        publicExports.setupTests(inputs);
         let timeStart = Date.now();
-        ToolKid.file.loopFiles(Object.assign({}, inputs, { execute: require }));
+        ToolKid.file.loopFiles({
+            ...inputs,
+            execute: require
+        });
         const timeInitial = Date.now() - timeStart;
         timeStart = Date.now();
-        const summary = TKTest.getSummary({
+        const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
             callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
                 // TODO: real test for .testFull
@@ -1803,6 +1821,15 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         if (summary.pending.size !== 0) {
             console.log(colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)");
         }
+    };
+    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
+        const TKTest = ToolKid.debug.test;
+        if (typeof inputs.title === "string") {
+            TKTest.switchResultGroup(inputs.title);
+        }
+        const name = TKTest.getResultGroup().name;
+        console.log(colorText("positive", "\n>>  testing " + name));
+        TKTest.setFailureHandler(logFailure.bind(null, name));
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -2227,6 +2254,8 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
 fileCollection.set("TK_DebugTerminalLog.js", module.exports);
 
 (function TK_File_init() {
+    const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
+    const fileRegistry = new Map();
     const publicExports = module.exports = {};
     publicExports.getExtension = function TK_File_getExtension(path) {
         const parts = publicExports.getName(path).split(".");
@@ -2238,11 +2267,55 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };
+    const basePathRX = /^\.{0,1}\/{0,1}/;
     if (typeof Element !== "undefined") {
         publicExports.loopFiles = function TK_File_loopFiles(inputs) {
-            // log(2345, inputs);
+            const { includes, excludes, execute } = inputs;
+            if (includes instanceof Array) {
+                includes.forEach(function (pattern, index) {
+                    if (typeof pattern === "string") {
+                        includes[index] = createSimpleRX(pattern);
+                    }
+                });
+            }
+            if (excludes instanceof Array) {
+                excludes.forEach(function (pattern, index) {
+                    if (typeof pattern === "string") {
+                        excludes[index] = createSimpleRX(pattern);
+                    }
+                });
+            }
+            const pathRX = (inputs.path instanceof Array)
+                ? new RegExp(inputs.path.map(createPathRX).join("|"))
+                : createPathRX(inputs.path);
+            const checkExtra = createStringChecker({ includes, excludes });
+            fileRegistry.forEach(function TK_File_loopFilesPath(path) {
+                if (pathRX.test(path) && checkExtra(path)) {
+                    execute(path);
+                }
+            });
         };
     }
+    ;
+    const createPathRX = function (path) {
+        return new RegExp("^" + path.replace(basePathRX, ""));
+    };
+    publicExports.register = function TK_File_register(path) {
+        const fileName = publicExports.getName(path);
+        const registeredPath = fileRegistry.get(fileName);
+        if (registeredPath === path) {
+            return;
+        }
+        else if (registeredPath === undefined) {
+            fileRegistry.set(fileName, path);
+        }
+        else {
+            throw [
+                "TK_File_register - fileName allready in use: ", fileName,
+                " paths are: ", fileRegistry.get(fileName), path
+            ];
+        }
+    };
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {
             publicExports.loopFiles = ToolKid.getCoreModule("files").loopFiles;

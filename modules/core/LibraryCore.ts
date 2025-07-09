@@ -30,8 +30,9 @@ type GenericFunction = { (...parameters: any[]): any }
 (function LibraryCore_init() {
     const coreModuleNames = {
         "building": "LibraryBuild.js",
-        "parsing": "LibraryParsing.js",
         "files": "LibraryFiles.js",
+        "regularExpression": "LibraryRegularExpression.js",
+        "parsing": "LibraryParsing.js",
     };
     const coreModules = <Dictionary>{};
     const publicExports = module.exports = <LibraryCore_file>{};
@@ -48,7 +49,7 @@ type GenericFunction = { (...parameters: any[]): any }
         addAsReadOnly({
             container: result,
             key: "getCoreModule",
-            value: publicExports.getCoreModule
+            value: getCoreModule.bind(null,result)
         });
         return result;
     };
@@ -91,12 +92,14 @@ type GenericFunction = { (...parameters: any[]): any }
         return object;
     };
 
-    publicExports.getCoreModule = function LibraryCore_getCoreModule(moduleName) {
+    const getCoreModule = function LibraryCore_getCoreModule(
+        core:Library, moduleName:string
+    ) {
         if (coreModules[moduleName] !== undefined) {
             return coreModules[moduleName];
         }
 
-        const path = coreModuleNames[moduleName];
+        const path = coreModuleNames[<"building">moduleName];
         if (path === undefined) {
             throw [
                 "LibraryCore_getCoreModule - unknonw core module name:", moduleName,
@@ -104,15 +107,23 @@ type GenericFunction = { (...parameters: any[]): any }
             ];
         }
 
-        return coreModules[moduleName] = require(
+        const module = coreModules[moduleName] = require(
             require("path").resolve(__dirname, "./" + path)
         );
+        if (typeof module === "function") {
+            module(core);
+        }
+        return module;
     };
+    publicExports.getCoreModule = getCoreModule.bind(null, publicExports);
 
     publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
-        const { name } = inputs;
+        const { name, module } = inputs;
         if (coreModules[name] === undefined) {
-            coreModules[name] = inputs.module;
+            coreModules[name] = module;
+            if (typeof module === "function") {
+                module(publicExports);
+            }
         } else {
             throw [
                 "LibraryCore_registerCoreModule - tried to overwrite " + name + ": current value = ", coreModules[name], " new value = ", inputs.module

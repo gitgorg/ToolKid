@@ -12,13 +12,13 @@ type LibraryFiles_test_file = {
 
 
 (function LibraryFiles_test() {
+    const { assert, assertEquality, assertFailure, test } = ToolKid.debug.test;
     const {
-        createSimpleRX, createStringChecker, loopFiles, readFile, resolvePath, writeFile,
+        loopFiles, readFile, resolvePath, writeFile,
     } = <LibraryFiles_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.js"));
 
     const FS = require("fs");
     const { resolve } = require("path");
-    const { assert, assertEquality, assertFailure, test } = ToolKid.debug.test;
 
 
 
@@ -46,67 +46,6 @@ type LibraryFiles_test_file = {
         \"number\": 1\
     }");
 
-
-
-    test({
-        subject: createSimpleRX,
-        execute: function differentUsecases() {
-            const testFiles = createSimpleRX({
-                pattern: "*.test.js",
-                isFromStartToEnd: true
-            });
-            const greedy = <any>createSimpleRX("**b**d");
-            assertEquality({
-                "testFiles": {
-                    value: [testFiles.test("a.test.js"), testFiles.test("b.js"), testFiles.test("c.test.jsm")],
-                    shouldBe: [true, false, false]
-                },
-                "greedy": {
-                    value: [
-                        greedy.exec("aaabcccd")[0],
-                        greedy.exec("abcd")[0],
-                        greedy.exec("aaabbbcccddd")[0],
-                        greedy.exec("abcdb")[0],
-                        greedy.exec("abcdbd")[0],
-                    ],
-                    shouldBe: ["aaabcccd", "abcd", "aaabbbcccddd", "abcd", "abcdbd"]
-                },
-            });
-
-            const sourceContent = <any>createSimpleRX('src="(*)"');
-            let found = sourceContent.exec('<img src="a.jpg" alt="a">');
-            assertEquality({
-                "sourceContent": {
-                    value: [found[0], found[1]],
-                    shouldBe: ['src="a.jpg"', "a.jpg"]
-                },
-            });
-        }
-    });
-
-    test({
-        subject: createStringChecker,
-        execute: function checkingStrings() {
-            const hasA = createStringChecker({ includes: [/a/] });
-            assertEquality({
-                "typeof hasA": {
-                    value: typeof hasA, shouldBe: "function"
-                },
-                "hasA": {
-                    value: [hasA("bcde"), hasA("bcade"), hasA("AAA")],
-                    shouldBe: [false, true, false]
-                }
-            });
-            const noBorC = createStringChecker({ excludes: [/b/, /c/] });
-            assertEquality({
-                "noBorC": {
-                    value: [noBorC("bbbb"), noBorC("ccccc"), noBorC("BC")],
-                    shouldBe: [false, false, true]
-                }
-            });
-        }
-    })
-
     test({
         subject: loopFiles,
         execute: function basicFileLoop() {
@@ -129,6 +68,8 @@ type LibraryFiles_test_file = {
                         resolve(fileDirectory, "LibraryFiles.test.js"),
                         resolve(fileDirectory, "LibraryParsing.js"),
                         resolve(fileDirectory, "LibraryParsing.test.js"),
+                        resolve(fileDirectory, "LibraryRegularExpression.js"),
+                        resolve(fileDirectory, "LibraryRegularExpression.test.js"),
                     ]
                 }
             });
@@ -143,6 +84,8 @@ type LibraryFiles_test_file = {
                         resolve(fileDirectory, "LibraryCore.js"),
                         resolve(fileDirectory, "LibraryFiles.js"),
                         resolve(fileDirectory, "LibraryFiles.test.js"),
+                        resolve(fileDirectory, "LibraryRegularExpression.js"),
+                        resolve(fileDirectory, "LibraryRegularExpression.test.js"),
                     ]
                 }
             });
