@@ -3,16 +3,19 @@ interface LibraryCore_file {
 }
 
 type LibraryBuild_file = {
-    bundleFiles(inputs: {
-        fileList: Map<
-            string, //importID
-            { filePath: string } | { fileContent: string }
-        >,
-
+    fileBundleSetup(inputs: {
         header?: string,
-        fileParser?: LibraryBuild_file["bundlerDefaults"]["fileParser"],
         footer?: string,
-    }): string,
+    }): FileBundleData,
+    fileBundlePush(inputs: {
+        bundleData: FileBundleData,
+        fileKey: string,
+        fileContent: string,
+    }): void,
+    fileBundleCombine(
+        bundleData: FileBundleData
+    ): string,
+
     bundlerDefaults: {
         header: string,
         fileParser(inputs: {
@@ -20,7 +23,19 @@ type LibraryBuild_file = {
             fileContent: string
         }): void | string,
         footer: string,
-    }
+    },
+    composeBundleContent(inputs: {
+        header?: string,
+
+        footer?: string,
+    }): string,
+}
+
+type FileBundleData = {
+    header: string,
+    fileContents: Map<string, string>,
+    fileOrder: Set<string>,
+    footer: string,
 }
 
 
@@ -39,6 +54,35 @@ type LibraryBuild_file = {
 
 
     const publicExports = module.exports = <LibraryBuild_file>{};
+
+    publicExports.fileBundleSetup = function LibraryBuild_fileBundleSetup(inputs) {
+        return {
+            header: inputs.header || publicExports.bundlerDefaults.header,
+            fileContents: new Map(),
+            fileOrder: new Set(),
+            footer: inputs.footer || publicExports.bundlerDefaults.footer,
+        };
+    };
+
+    publicExports.fileBundlePush = function LibraryBuild_fileBundlePush(inputs) {
+        const { fileKey } = inputs;
+        const { fileContents, fileOrder } = inputs.bundleData;
+        fileOrder.delete(fileKey);
+        fileOrder.add(fileKey);
+        if (fileContents.get(fileKey) === undefined) {
+            fileContents.set(fileKey, inputs.fileContent);
+        }
+    };
+
+    publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(inputs) {
+        const { fileContents } = inputs;
+        const fileOrder = [...inputs.fileOrder.keys()];
+        let result = inputs.header;
+        for (let i = fileOrder.length - 1; i > -1; i -= 1) {
+            result += fileContents.get(fileOrder[i]);
+        }
+        return result + inputs.footer;
+    };
 
     publicExports.bundleFiles = function LibraryBuild_bundleFiles(inputs) {
         const defaults = publicExports.bundlerDefaults;
@@ -86,7 +130,7 @@ type LibraryBuild_file = {
         return boundInputs.fileParser({ importID, fileContent });
     };
 
-    publicExports.bundlerDefaults = Object.freeze({
+    publicExports.bundlerDefaults = {
         header: '"use strict";\n\
 (function Library_bundledFiles_init() {\n\
 const fileCollection = new Map();\n\n',
@@ -97,7 +141,7 @@ const fileCollection = new Map();\n\n',
 fileCollection.set("' + inputs.importID + '", module.exports);\n\n';
         },
         footer: '\n\n})();'
-    });
+    };
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
         const firstPosition = fileContent.indexOf("use strict") - 1;

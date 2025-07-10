@@ -1792,6 +1792,15 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const omissionSignal = function TK_DebugTestFull_omissionSignal(omitted) {
         return "[ ... " + omitted.length + " ... ]";
     };
+    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
+        const TKTest = ToolKid.debug.test;
+        if (typeof inputs.title === "string") {
+            TKTest.switchResultGroup(inputs.title);
+        }
+        const name = TKTest.getResultGroup().name;
+        console.log(colorText("positive", "\n>>  testing " + name));
+        TKTest.setFailureHandler(logFailure.bind(null, name));
+    };
     const shortenData = function TK_DebugTestFull_shortenValue(list) {
         return ToolKid.dataTypes.list.shorten({
             list,
@@ -1821,15 +1830,6 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         if (summary.pending.size !== 0) {
             console.log(colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)");
         }
-    };
-    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
-        const TKTest = ToolKid.debug.test;
-        if (typeof inputs.title === "string") {
-            TKTest.switchResultGroup(inputs.title);
-        }
-        const name = TKTest.getResultGroup().name;
-        console.log(colorText("positive", "\n>>  testing " + name));
-        TKTest.setFailureHandler(logFailure.bind(null, name));
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -2257,6 +2257,10 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
     const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
     const fileRegistry = new Map();
     const publicExports = module.exports = {};
+    const basePathRX = /^\.{0,1}\/{0,1}/;
+    const createPathRX = function (path) {
+        return new RegExp("^" + path.replace(basePathRX, ""));
+    };
     publicExports.getExtension = function TK_File_getExtension(path) {
         const parts = publicExports.getName(path).split(".");
         return (parts.length === 1)
@@ -2267,7 +2271,6 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };
-    const basePathRX = /^\.{0,1}\/{0,1}/;
     if (typeof Element !== "undefined") {
         publicExports.loopFiles = function TK_File_loopFiles(inputs) {
             const { includes, excludes, execute } = inputs;
@@ -2297,9 +2300,6 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         };
     }
     ;
-    const createPathRX = function (path) {
-        return new RegExp("^" + path.replace(basePathRX, ""));
-    };
     publicExports.register = function TK_File_register(path) {
         const fileName = publicExports.getName(path);
         const registeredPath = fileRegistry.get(fileName);
