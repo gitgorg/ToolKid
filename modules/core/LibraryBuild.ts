@@ -3,38 +3,51 @@ interface LibraryCore_file {
 }
 
 type LibraryBuild_file = {
-    fileBundleSetup(inputs: {
-        header?: string,
-        footer?: string,
-    }): FileBundleData,
-    fileBundlePush(inputs: {
-        bundleData: FileBundleData,
-        fileKey: string,
-        fileContent: string,
-    }): void,
-    fileBundleCombine(
-        bundleData: FileBundleData
-    ): string,
-
     bundlerDefaults: {
         header: string,
         fileParser(inputs: {
             importID: string,
             fileContent: string
-        }): void | string,
+        }): string,
         footer: string,
     },
+    bundleFiles(inputs: {
+        header?: string,
+        fileParser?: GenericFunction,
+        fileList: Map<string, {
+            filePath: string
+        }>,
+        footer?: string,
+    }): string,
     composeBundleContent(inputs: {
         header?: string,
 
         footer?: string,
     }): string,
+
+    fileBundleSetup(inputs?: {
+        header?: string,
+        footer?: string,
+    }): FileBundleData,
+    fileBundlePush(inputs: {
+        bundleData: FileBundleData,
+        importID: string,
+        fileContent: string,
+        fileParser?: false | {
+            (inputs: {
+                importID: string,
+                fileContent: string,
+            }): string
+        }
+    }): void,
+    fileBundleCombine(
+        bundleData: FileBundleData
+    ): string,
 }
 
 type FileBundleData = {
     header: string,
     fileContents: Map<string, string>,
-    fileOrder: Set<string>,
     footer: string,
 }
 
@@ -55,33 +68,35 @@ type FileBundleData = {
 
     const publicExports = module.exports = <LibraryBuild_file>{};
 
-    publicExports.fileBundleSetup = function LibraryBuild_fileBundleSetup(inputs) {
+    publicExports.fileBundleSetup = function LibraryBuild_fileBundleSetup(inputs = {}) {
         return {
             header: inputs.header || publicExports.bundlerDefaults.header,
             fileContents: new Map(),
-            fileOrder: new Set(),
             footer: inputs.footer || publicExports.bundlerDefaults.footer,
         };
     };
 
     publicExports.fileBundlePush = function LibraryBuild_fileBundlePush(inputs) {
-        const { fileKey } = inputs;
-        const { fileContents, fileOrder } = inputs.bundleData;
-        fileOrder.delete(fileKey);
-        fileOrder.add(fileKey);
-        if (fileContents.get(fileKey) === undefined) {
-            fileContents.set(fileKey, inputs.fileContent);
+        const { importID } = inputs;
+        const { fileContents } = inputs.bundleData;
+        if (fileContents.get(importID) !== undefined) {
+            return;
+        }
+
+        if (inputs.fileParser === false) {
+            fileContents.set(importID, inputs.fileContent);
+        } else {
+            const fileParser = inputs.fileParser || publicExports.bundlerDefaults.fileParser;
+            fileContents.set(importID, fileParser({
+                importID, fileContent: inputs.fileContent
+            }));
         }
     };
 
-    publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(inputs) {
-        const { fileContents } = inputs;
-        const fileOrder = [...inputs.fileOrder.keys()];
-        let result = inputs.header;
-        for (let i = fileOrder.length - 1; i > -1; i -= 1) {
-            result += fileContents.get(fileOrder[i]);
-        }
-        return result + inputs.footer;
+    publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(bundleData) {
+        return bundleData.header
+        + [...bundleData.fileContents.values()].join("")
+        + bundleData.footer;
     };
 
     publicExports.bundleFiles = function LibraryBuild_bundleFiles(inputs) {
@@ -140,7 +155,7 @@ const fileCollection = new Map();\n\n',
             return removeStrictMode(inputs.fileContent) + '\n\
 fileCollection.set("' + inputs.importID + '", module.exports);\n\n';
         },
-        footer: '\n\n})();'
+        footer: '})();'
     };
 
     const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {

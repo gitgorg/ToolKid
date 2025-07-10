@@ -55,7 +55,7 @@ type LibraryFiles_test_file = {
                 const register = collected.push.bind(collected);
                 loopFiles(Object.assign({}, inputs, { execute: register }));
                 return collected;
-            }
+            };
             assert({
                 "siblingFiles": {
                     value: collect({
@@ -63,6 +63,7 @@ type LibraryFiles_test_file = {
                     }),
                     shouldBe: [
                         resolve(fileDirectory, "LibraryBuild.js"),
+                        resolve(fileDirectory, "LibraryBuild.test.js"),
                         resolve(fileDirectory, "LibraryCore.js"),
                         resolve(fileDirectory, "LibraryFiles.js"),
                         resolve(fileDirectory, "LibraryFiles.test.js"),
@@ -81,6 +82,7 @@ type LibraryFiles_test_file = {
                     }),
                     shouldBe: [
                         resolve(fileDirectory, "LibraryBuild.js"),
+                        resolve(fileDirectory, "LibraryBuild.test.js"),
                         resolve(fileDirectory, "LibraryCore.js"),
                         resolve(fileDirectory, "LibraryFiles.js"),
                         resolve(fileDirectory, "LibraryFiles.test.js"),
