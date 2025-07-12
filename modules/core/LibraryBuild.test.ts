@@ -33,7 +33,6 @@
                 bundleData,
                 importID: "a",
                 fileContent: "aaa",
-                fileParser: false,
             });
             assert({
                 "fileBundlePush returns": {
@@ -41,7 +40,6 @@
                         bundleData,
                         importID: "b",
                         fileContent: "bbb",
-                        fileParser: false,
                     }),
                     shouldBe: undefined,
                 },
@@ -57,18 +55,11 @@
         subject: fileBundleCombine,
         execute: function defaultCombine() {
             const bundleData = fileBundleSetup();
-            fileBundlePush({ bundleData, importID: "a", fileContent: "aaa" });
-            fileBundlePush({ bundleData, importID: "b", fileContent: "bbb" });
+            fileBundlePush({ bundleData, importID: "a", fileContent: "aaa\n" });
+            fileBundlePush({ bundleData, importID: "b", fileContent: "bbb\n" });
+            fileBundlePush({ bundleData, importID: "a", fileContent: "a\n" });
             assert({
-                "simple order": {
-                    value: fileBundleCombine(bundleData),
-                    shouldBe: shouldBeString,
-                }
-            });
-            fileBundlePush({ bundleData, importID: "a", fileContent: "a" });
-            fileBundlePush({ bundleData, importID: "b", fileContent: "b" });
-            assert({
-                "overwritten order": {
+                "overwrites don't apply": {
                     value: fileBundleCombine(bundleData),
                     shouldBe: '\
 "use strict";\n\
@@ -76,11 +67,7 @@
 const fileCollection = new Map();\n\
 \n\
 aaa\n\
-fileCollection.set("a", module.exports);\n\
-\n\
 bbb\n\
-fileCollection.set("b", module.exports);\n\
-\n\
 })();',
                 }
             });

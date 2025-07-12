@@ -3,14 +3,21 @@ interface LibraryCore_file {
 }
 
 type LibraryFiles_file = {
+    createPathChecker(inputs: {
+        includes?: (string | RegExp)[],
+        excludes?: (string | RegExp)[],
+    }): { (path: string): boolean },
     loopFiles(inputs: {
         path: string | string[],
         execute(
             path: string
         ): void,
+    } & ({
         includes?: (string | RegExp)[],
         excludes?: (string | RegExp)[],
-    }): void,
+    } | {
+        pathChecker: ReturnType<LibraryFiles_file["createPathChecker"]>
+    })): void,
     readFile(
         path: string | {
             path: string,
@@ -69,10 +76,6 @@ type LibraryFiles_file = {
         ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
     };
 
-    const isDirectory = function LibraryFiles_isDirectory(path: string) {
-        return readPathStats(path).isDirectory();
-    };
-
     const collectPaths = function LibraryFiles_collectPaths(
         expressions: (string | RegExp)[] | undefined
     ): RegExp[] {
@@ -98,13 +101,22 @@ type LibraryFiles_file = {
         }
     };
 
-    publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
-        const checker = createStringChecker({
+    publicExports.createPathChecker = function (inputs) {
+        return createStringChecker({
             includes: collectPaths(inputs.includes),
             excludes: collectPaths(inputs.excludes),
         });
+    };
+
+    const isDirectory = function LibraryFiles_isDirectory(path: string) {
+        return readPathStats(path).isDirectory();
+    };
+
+    publicExports.loopFiles = function LibraryFiles_loopFiles(
+        inputs:Dictionary
+    ) {
         const DataForLooping = {
-            isIncluded: checker,
+            isIncluded: inputs.pathChecker || publicExports.createPathChecker(inputs),
             execute: inputs.execute,
         };
         const { path } = inputs;

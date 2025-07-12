@@ -3,6 +3,7 @@
 console.log(">>  activate ToolKid");
 const fileCollection = new Map();
 
+"use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
         "building": "LibraryBuild.js",
@@ -50,7 +51,7 @@ const fileCollection = new Map();
         }
         return object;
     };
-    const getCoreModule = function LibraryCore_getCoreModule(core, moduleName) {
+    const getCoreModule = function LibraryCore_getCoreModule(library, moduleName) {
         if (coreModules[moduleName] !== undefined) {
             return coreModules[moduleName];
         }
@@ -63,7 +64,7 @@ const fileCollection = new Map();
         }
         const module = coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
         if (typeof module === "function") {
-            module(core);
+            module(library);
         }
         return module;
     };
@@ -132,9 +133,12 @@ const fileCollection = new Map();
         return section;
     };
 })();
-fileCollection.set("LibraryCore.js", module.exports);
 
+fileCollection.set("LibraryCore.js", module.exports);
 global.ToolKid = module.exports.createInstance();
+
+
+"use strict";
 (function LibraryRegularExpression_init() {
     const publicExports = module.exports = {};
     const checkString = function LibraryRegularExpression_checkString(value, expression) {
@@ -208,19 +212,17 @@ global.ToolKid = module.exports.createInstance();
     Object.freeze(publicExports);
 })();
 fileCollection.set("LibraryRegularExpression.js", module.exports);
-
 fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "regularExpression", module: module.exports
 });
+
+"use strict";
 (function LibraryFiles_init() {
     const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
     const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
     let { createSimpleRX, createStringChecker } = {};
     const publicExports = module.exports = function LibraryFiles_setup(core) {
         ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
-    };
-    const isDirectory = function LibraryFiles_isDirectory(path) {
-        return readPathStats(path).isDirectory();
     };
     const collectPaths = function LibraryFiles_collectPaths(expressions) {
         if (!(expressions instanceof Array)) {
@@ -241,13 +243,18 @@ name: "regularExpression", module: module.exports
             validated.push(expression);
         }
     };
-    publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
-        const checker = createStringChecker({
+    publicExports.createPathChecker = function (inputs) {
+        return createStringChecker({
             includes: collectPaths(inputs.includes),
             excludes: collectPaths(inputs.excludes),
         });
+    };
+    const isDirectory = function LibraryFiles_isDirectory(path) {
+        return readPathStats(path).isDirectory();
+    };
+    publicExports.loopFiles = function LibraryFiles_loopFiles(inputs) {
         const DataForLooping = {
-            isIncluded: checker,
+            isIncluded: inputs.pathChecker || publicExports.createPathChecker(inputs),
             execute: inputs.execute,
         };
         const { path } = inputs;
@@ -338,10 +345,11 @@ name: "regularExpression", module: module.exports
     Object.freeze(publicExports);
 })();
 fileCollection.set("LibraryFiles.js", module.exports);
-
 fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "files", module: module.exports
 });
+
+"use strict";
 // regExp flags:
 // g = to store .lastIndex inside the regExp
 // s = to make . match really EVERY character...
@@ -583,10 +591,11 @@ name: "files", module: module.exports
     Object.freeze(publicExports);
 })();
 fileCollection.set("LibraryParsing.js", module.exports);
-
 fileCollection.get("LibraryCore.js").registerCoreModule({
 name: "parsing", module: module.exports
 });
+
+"use strict";
 (function TK_CodeJS_init() {
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
@@ -619,7 +628,7 @@ name: "parsing", module: module.exports
     }
 })();
 fileCollection.set("TK_CodeJS.js", module.exports);
-
+"use strict";
 (function TK_CodeParsing_init() {
     const publicExports = module.exports = {};
     publicExports.removeQuotes = function TK_CodeParsing__removeQuotes(text) {
@@ -648,7 +657,7 @@ fileCollection.set("TK_CodeJS.js", module.exports);
     }
 })();
 fileCollection.set("TK_CodeParsing.js", module.exports);
-
+"use strict";
 (function TK_ConnectionHTTPinit() {
     const publicExports = module.exports = {};
     publicExports.request = function TK_ConnectionHTTPRequest(inputs) {
@@ -731,7 +740,7 @@ fileCollection.set("TK_CodeParsing.js", module.exports);
     }
 })();
 fileCollection.set("TK_ConnectionHTTP.js", module.exports);
-
+"use strict";
 (function TK_ConnectionHTTPFormats_init() {
     const publicExports = module.exports = {};
     publicExports.readMediaType = function TK_ConnectionHTTPFormats_readMediaType(path) {
@@ -773,7 +782,7 @@ fileCollection.set("TK_ConnectionHTTP.js", module.exports);
     }
 })();
 fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
-
+"use strict";
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
     publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
@@ -814,7 +823,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesArray.js", module.exports);
-
+"use strict";
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
     const getDataType = publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
@@ -916,7 +925,7 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesChecks.js", module.exports);
-
+"use strict";
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = {};
     publicExports.areEqual = function TK_DataTypesChecksEquality_areEqual(inputs) {
@@ -1074,7 +1083,7 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
-
+"use strict";
 (function TK_DataTypesList_init() {
     const publicExports = module.exports = {};
     publicExports.shorten = function TK_DataTypesList_shorten(inputs) {
@@ -1098,7 +1107,7 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesList.js", module.exports);
-
+"use strict";
 (function TK_DataTypesNumber_init() {
     const publicExports = module.exports = {};
     publicExports.addUnderscores = function TK_DataTypesNuber_addUnderscores(value) {
@@ -1139,7 +1148,7 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
-
+"use strict";
 (function TK_DataTypesObject_init() {
     const publicExports = module.exports = {};
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
@@ -1184,7 +1193,7 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesObject.js", module.exports);
-
+"use strict";
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
@@ -1250,7 +1259,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
     }
 })();
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
-
+"use strict";
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
     const resultGroups = new Map([["default", {
@@ -1405,7 +1414,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTest.js", module.exports);
-
+"use strict";
 (function TK_DebugTestAssertFailure_init() {
     const { areEqual } = ToolKid.dataTypes.checks;
     const publicExports = module.exports = {};
@@ -1556,7 +1565,7 @@ fileCollection.set("TK_DebugTest.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
-
+"use strict";
 (function TK_DebugTestAssertion_init() {
     const defaultConfig = {};
     const publicExports = module.exports = {};
@@ -1644,7 +1653,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTestAssertion.js", module.exports);
-
+"use strict";
 (function TK_DebugTestCondition_init() {
     const publicExports = module.exports = {};
     const registeredConditions = new Map();
@@ -1716,7 +1725,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTestCondition.js", module.exports);
-
+"use strict";
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
     const colors = {
@@ -1837,7 +1846,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTestFull.js", module.exports);
-
+"use strict";
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
     const createValueChecker = function TD_DebugTestShouldPass_createValueChecker(mode, value) {
@@ -1904,7 +1913,7 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
-
+"use strict";
 (function TK_DebugTestSummary_init() {
     const publicExports = module.exports = {};
     const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(testResult) {
@@ -2123,7 +2132,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
-
+"use strict";
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
     publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
@@ -2142,7 +2151,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugCallstack.js", module.exports);
-
+"use strict";
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
     const colorsServer = {
@@ -2252,7 +2261,7 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
     }
 })();
 fileCollection.set("TK_DebugTerminalLog.js", module.exports);
-
+"use strict";
 (function TK_File_init() {
     const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
     const fileRegistry = new Map();
@@ -2325,7 +2334,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
     Object.freeze(publicExports);
 })();
 fileCollection.set("TK_File.js", module.exports);
-
+"use strict";
 (function TK_NodeJSFile_init() {
     const { appendFileSync: extendFile, existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
@@ -2374,7 +2383,6 @@ fileCollection.set("TK_File.js", module.exports);
     }
 })();
 fileCollection.set("TK_NodeJSFile.js", module.exports);
-
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;

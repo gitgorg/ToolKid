@@ -5,144 +5,51 @@ interface LibraryCore_file {
 type LibraryBuild_file = {
     bundlerDefaults: {
         header: string,
-        fileParser(inputs: {
-            importID: string,
-            fileContent: string
-        }): string,
+        fileParser: any,
         footer: string,
     },
-    bundleFiles(inputs: {
-        header?: string,
-        fileParser?: GenericFunction,
-        fileList: Map<string, {
-            filePath: string
-        }>,
-        footer?: string,
-    }): string,
     composeBundleContent(inputs: {
         header?: string,
 
         footer?: string,
     }): string,
 
-    fileBundleSetup(inputs?: {
-        header?: string,
-        footer?: string,
-    }): FileBundleData,
     fileBundlePush(inputs: {
-        bundleData: FileBundleData,
+        fileContents: Map<string, string>,
         importID: string,
+    } & ({
         fileContent: string,
-        fileParser?: false | {
-            (inputs: {
-                importID: string,
-                fileContent: string,
-            }): string
-        }
-    }): void,
-    fileBundleCombine(
-        bundleData: FileBundleData
-    ): string,
-}
-
-type FileBundleData = {
-    header: string,
-    fileContents: Map<string, string>,
-    footer: string,
+    } | {
+        fileParser: {
+            (importID: string): string
+        },
+    })): void,
+    fileBundleCombine(inputs:{
+        header?: string,
+        fileContents: Map<string, string>,
+        footer?: string,
+    }): string,
 }
 
 
 
 (function LibraryBuild_init() {
-    const {
-        existsSync: isUsedPath,
-        lstatSync: readPathStats,
-        readFileSync: readFile,
-    } = require("fs");
-    const {
-        resolve: resolvePath,
-    } = require("path");
-
-
-
-
     const publicExports = module.exports = <LibraryBuild_file>{};
 
-    publicExports.fileBundleSetup = function LibraryBuild_fileBundleSetup(inputs = {}) {
-        return {
-            header: inputs.header || publicExports.bundlerDefaults.header,
-            fileContents: new Map(),
-            footer: inputs.footer || publicExports.bundlerDefaults.footer,
-        };
-    };
-
-    publicExports.fileBundlePush = function LibraryBuild_fileBundlePush(inputs) {
-        const { importID } = inputs;
-        const { fileContents } = inputs.bundleData;
-        if (fileContents.get(importID) !== undefined) {
-            return;
-        }
-
-        if (inputs.fileParser === false) {
-            fileContents.set(importID, inputs.fileContent);
-        } else {
-            const fileParser = inputs.fileParser || publicExports.bundlerDefaults.fileParser;
-            fileContents.set(importID, fileParser({
-                importID, fileContent: inputs.fileContent
-            }));
-        }
-    };
-
-    publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(bundleData) {
-        return bundleData.header
-        + [...bundleData.fileContents.values()].join("")
-        + bundleData.footer;
-    };
-
-    publicExports.bundleFiles = function LibraryBuild_bundleFiles(inputs) {
-        const defaults = publicExports.bundlerDefaults;
-        if (!(typeof inputs.fileParser === "function")) {
-            inputs.fileParser = defaults.fileParser;
-        }
-        let result = inputs.header || defaults.header;
-        const registeredFiles = new Set();
-        inputs.fileList.forEach(function (data: Dictionary, importID) {
-            if (registeredFiles.has(importID) === true) {
-                return;
-            }
-
-            registeredFiles.add(importID);
-            result += bundleFilesAppend(<any>inputs, importID);
-        });
-        return result + (inputs.footer || defaults.footer);
-    };
-
-    const bundleFilesAppend = function LibraryBuild_bundleFilesAppend(
-        boundInputs: {
-            fileList: Map<string, Dictionary>,
-            fileParser(inputs: {
-                importID: string,
-                fileContent: string
-            }): string
-        },
-        importID: string
+    publicExports.fileBundlePush = function LibraryBuild_fileBundlePush(
+        inputs: Dictionary
     ) {
-        const data = boundInputs.fileList.get(importID);
-        if (data === undefined) {
-            console.warn(["LibraryBuild_bundleFiles - unknown importID:", importID]);
-            return "";
+        const { importID } = inputs;
+        const { fileContents } = inputs;
+        if (fileContents.get(importID) === undefined) {
+            fileContents.set(importID, inputs.fileContent || inputs.fileParser(importID));
         }
+    };
 
-        let fileContent = data.fileContent;
-        if (data.fileContent === undefined) {
-            const filePath = resolvePath(data.filePath);
-            if (!isUsedPath(filePath) || readPathStats(filePath).isDirectory()) {
-                return;
-            }
-
-            fileContent = readFile(filePath, "utf8");
-        }
-        return boundInputs.fileParser({ importID, fileContent });
+    publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(inputs) {
+        return (inputs.header || publicExports.bundlerDefaults.header)
+            + [...inputs.fileContents.values()].join("")
+            + (inputs.footer || publicExports.bundlerDefaults.footer);
     };
 
     publicExports.bundlerDefaults = {

@@ -93,7 +93,7 @@ type GenericFunction = { (...parameters: any[]): any }
     };
 
     const getCoreModule = function LibraryCore_getCoreModule(
-        core:Library, moduleName:string
+        library:Library, moduleName:string
     ) {
         if (coreModules[moduleName] !== undefined) {
             return coreModules[moduleName];
@@ -111,7 +111,7 @@ type GenericFunction = { (...parameters: any[]): any }
             require("path").resolve(__dirname, "./" + path)
         );
         if (typeof module === "function") {
-            module(core);
+            module(library);
         }
         return module;
     };
