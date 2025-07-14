@@ -57,11 +57,14 @@ interface TK_DebugTest_file {
     const logFailure = function TK_DebugTestFull_logFailure(
         summaryName: string, result: TKTestResult
     ) {
+        const subjectName = (result.subject === undefined)
+            ? "?"
+            : result.subject.name || "?"
         console.warn("\n" +
             colorText("negative",
                 ">>  " + summaryName
                 + "  >  " + result.errorSource
-                + "  >  " + result.subject.name
+                + "  >  " + subjectName
                 + "  >  \"" + result.name + "\"\n"
             ),
             ...shortenData(logFailureNice(result.errorMessage))

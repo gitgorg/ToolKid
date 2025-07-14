@@ -111,7 +111,7 @@ type GenericFunction = { (...parameters: any[]): any }
             require("path").resolve(__dirname, "./" + path)
         );
         if (typeof module === "function") {
-            module(library);
+            (<any>module)(library);
         }
         return module;
     };

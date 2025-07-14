@@ -8,11 +8,6 @@ type LibraryBuild_file = {
         fileParser: any,
         footer: string,
     },
-    composeBundleContent(inputs: {
-        header?: string,
-
-        footer?: string,
-    }): string,
 
     fileBundlePush(inputs: {
         fileContents: Map<string, string>,
@@ -24,7 +19,7 @@ type LibraryBuild_file = {
             (importID: string): string
         },
     })): void,
-    fileBundleCombine(inputs:{
+    fileBundleCombine(inputs: {
         header?: string,
         fileContents: Map<string, string>,
         footer?: string,

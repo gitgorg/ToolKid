@@ -75,6 +75,21 @@ type TKTestResultGroup = {
         };
     };
 
+    const fillErrorResult = function TK_DebugTest_fillErrorResult(
+        testResult: TKTestResult,
+        error: any,
+        time: number,
+        failureHandler?: { (result: TKTestResult): void }
+    ) {
+        testResult.time = time;
+        testResult.errorMessage = error || "Unspecified Error";
+        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+        if (failureHandler !== undefined) {
+            failureHandler(testResult);
+        }
+        return Object.freeze(testResult);
+    };
+
     const isValidSubject = function TK_DebugTest_isValidSubject(
         subject: any
     ) {
@@ -139,15 +154,23 @@ type TKTestResultGroup = {
         resultGroup: TKTestResultGroup,
         config: TKTestConfig,
     ) {
+        const testResult = createResultBase(<any>config);
         if (typeof config !== "object" || config === null) {
-            throw ["TK_DebugTest_test - config has to be an object but is:", config];
+            return fillErrorResult(testResult,
+                ["TK_DebugTest_test - config has to be an object but is:", config],
+                0, resultGroup.failureHandler
+            );
         } else if (!isValidSubject(config.subject)) {
-            throw ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject];
+            const result = fillErrorResult(testResult,
+                ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject],
+                0, resultGroup.failureHandler
+            );
+            return result;
         }
 
         return testExecute({
             config,
-            testResult: createResultBase(<any>config),
+            testResult,
             resultGroup
         });
     };
@@ -185,12 +208,11 @@ type TKTestResultGroup = {
 
             testResult.time = Date.now() - startTime;
         } catch (error) {
-            testResult.time = Date.now() - startTime;
-            testResult.errorMessage = error;
-            testResult.errorSource = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
-            if (inputs.resultGroup.failureHandler !== undefined) {
-                inputs.resultGroup.failureHandler(testResult);
-            }
+            fillErrorResult(
+                testResult, error,
+                Date.now() - startTime,
+                inputs.resultGroup.failureHandler
+            );
         }
         if (typeof inputs.config.callback === "function") {
             inputs.config.callback({ scope, testResult });
@@ -237,16 +259,12 @@ type TKTestResultGroup = {
         }, reason: any
     ) {
         const { testResult } = bound;
-        testResult.errorMessage = reason;
-        testResult.time = Date.now() - bound.startTime;
-        if (reason === undefined) {
-            reason = "Unspecified Error"
-        }
-        testResult.errorMessage = reason;
         testResult.errorSource = bound.source;
-        if (bound.resultGroup.failureHandler !== undefined) {
-            bound.resultGroup.failureHandler(testResult);
-        }
+        fillErrorResult(
+            testResult, reason,
+            Date.now() - bound.startTime,
+            bound.resultGroup.failureHandler
+        );
         bound.resolver(Object.freeze(testResult));
     };
 

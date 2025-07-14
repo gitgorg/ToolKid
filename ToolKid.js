@@ -1280,6 +1280,15 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             time: 0
         };
     };
+    const fillErrorResult = function TK_DebugTest_fillErrorResult(testResult, error, time, failureHandler) {
+        testResult.time = time;
+        testResult.errorMessage = error || "Unspecified Error";
+        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+        if (failureHandler !== undefined) {
+            failureHandler(testResult);
+        }
+        return Object.freeze(testResult);
+    };
     const isValidSubject = function TK_DebugTest_isValidSubject(subject) {
         if (typeof subject === "function") {
             return subject.name.length !== 0;
@@ -1329,15 +1338,17 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         return testResults;
     };
     const testSingle = function TK_DebugTest_testSingle(resultGroup, config) {
+        const testResult = createResultBase(config);
         if (typeof config !== "object" || config === null) {
-            throw ["TK_DebugTest_test - config has to be an object but is:", config];
+            return fillErrorResult(testResult, ["TK_DebugTest_test - config has to be an object but is:", config], 0, resultGroup.failureHandler);
         }
         else if (!isValidSubject(config.subject)) {
-            throw ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject];
+            const result = fillErrorResult(testResult, ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject], 0, resultGroup.failureHandler);
+            return result;
         }
         return testExecute({
             config,
-            testResult: createResultBase(config),
+            testResult,
             resultGroup
         });
     };
@@ -1369,12 +1380,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             testResult.time = Date.now() - startTime;
         }
         catch (error) {
-            testResult.time = Date.now() - startTime;
-            testResult.errorMessage = error;
-            testResult.errorSource = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
-            if (inputs.resultGroup.failureHandler !== undefined) {
-                inputs.resultGroup.failureHandler(testResult);
-            }
+            fillErrorResult(testResult, error, Date.now() - startTime, inputs.resultGroup.failureHandler);
         }
         if (typeof inputs.config.callback === "function") {
             inputs.config.callback({ scope, testResult });
@@ -1396,16 +1402,8 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     };
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
         const { testResult } = bound;
-        testResult.errorMessage = reason;
-        testResult.time = Date.now() - bound.startTime;
-        if (reason === undefined) {
-            reason = "Unspecified Error";
-        }
-        testResult.errorMessage = reason;
         testResult.errorSource = bound.source;
-        if (bound.resultGroup.failureHandler !== undefined) {
-            bound.resultGroup.failureHandler(testResult);
-        }
+        fillErrorResult(testResult, reason, Date.now() - bound.startTime, bound.resultGroup.failureHandler);
         bound.resolver(Object.freeze(testResult));
     };
     Object.freeze(publicExports);
@@ -1750,10 +1748,13 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         return typeof failure[1] === "object" && failure[1].path instanceof Array;
     };
     const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
+        const subjectName = (result.subject === undefined)
+            ? "?"
+            : result.subject.name || "?";
         console.warn("\n" +
             colorText("negative", ">>  " + summaryName
                 + "  >  " + result.errorSource
-                + "  >  " + result.subject.name
+                + "  >  " + subjectName
                 + "  >  \"" + result.name + "\"\n"), ...shortenData(logFailureNice(result.errorMessage)));
     };
     const logFailureNice = function TK_DebugTestFull_logFailureNice(errorMessage) {
