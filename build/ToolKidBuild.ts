@@ -44,7 +44,7 @@ type ToolKidConfig = {
         if (config === undefined) {
             config = readConfig();
         }
-        const library = (<LibraryCore_file>require(
+        const library = (<any>require(
             Path.resolve(config.rootLibraryFiles, "LibraryCore.js")
         )).createInstance();
         const coreModuleFiles = library.getCoreModule("files");
@@ -142,7 +142,7 @@ console.log(">> ToolKid ready")\n\
     };
 
     publicExports.writeToolKid = function ToolKidBuild_executeBuild(config) {
-        const libraryCore = <LibraryCore_file>require(
+        const libraryCore = <any>require(
             Path.resolve(config.rootLibraryFiles, "LibraryCore.js")
         );
         const coreModuleFiles = libraryCore.getCoreModule("files");
