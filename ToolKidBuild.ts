@@ -82,10 +82,9 @@ type ToolKidConfig = {
         );
         const { createPathChecker, loopFiles, readFile, writeFile } = libraryCore.getCoreModule("files");
         const LibraryBuilding = libraryCore.getCoreModule("building");
-        const { fileBundlePush } = LibraryBuilding;
 
-        const filePath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
-        console.log(">>  write Toolkid to " + filePath);
+        const exportPath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
+        console.log(">>  write Toolkid to " + exportPath);
         const fileRegistry = <Map<string, string>>new Map();
         loopFiles({
             path: resolve(config.fileRoot, "modules"),
@@ -95,7 +94,7 @@ type ToolKidConfig = {
                 fileRegistry.set(basename(filePath), filePath);
             }
         });
-        const fileContents = new Map() as Map<string, string>;
+        const fileContents = new Map();
         const readFileContent = function ToolKidBuild_readFileContent(fileName: string): string {
             return readFile(<string>fileRegistry.get(fileName)).content;
         };
@@ -111,28 +110,32 @@ type ToolKidConfig = {
                 + moduleName
                 + '", module: module.exports\n});\n';
         };
-        fileBundlePush({
-            fileContents, importID: "LibraryCore.js",
-            fileContent: readFileContent("LibraryCore.js") + '\n'
-                + 'fileCollection.set("LibraryCore.js", module.exports);\n'
-                + 'global.ToolKid = module.exports.createInstance();\n\n',
-        });
-        fileBundlePush({ fileContents, fileParser: fileParserCore, importID: "LibraryRegularExpression.js" });
-        let coreCheck = createPathChecker({ includes: ["*/modules/core/*"] });
+
+        fileContents.set(
+            "LibraryCore.js",
+            readFileContent("LibraryCore.js") + '\n'
+            + 'fileCollection.set("LibraryCore.js", module.exports);\n'
+            + 'global.ToolKid = module.exports.createInstance();\n\n',
+        );
+        fileContents.set(
+            "LibraryRegularExpression.js",
+            fileParserCore("LibraryRegularExpression.js")
+        );
+        const coreCheck = createPathChecker({ includes: ["*/modules/core/*"] });
         fileRegistry.forEach(function (filePath, importID) {
-            if (coreCheck(filePath)) {
-                fileBundlePush({ fileContents, fileParser: fileParserCore, importID });
+            if (coreCheck(filePath) && !fileContents.has(importID)) {
+                fileContents.set(importID, fileParserCore(importID));
             }
         });
 
         fileRegistry.forEach(function (filePath, importID) {
-            if (!coreCheck(filePath)) {
-                fileBundlePush({ fileContents, fileParser: fileParserRegular, importID });
+            if (!coreCheck(filePath) && !fileContents.has(importID)) {
+                fileContents.set(importID, fileParserRegular(importID));
             }
         });
 
         writeFile({
-            path: filePath,
+            path: exportPath,
             content: LibraryBuilding.fileBundleCombine({
                 header: '"use strict";\n\
 (function ToolKid_bundle() {\n\

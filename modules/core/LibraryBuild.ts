@@ -9,16 +9,15 @@ type LibraryBuild_file = {
         footer: string,
     },
 
-    fileBundlePush(inputs: {
-        fileContents: Map<string, string>,
-        importID: string,
-    } & ({
-        fileContent: string,
-    } | {
-        fileParser: {
-            (importID: string): string
-        },
-    })): void,
+    bundleFile(
+        bundleRegistry: Set<string>,
+        getFileContent: (
+            bundleRegistry: Set<string>,
+            bundleID: string
+        ) => string[],
+        bundleID: string,
+    ): string[]
+
     fileBundleCombine(inputs: {
         header?: string,
         fileContents: Map<string, string>,
@@ -31,14 +30,14 @@ type LibraryBuild_file = {
 (function LibraryBuild_init() {
     const publicExports = module.exports = <LibraryBuild_file>{};
 
-    publicExports.fileBundlePush = function LibraryBuild_fileBundlePush(
-        inputs: Dictionary
+    publicExports.bundleFile = function RS_build_bundleFile(
+        bundleRegistry, getFileContent, bundleID,
     ) {
-        const { importID } = inputs;
-        const { fileContents } = inputs;
-        if (fileContents.get(importID) === undefined) {
-            fileContents.set(importID, inputs.fileContent || inputs.fileParser(importID));
-        }
+        bundleRegistry.add(bundleID);
+        return [
+            ...getFileContent(bundleRegistry, bundleID),
+            '\nfileCollection.set("' + bundleID + '", module.exports);'
+        ];
     };
 
     publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(inputs) {
