@@ -113,22 +113,22 @@ type LibraryFiles_file = {
     };
 
     publicExports.loopFiles = function LibraryFiles_loopFiles(
-        inputs:Dictionary
+        inputs: Dictionary
     ) {
-        const DataForLooping = {
+        const privateData = {
             isIncluded: inputs.pathChecker || publicExports.createPathChecker(inputs),
             execute: inputs.execute,
         };
         const { path } = inputs;
         if (path instanceof Array) {
-            path.forEach(loopFilesFrom.bind(null, DataForLooping));
+            path.forEach(loopFilesFrom.bind(null, privateData));
         } else {
-            loopFilesFrom(DataForLooping, path);
+            loopFilesFrom(privateData, path);
         }
     };
 
     const loopFilesFrom = function LibraryFiles_loopFilesFrom(
-        DataForLooping: DataForLooping,
+        privateData: DataForLooping,
         path: string
     ) {
         path = resolvePath(path);
@@ -137,31 +137,31 @@ type LibraryFiles_file = {
         }
 
         if (isDirectory(path)) {
-            loopFilesFromDirectory(DataForLooping, path);
+            loopFilesFromDirectory(privateData, path);
         } else {
-            loopFilesExecute(DataForLooping, "", path);
+            loopFilesExecute(privateData, "", path);
         }
     };
 
     const loopFilesFromDirectory = function LibraryFiles_loopFilesFromDirectory(
-        DataForLooping: DataForLooping, path: string
+        privateData: DataForLooping, path: string
     ) {
         readDirectory(path).forEach(
-            loopFilesExecute.bind(null, DataForLooping, path)
+            loopFilesExecute.bind(null, privateData, path)
         );
     };
 
     const loopFilesExecute = function LibraryFiles_loopFilesExecute(
-        boundInputs: DataForLooping, root: string, path: string
+        privateData: DataForLooping, root: string, path: string
     ) {
         path = resolvePath(root, path);
         if (isDirectory(path)) {
-            loopFilesFromDirectory(boundInputs, path);
+            loopFilesFromDirectory(privateData, path);
             return;
         }
 
-        if (boundInputs.isIncluded(path)) {
-            boundInputs.execute(path);
+        if (privateData.isIncluded(path)) {
+            privateData.execute(path);
         }
     };
 

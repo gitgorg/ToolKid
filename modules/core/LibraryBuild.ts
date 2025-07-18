@@ -5,7 +5,6 @@ interface LibraryCore_file {
 type LibraryBuild_file = {
     bundlerDefaults: {
         header: string,
-        fileParser: any,
         footer: string,
     },
 
@@ -15,14 +14,8 @@ type LibraryBuild_file = {
             bundleRegistry: Set<string>,
             bundleID: string
         ) => string[],
-        bundleID: string,
+        bundleIDs: string[],
     ): string[]
-
-    fileBundleCombine(inputs: {
-        header?: string,
-        fileContents: Map<string, string>,
-        footer?: string,
-    }): string,
 }
 
 
@@ -30,42 +23,32 @@ type LibraryBuild_file = {
 (function LibraryBuild_init() {
     const publicExports = module.exports = <LibraryBuild_file>{};
 
-    publicExports.bundleFile = function RS_build_bundleFile(
-        bundleRegistry, getFileContent, bundleID,
+    publicExports.bundleFile = function LibraryBuild_bundleFile(
+        bundleRegistry, getFileContent, bundleIDs,
     ) {
-        bundleRegistry.add(bundleID);
-        return [
-            ...getFileContent(bundleRegistry, bundleID),
-            '\nfileCollection.set("' + bundleID + '", module.exports);'
-        ];
-    };
+        const result = [] as string[];
+        const length = bundleIDs.length;
+        let bundleID: string;
+        for (let i = 0; i < length; i += 1) {
+            if (bundleRegistry.has(bundleIDs[i])) {
+                continue;
+            }
 
-    publicExports.fileBundleCombine = function LibraryBuild_fileBundleCombine(inputs) {
-        return (inputs.header || publicExports.bundlerDefaults.header)
-            + [...inputs.fileContents.values()].join("")
-            + (inputs.footer || publicExports.bundlerDefaults.footer);
+            bundleID = bundleIDs[i];
+            bundleRegistry.add(bundleID);
+            result.push(
+                ...getFileContent(bundleRegistry, bundleID),
+                '\nfileCollection.set("' + bundleID + '", module.exports);\n\n'
+            );
+        }
+        return result;
     };
 
     publicExports.bundlerDefaults = {
         header: '"use strict";\n\
 (function Library_bundledFiles_init() {\n\
-const fileCollection = new Map();\n\n',
-        fileParser: function LibraryBuild_defaultFileParser(inputs: {
-            importID: string, fileContent: string
-        }) {
-            return removeStrictMode(inputs.fileContent) + '\n\
-fileCollection.set("' + inputs.importID + '", module.exports);\n\n';
-        },
-        footer: '})();'
-    };
-
-    const removeStrictMode = function ToolKidBuild_removeStrictMode(fileContent: string) {
-        const firstPosition = fileContent.indexOf("use strict") - 1;
-        if (firstPosition !== -2 && firstPosition < 20) {
-            return fileContent.slice(firstPosition + 13).trim();
-        } else {
-            return fileContent;
-        }
+const fileCollection = new Map();\n\n\n',
+        footer: '\n})();'
     };
 
 

@@ -1,8 +1,9 @@
 "use strict";
-(function ToolKid_bundle() {
-console.log(">>  activate ToolKid");
+(function Library_bundledFiles_init() {
 const fileCollection = new Map();
 
+
+console.log(">>  activate ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
@@ -133,10 +134,8 @@ const fileCollection = new Map();
         return section;
     };
 })();
-
-fileCollection.set("LibraryCore.js", module.exports);
 global.ToolKid = module.exports.createInstance();
-
+fileCollection.set("LibraryCore.js", module.exports);
 
 "use strict";
 (function LibraryRegularExpression_init() {
@@ -211,10 +210,10 @@ global.ToolKid = module.exports.createInstance();
     };
     Object.freeze(publicExports);
 })();
-fileCollection.set("LibraryRegularExpression.js", module.exports);
 fileCollection.get("LibraryCore.js").registerCoreModule({
-name: "regularExpression", module: module.exports
+    name: "regularExpression", module: module.exports
 });
+fileCollection.set("LibraryRegularExpression.js", module.exports);
 
 "use strict";
 // regExp flags:
@@ -457,10 +456,10 @@ name: "regularExpression", module: module.exports
     };
     Object.freeze(publicExports);
 })();
-fileCollection.set("LibraryParsing.js", module.exports);
 fileCollection.get("LibraryCore.js").registerCoreModule({
-name: "parsing", module: module.exports
+    name: "parsing", module: module.exports
 });
+fileCollection.set("LibraryParsing.js", module.exports);
 
 "use strict";
 (function TK_CodeJS_init() {
@@ -494,7 +493,9 @@ name: "parsing", module: module.exports
         ToolKid.register({ section: "code", subSection: "JS", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_CodeJS.js", module.exports);
+
 "use strict";
 (function TK_CodeParsing_init() {
     const publicExports = module.exports = {};
@@ -523,7 +524,9 @@ fileCollection.set("TK_CodeJS.js", module.exports);
         ToolKid.register({ section: "code", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_CodeParsing.js", module.exports);
+
 "use strict";
 (function TK_ConnectionHTTPinit() {
     const publicExports = module.exports = {};
@@ -606,7 +609,9 @@ fileCollection.set("TK_CodeParsing.js", module.exports);
         ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_ConnectionHTTP.js", module.exports);
+
 "use strict";
 (function TK_ConnectionHTTPFormats_init() {
     const publicExports = module.exports = {};
@@ -648,7 +653,9 @@ fileCollection.set("TK_ConnectionHTTP.js", module.exports);
         ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
+
 "use strict";
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
@@ -689,7 +696,9 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "array", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesArray.js", module.exports);
+
 "use strict";
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
@@ -791,7 +800,9 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesChecks.js", module.exports);
+
 "use strict";
 (function TK_DataTypesChecksEquality_init() {
     const publicExports = module.exports = {};
@@ -949,7 +960,9 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
+
 "use strict";
 (function TK_DataTypesList_init() {
     const publicExports = module.exports = {};
@@ -973,7 +986,9 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "list", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesList.js", module.exports);
+
 "use strict";
 (function TK_DataTypesNumber_init() {
     const publicExports = module.exports = {};
@@ -1014,7 +1029,9 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "number", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
+
 "use strict";
 (function TK_DataTypesObject_init() {
     const publicExports = module.exports = {};
@@ -1059,7 +1076,9 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesObject.js", module.exports);
+
 "use strict";
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
@@ -1125,7 +1144,9 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "promise", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
+
 "use strict";
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
@@ -1278,7 +1299,9 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTest.js", module.exports);
+
 "use strict";
 (function TK_DebugTestAssertFailure_init() {
     const { areEqual } = ToolKid.dataTypes.checks;
@@ -1429,7 +1452,9 @@ fileCollection.set("TK_DebugTest.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
+
 "use strict";
 (function TK_DebugTestAssertion_init() {
     const defaultConfig = {};
@@ -1517,7 +1542,9 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTestAssertion.js", module.exports);
+
 "use strict";
 (function TK_DebugTestCondition_init() {
     const publicExports = module.exports = {};
@@ -1589,7 +1616,9 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTestCondition.js", module.exports);
+
 "use strict";
 (function TK_DebugTestFull_init() {
     const publicExports = module.exports = {};
@@ -1713,7 +1742,9 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTestFull.js", module.exports);
+
 "use strict";
 (function TK_DebugTestShouldPass_init() {
     const publicExports = module.exports = {};
@@ -1780,7 +1811,9 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
+
 "use strict";
 (function TK_DebugTestSummary_init() {
     const publicExports = module.exports = {};
@@ -1999,7 +2032,9 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
+
 "use strict";
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
@@ -2018,7 +2053,9 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugCallstack.js", module.exports);
+
 "use strict";
 (function TK_DebugTerminalLog_init() {
     const publicExports = module.exports = {};
@@ -2128,7 +2165,9 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
     }
 })();
+
 fileCollection.set("TK_DebugTerminalLog.js", module.exports);
+
 "use strict";
 (function TK_File_init() {
     const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
@@ -2201,7 +2240,10 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
     }
     Object.freeze(publicExports);
 })();
+
 fileCollection.set("TK_File.js", module.exports);
+
+
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
