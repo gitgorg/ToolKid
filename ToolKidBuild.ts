@@ -77,9 +77,8 @@ type ToolKidConfig = {
     };
 
     const corePathCheck = createPathChecker({ includes: ["*/modules/core/*"] });
-    const readBundleContent = function (
+    const readBundleContent = function TooloKidBuild_readBundleContent(
         filePaths: Map<string, string>,
-        bundleRegistry: Set<string>,
         bundleID: string,
     ) {
         const filePath = filePaths.get(bundleID) as string;
@@ -108,23 +107,16 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
     publicExports.write = function ToolKidBuild_write(config) {
         const exportPath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
         console.log(">>  write Toolkid to " + exportPath);
-        const filePaths = <Map<string, string>>new Map([
+        const filePaths = new Map([
             ["LibraryCore.js", ""], ["LibraryRegularExpression.js", ""]
         ]);
-        //library modules first
         loopFiles({
-            path: resolve(__dirname, "modules/core"),
+            path: [
+                resolve(__dirname, "modules/core"), //library core first
+                resolve(__dirname, "modules")
+            ],
             includes: ["*.js", ...(config.include || [])],
             excludes: ["*.test.js", ...(config.exclude || [])],
-            execute: function ToolKidBuil_executeBuildCoreModules(filePath) {
-                filePaths.set(basename(filePath), filePath);
-            }
-        });
-        //extension modules second
-        loopFiles({
-            path: resolve(__dirname, "modules"),
-            includes: ["*.js", ...(config.include || [])],
-            excludes: ["*/modules/core/*", "*.test.js", ...(config.exclude || [])],
             execute: function ToolKidBuil_executeBuildCoreModules(filePath) {
                 filePaths.set(basename(filePath), filePath);
             }
@@ -136,8 +128,7 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
                 LibraryBuilding.bundlerDefaults.header,
                 'console.log(">>  activate ToolKid");\n',
                 ...LibraryBuilding.bundleFile(
-                    new Set(),
-                    readBundleContent.bind(null, filePaths),
+                    { readBundleContent: readBundleContent.bind(null, filePaths) },
                     [...filePaths.keys()],
                 ), '\
 \n\nglobal.log = ToolKid.debug.terminal.logImportant;\n\
