@@ -1,10 +1,5 @@
 //combining all ToolKid parts
 type ToolKidBuild_file = {
-    activate(
-        inputs?: ToolKidConfig & {
-            runTests?: true
-        }
-    ): void,
     write(
         inputs: ToolKidConfig & {
             exportPath?: string,
@@ -27,6 +22,8 @@ type ToolKidConfig = {
 
 
 (function ToolKidBuild_init() {
+    console.log(">>  activate ToolKid");
+    const FS = require("fs");
     const { basename, resolve } = require("path");
     const libraryCore = <LibraryCore_file><any>require(
         resolve(__dirname, "modules/core/LibraryCore.js")
@@ -34,38 +31,30 @@ type ToolKidConfig = {
     const { createPathChecker, loopFiles, readFile, writeFile } = libraryCore.getCoreModule("files");
     const LibraryBuilding = libraryCore.getCoreModule("building");
 
+    (<Dictionary>global).ToolKid = libraryCore.createInstance();
+    const { replaceFileConnections } = <TK_CodeJS_file>require("./modules/code/TK_CodeJS.js");
 
 
     const publicExports = module.exports = <ToolKidBuild_file>{};
-    publicExports.activate = function ToolKidBuild_activate(config) {
-        if (typeof ToolKid !== "undefined") {
-            return;
-        }
 
-        console.log(">>  activate ToolKid");
-        if (config === undefined) {
-            const FS = require("fs");
-            if (FS.existsSync(resolve("./ToolKidConfig.json"))) {
-                config = <ToolKidConfig>JSON.parse(
-                    FS.readFileSync("./ToolKidConfig.json", "utf8")
-                );
-            } else {
-                config = {}
-            }
-        }
-        (<Dictionary>global).ToolKid = libraryCore.createInstance();
 
-        loopFiles({
-            path: resolve(__dirname, "modules"),
-            includes: ["*.js", ...(config.include || [])],
-            excludes: ["*.test.js", ...(config.exclude || [])],
-            execute: require
-        });
-        console.log(">>  ToolKid ready");
-        if (config.runTests === true) {
-            runTests();
-        }
-    };
+
+
+
+    let config;
+    if (FS.existsSync(resolve("./ToolKidConfig.json"))) {
+        config = <ToolKidConfig>JSON.parse(
+            FS.readFileSync("./ToolKidConfig.json", "utf8")
+        );
+    } else {
+        config = {}
+    }
+    loopFiles({
+        path: resolve(__dirname, "modules"),
+        includes: ["*.js", ...(config.include || [])],
+        excludes: ["*.test.js", ...(config.exclude || [])],
+        execute: require
+    });
 
     const runTests = function ToolKidBuild_runTests() {
         setTimeout(ToolKid.debug.test.testFull.bind(null, {
@@ -82,26 +71,42 @@ type ToolKidConfig = {
         bundleID: string,
     ) {
         const filePath = filePaths.get(bundleID) as string;
-        const result = [
-            readFile(filePath).content,
-        ];
+        const neededBundleIDs = new Set() as Set<string>;
+        const content = [replaceFileConnections({
+            text: readFile(filePath).content,
+            replacer: replacer.bind(null, neededBundleIDs)
+        })];
         if (!corePathCheck(filePath)) {
-            return result;
+            return {
+                neededBundleIDs: Array.from(neededBundleIDs),
+                content,
+            };
         }
 
-        let moduleName = bundleID.slice(7, -3);
+        let moduleName = basename(bundleID).slice(7, -3);
         moduleName = moduleName[0].toLocaleLowerCase() + moduleName.slice(1);
         if (moduleName === "core") {
-            result.push('global.ToolKid = module.exports.createInstance();'
+            content.push('global.ToolKid = module.exports.createInstance();'
             );
         } else {
-            result.push('\
+            content.push('\
 fileCollection.get("LibraryCore.js").registerCoreModule({\n\
     name: "', moduleName, '", module: module.exports\n\
 });'
             );
         }
-        return result;
+        return {
+            neededBundleIDs: Array.from(neededBundleIDs),
+            content,
+        };
+    };
+
+    const replacer = function RS_build_replacer(
+        neededBundleIDs: Set<string>, content: string
+    ): string | void {
+        const bundleID = basename(content.slice(1, -1));
+        neededBundleIDs.add(bundleID);
+        return 'fileCollection.get("' + bundleID + '")';
     };
 
     publicExports.write = function ToolKidBuild_write(config) {
@@ -127,10 +132,10 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
             content: [
                 LibraryBuilding.bundlerDefaults.header,
                 'console.log(">>  activate ToolKid");\n',
-                ...LibraryBuilding.bundleFile(
-                    { readBundleContent: readBundleContent.bind(null, filePaths) },
-                    [...filePaths.keys()],
-                ), '\
+                ...LibraryBuilding.bundleFile({
+                    readBundleContent: readBundleContent.bind(null, filePaths),
+                    bundleIDs: [...filePaths.keys()]
+                }), '\
 \n\nglobal.log = ToolKid.debug.terminal.logImportant;\n\
 module.exports = ToolKid;\n\
 console.log(">>  ToolKid ready");',
@@ -145,10 +150,5 @@ console.log(">>  ToolKid ready");',
 
 
     Object.freeze(publicExports);
-
-    const executionFile = basename(process.argv[1]);
-    const isExecutedViaTerminal = executionFile.slice(0, 12) === "ToolKidBuild";
-    if (isExecutedViaTerminal) {
-        publicExports.activate();
-    }
+    console.log(">>  ToolKid ready");
 })();

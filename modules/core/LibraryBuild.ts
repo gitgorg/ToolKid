@@ -11,21 +11,19 @@ type LibraryBuild_file = {
         footer: string,
     },
 
-    bundleFile(
-        privateData: {
-            readBundleContent: (
-                bundleID: string
-            ) => string[] | BundleContent,
-            bundleRegistry?: Set<string>,
-            bundleAfter?: LibraryBuild_file["bundlerDefaults"]["bundleAfter"] | false,
-        },
+    bundleFile(inputs: {
         bundleIDs: string[],
-    ): string[]
+        readBundleContent: (
+            bundleID: string
+        ) => string[] | BundleContent,
+        bundleRegistry?: Set<string>,
+        bundleAfter?: LibraryBuild_file["bundlerDefaults"]["bundleAfter"] | false,
+    }): string[],
 }
 
 type BundleContent = {
+    content: string[],
     neededBundleIDs?: string[],
-    content: string[]
 }
 
 
@@ -42,19 +40,19 @@ type BundleContent = {
     const publicExports = module.exports = <LibraryBuild_file>{};
 
     const returnNone = <any>function LibraryBuild_returnNone() { };
-    publicExports.bundleFile = function LibraryBuild_bundleFile(
-        config, bundleIDs,
-    ) {
-        const privateData = Object.assign({}, config) as PrivateData;
-        if (!(config.bundleRegistry instanceof Set)) {
+    publicExports.bundleFile = function LibraryBuild_bundleFile(inputs) {
+        const privateData = Object.assign({}, inputs) as PrivateData;
+        //@ts-ignore
+        delete privateData.bundleIDs;
+        if (!(inputs.bundleRegistry instanceof Set)) {
             privateData.bundleRegistry = new Set();
         }
-        if (config.bundleAfter === false) {
+        if (inputs.bundleAfter === false) {
             privateData.bundleAfter = returnNone;
-        } else if (typeof config.bundleAfter !== "function") {
+        } else if (typeof inputs.bundleAfter !== "function") {
             privateData.bundleAfter = publicExports.bundlerDefaults.bundleAfter;
         }
-        return bundleFileIntern(privateData, bundleIDs);
+        return bundleFileIntern(privateData, inputs.bundleIDs);
     };
 
     const bundleFileIntern = function LibraryBuild_bundleFileIntern(
@@ -65,7 +63,7 @@ type BundleContent = {
         const result = [] as string[];
         const length = bundleIDs.length;
         let bundleID = "";
-        let bundleContent: any;
+        let bundleContent: string[] | BundleContent;
         for (let i = 0; i < length; i += 1) {
             if (bundleRegistry.has(bundleIDs[i])) {
                 continue;
@@ -74,17 +72,21 @@ type BundleContent = {
             bundleID = bundleIDs[i];
             bundleRegistry.add(bundleID);
             bundleContent = readBundleContent(bundleID);
-            if (
-                typeof bundleContent === "object"
-                && bundleContent.neededBundleIDs instanceof Array
-            ) {
+            if (bundleContent instanceof Array) {
+                result.push(
+                    ...bundleContent,
+                    privateData.bundleAfter(bundleID),
+                );
+                continue;
+            }
+
+            if (bundleContent.neededBundleIDs instanceof Array) {
                 result.push(...bundleFileIntern(
                     privateData, bundleContent.neededBundleIDs
                 ));
-                bundleContent = bundleContent.content;
             }
             result.push(
-                ...bundleContent,
+                ...bundleContent.content,
                 privateData.bundleAfter(bundleID),
             );
         }

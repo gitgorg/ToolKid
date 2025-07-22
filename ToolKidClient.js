@@ -462,7 +462,122 @@ fileCollection.get("LibraryCore.js").registerCoreModule({
 fileCollection.set("LibraryParsing.js", module.exports);
 
 "use strict";
+(function TK_CodeCDW_init() {
+    const publicExports = module.exports = {};
+    publicExports.textLayerDefinition = {
+        cdw_comment: {
+            patterns: [["//", /\n|$/], ["/*", "*/"]],
+        },
+        cdw_import: {
+            patterns: [["#import(", ")"]],
+        },
+        cdw_importMaybe: {
+            patterns: [["#load(", ")"]],
+        },
+        cdw_insertAfter: {
+            patterns: [["#insertAfter(", ")"]],
+        },
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "code", subSection: "CDW", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_CodeCDW.js", module.exports);
+
+"use strict";
+(function TK_DataTypesObject_init() {
+    const publicExports = module.exports = {};
+    publicExports.filter = function TK_DataTypesObject_filter(inputs) {
+        const result = {};
+        const { data, byKeys } = inputs;
+        let value;
+        for (let i = 0; i < byKeys.length; i += 1) {
+            value = data[byKeys[i]];
+            if (value !== undefined) {
+                result[byKeys[i]] = value;
+            }
+        }
+        return result;
+    };
+    publicExports.merge = function TK_DataTypesObject_merge(base, ...changes) {
+        const result = Object.assign({}, base);
+        const addToResult = mergeLayer.bind(null, result);
+        for (let i = 0; i < changes.length; i += 1) {
+            Object.entries(changes[i]).forEach(addToResult);
+        }
+        return result;
+    };
+    const mergeLayer = function TK_DataTypesObject_mergeLayer(result, [key, newValue]) {
+        if (newValue === undefined) {
+            delete result[key];
+            return;
+        }
+        const oldValue = result[key];
+        if (newValue !== oldValue && isObject(oldValue) && isObject(newValue)) {
+            const replacement = Object.assign({}, oldValue);
+            Object.entries(newValue).forEach(mergeLayer.bind(null, replacement));
+            newValue = replacement;
+        }
+        result[key] = newValue;
+    };
+    const isObject = function TK_DataTypesObject_isObject(value) {
+        return typeof value === "object" && !(value instanceof Array);
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DataTypesObject.js", module.exports);
+
+"use strict";
+(function TK_CodeHTML_init() {
+    const publicExports = module.exports = {};
+    const { textLayerDefinition } = fileCollection.get("TK_CodeCDW.js");
+    const { merge } = fileCollection.get("TK_DataTypesObject.js");
+    publicExports.textLayerDefinition = {
+        html_comment: {
+            patterns: [["<!--", "-->"]],
+        },
+        html_href: {
+            patterns: [["href=\"", "\""]],
+        },
+        html_src: {
+            patterns: [["src=\"", "\""]],
+        },
+        html_insert: {
+            patterns: [["DATA-INSERT=\"", "\""]],
+        },
+        // html_css: {
+        //     patterns: [["style=\"", "\""]],
+        //     contains: ["css_comment", "css_string", "css_url"]
+        // },
+        // css_comment: nonMainLayer,
+        // css_string: nonMainLayer,
+        // css_url: nonMainLayer,
+        // html_cdw: {
+        //     patterns: [["DATA-MVC=\"", "\""], ["DATA-CDW=\"", "\""]],
+        //     contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
+        // },
+        // cdw_comment: nonMainLayer,
+        // cdw_import: nonMainLayer,
+        // cdw_importMaybe: nonMainLayer,
+        // cdw_insertAfter: nonMainLayer,
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "code", subSection: "HTML", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_CodeHTML.js", module.exports);
+
+"use strict";
 (function TK_CodeJS_init() {
+    const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
         js_comment: {
@@ -478,6 +593,9 @@ fileCollection.set("LibraryParsing.js", module.exports);
         },
         js_import: {
             patterns: [["require(", ")"]],
+            layerData: {
+                fileConnection: "needed"
+            },
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],
@@ -488,6 +606,68 @@ fileCollection.set("LibraryParsing.js", module.exports);
             contains: ["js_escape"]
         },
     };
+    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
+        layerDefinition: {
+            js_comment: publicExports.textLayerDefinition.js_comment,
+            js_text: publicExports.textLayerDefinition.js_text,
+            js_escape: publicExports.textLayerDefinition.js_escape,
+        },
+        parseClosings: function (result, layerData) {
+            if (layerData.name === "js_comment") {
+                return "";
+            }
+        }
+    });
+    Object.defineProperty(publicExports.removeComments, "name", {
+        value: "TK_CodeJS_removeComments",
+    });
+    const validPathOpenings = new Set(['"', "'", "`"]);
+    const validPathClosings = new Set([".js", "jsm"]);
+    const parseFileConnections = ToolKid.getCoreModule("parsing").createTextParser({
+        layerDefinition: publicExports.textLayerDefinition,
+        parseClosings: function RS_connections_parseLayerJS(...inputs) {
+            if (inputs[1].fileConnection === undefined) {
+                return;
+            }
+            let content = readLayerContent(inputs);
+            content = publicExports.removeComments(content).trim();
+            if (!validPathOpenings.has(content[0])
+                || !validPathClosings.has(content.slice(-4, -1))) {
+                return;
+            }
+            const closing = inputs[0];
+            const opening = inputs[4];
+            inputs[2].result.push([
+                content.slice(1, -1),
+                inputs[1].fileConnection,
+                [
+                    opening.index, opening.index + opening[0].length,
+                    closing.index, closing.index + closing[0].length,
+                ]
+            ]);
+        }
+    });
+    publicExports.readFileConnections = function TK_CodeJS_readFileConnections(text) {
+        const result = [];
+        parseFileConnections({ text, result });
+        return result;
+    };
+    publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
+        layerDefinition: publicExports.textLayerDefinition,
+        parseClosings: function TK_CodeJS_replaceFileConnections(...inputs) {
+            if (inputs[1].fileConnection === undefined) {
+                return;
+            }
+            const content = publicExports.removeComments(readLayerContent(inputs)).trim();
+            if (validPathOpenings.has(content[0])
+                && validPathClosings.has(content.slice(-4, -1))) {
+                return inputs[2].replacer(content);
+            }
+        }
+    });
+    Object.defineProperty(publicExports.replaceFileConnections, "name", {
+        value: "TK_CodeJS_replaceFileConnections",
+    });
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "code", subSection: "JS", entries: publicExports });
@@ -1031,53 +1211,6 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
 })();
 
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
-
-"use strict";
-(function TK_DataTypesObject_init() {
-    const publicExports = module.exports = {};
-    publicExports.filter = function TK_DataTypesObject_filter(inputs) {
-        const result = {};
-        const { data, byKeys } = inputs;
-        let value;
-        for (let i = 0; i < byKeys.length; i += 1) {
-            value = data[byKeys[i]];
-            if (value !== undefined) {
-                result[byKeys[i]] = value;
-            }
-        }
-        return result;
-    };
-    publicExports.merge = function TK_DataTypesObject_merge(base, ...changes) {
-        const result = Object.assign({}, base);
-        const addToResult = mergeLayer.bind(null, result);
-        for (let i = 0; i < changes.length; i += 1) {
-            Object.entries(changes[i]).forEach(addToResult);
-        }
-        return result;
-    };
-    const mergeLayer = function TK_DataTypesObject_mergeLayer(result, [key, newValue]) {
-        if (newValue === undefined) {
-            delete result[key];
-            return;
-        }
-        const oldValue = result[key];
-        if (newValue !== oldValue && isObject(oldValue) && isObject(newValue)) {
-            const replacement = Object.assign({}, oldValue);
-            Object.entries(newValue).forEach(mergeLayer.bind(null, replacement));
-            newValue = replacement;
-        }
-        result[key] = newValue;
-    };
-    const isObject = function TK_DataTypesObject_isObject(value) {
-        return typeof value === "object" && !(value instanceof Array);
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DataTypesObject.js", module.exports);
 
 "use strict";
 (function TK_DataTypesPromise_init() {
