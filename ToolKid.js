@@ -603,12 +603,15 @@ fileCollection.set("LibraryParsing.js", module.exports);
         },
         cdw_import: {
             patterns: [["#import(", ")"]],
+            layerData: { fileConnection: "insert" },
         },
         cdw_importMaybe: {
             patterns: [["#load(", ")"]],
+            layerData: { fileConnection: "optional" },
         },
         cdw_insertAfter: {
             patterns: [["#insertAfter(", ")"]],
+            layerData: { fileConnection: "optional" },
         },
     };
     Object.freeze(publicExports);
@@ -618,6 +621,29 @@ fileCollection.set("LibraryParsing.js", module.exports);
 })();
 
 fileCollection.set("TK_CodeCDW.js", module.exports);
+
+"use strict";
+(function TK_CodeCSS_init() {
+    const publicExports = module.exports = {};
+    publicExports.textLayerDefinition = {
+        css_comment: {
+            patterns: [["/*", "*/"]]
+        },
+        css_string: {
+            patterns: [["\"", "\""], ["'", "'"]]
+        },
+        css_url: {
+            patterns: [["url(", ")"]],
+            layerData: { fileConnection: "optional" }
+        },
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "code", subSection: "CSS", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_CodeCSS.js", module.exports);
 
 "use strict";
 (function TK_DataTypesObject_init() {
@@ -668,10 +694,13 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
 
 "use strict";
 (function TK_CodeHTML_init() {
-    const publicExports = module.exports = {};
-    const { textLayerDefinition } = fileCollection.get("TK_CodeCDW.js");
+    const { readLayerContent } = ToolKid.getCoreModule("parsing");
+    const CodeCDW = fileCollection.get("TK_CodeCDW.js");
+    const CodeCSS = fileCollection.get("TK_CodeCSS.js");
     const { merge } = fileCollection.get("TK_DataTypesObject.js");
-    publicExports.textLayerDefinition = {
+    const publicExports = module.exports = {};
+    const nonMainLayer = { isROOTLayer: false };
+    publicExports.textLayerDefinition = merge(CodeCSS.textLayerDefinition, CodeCDW.textLayerDefinition, {
         html_comment: {
             patterns: [["<!--", "-->"]],
         },
@@ -680,26 +709,54 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         },
         html_src: {
             patterns: [["src=\"", "\""]],
+            layerData: { fileConnection: "preload" },
         },
         html_insert: {
             patterns: [["DATA-INSERT=\"", "\""]],
+            layerData: { fileConnection: "insert" },
         },
-        // html_css: {
-        //     patterns: [["style=\"", "\""]],
-        //     contains: ["css_comment", "css_string", "css_url"]
-        // },
-        // css_comment: nonMainLayer,
-        // css_string: nonMainLayer,
-        // css_url: nonMainLayer,
-        // html_cdw: {
-        //     patterns: [["DATA-MVC=\"", "\""], ["DATA-CDW=\"", "\""]],
-        //     contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
-        // },
-        // cdw_comment: nonMainLayer,
-        // cdw_import: nonMainLayer,
-        // cdw_importMaybe: nonMainLayer,
-        // cdw_insertAfter: nonMainLayer,
-    };
+        html_css: {
+            patterns: [["style=\"", "\""]],
+            contains: ["css_comment", "css_string", "css_url"]
+        },
+        css_comment: nonMainLayer,
+        css_string: nonMainLayer,
+        css_url: nonMainLayer,
+        html_cdw: {
+            patterns: [["DATA-MVC=\"", "\""], ["DATA-CDW=\"", "\""]],
+            contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
+        },
+        cdw_comment: nonMainLayer,
+        cdw_import: nonMainLayer,
+        cdw_importMaybe: nonMainLayer,
+        cdw_insertAfter: nonMainLayer,
+    });
+    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
+        layerDefinition: {
+            html_comment: publicExports.textLayerDefinition.html_comment,
+        },
+        parseClosings: function TK_CodeHTML_removeCommentsParser(content, layerData) {
+            if (layerData.name === "js_comment") {
+                return "";
+            }
+        }
+    });
+    Object.defineProperty(publicExports.removeComments, "name", {
+        value: "TK_CodeHTML_removeComments",
+    });
+    publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
+        layerDefinition: publicExports.textLayerDefinition,
+        parseClosings: function TK_CodeHTML_replaceFileConnections(...inputs) {
+            if (inputs[1].fileConnection === undefined) {
+                return;
+            }
+            const content = publicExports.removeComments(readLayerContent(inputs)).trim();
+            return inputs[2].replacer(content);
+        }
+    });
+    Object.defineProperty(publicExports.replaceFileConnections, "name", {
+        value: "TK_CodeHTML_replaceFileConnections",
+    });
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "code", subSection: "HTML", entries: publicExports });
@@ -726,9 +783,7 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
         },
         js_import: {
             patterns: [["require(", ")"]],
-            layerData: {
-                fileConnection: "needed"
-            },
+            layerData: { fileConnection: "preload" },
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],
@@ -739,23 +794,6 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
             contains: ["js_escape"]
         },
     };
-    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
-        layerDefinition: {
-            js_comment: publicExports.textLayerDefinition.js_comment,
-            js_text: publicExports.textLayerDefinition.js_text,
-            js_escape: publicExports.textLayerDefinition.js_escape,
-        },
-        parseClosings: function (result, layerData) {
-            if (layerData.name === "js_comment") {
-                return "";
-            }
-        }
-    });
-    Object.defineProperty(publicExports.removeComments, "name", {
-        value: "TK_CodeJS_removeComments",
-    });
-    const validPathOpenings = new Set(['"', "'", "`"]);
-    const validPathClosings = new Set([".js", "jsm"]);
     const parseFileConnections = ToolKid.getCoreModule("parsing").createTextParser({
         layerDefinition: publicExports.textLayerDefinition,
         parseClosings: function RS_connections_parseLayerJS(...inputs) {
@@ -785,6 +823,23 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
         parseFileConnections({ text, result });
         return result;
     };
+    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
+        layerDefinition: {
+            js_comment: publicExports.textLayerDefinition.js_comment,
+            js_text: publicExports.textLayerDefinition.js_text,
+            js_escape: publicExports.textLayerDefinition.js_escape,
+        },
+        parseClosings: function (result, layerData) {
+            if (layerData.name === "js_comment") {
+                return "";
+            }
+        }
+    });
+    Object.defineProperty(publicExports.removeComments, "name", {
+        value: "TK_CodeJS_removeComments",
+    });
+    const validPathOpenings = new Set(['"', "'", "`"]);
+    const validPathClosings = new Set([".js", "jsm"]);
     publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: publicExports.textLayerDefinition,
         parseClosings: function TK_CodeJS_replaceFileConnections(...inputs) {

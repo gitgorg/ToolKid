@@ -1,33 +1,34 @@
 //general automated testing
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
-interface TK_DataTypes_file { object: TK_DataTypesObject_file }
-interface TK_DataTypesObject_file {
-    filter<Data extends Dictionary, Key extends string>(
-        inputs: {
-            data: Data;
-            byKeys: Key[];
-        }
-    ): Pick<Data, Key>,
-    merge<
-        Base extends Dictionary,
-        Change extends Dictionary,
-        FurtherChange extends Dictionary
-    >(
-        base: Base,
-        change: Change,
-        ...changes: FurtherChange[]
-    ): Base & Change & FurtherChange,
+interface TK_DataTypes_file {
+    object: {
+        filter<Data extends Dictionary, Key extends string>(
+            inputs: {
+                data: Data;
+                byKeys: Key[];
+            }
+        ): Pick<Data, Key>,
+        merge<
+            First extends Dictionary,
+            Second extends Dictionary,
+            FurtherChange extends Dictionary
+        >(
+            base: First,
+            change: Second,
+            ...changes: FurtherChange[]
+        ): First & Second & FurtherChange,
+    }
 }
 
 
 
 (function TK_DataTypesObject_init() {
-    const publicExports = module.exports = <TK_DataTypesObject_file>{};
+    const publicExports = module.exports = <TK_DataTypes_file["object"]>{};
 
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
         const result = {} as any;
         const { data, byKeys } = inputs;
-        let value:any;
+        let value: any;
         for (let i = 0; i < byKeys.length; i += 1) {
             value = data[byKeys[i]];
             if (value !== undefined) {

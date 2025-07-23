@@ -11,6 +11,7 @@ type TK_CodeJS_file = {
         text: string,
         replacer(code: string): string | void
     }): string,
+
     textLayerDefinition: TextLayerDefinition,
 }
 
@@ -32,7 +33,6 @@ type FileConnectionIndexes = [
 
 
     const publicExports = module.exports = {} as TK_CodeJS_file;
-
     publicExports.textLayerDefinition = {
         js_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
@@ -47,9 +47,7 @@ type FileConnectionIndexes = [
         },
         js_import: {
             patterns: [["require(", ")"]],
-            layerData: {
-                fileConnection: "needed"
-            },
+            layerData: { fileConnection: "preload" },
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],
@@ -61,24 +59,8 @@ type FileConnectionIndexes = [
         },
     };
 
-    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
-        layerDefinition: {
-            js_comment: publicExports.textLayerDefinition.js_comment,
-            js_text: publicExports.textLayerDefinition.js_text,
-            js_escape: publicExports.textLayerDefinition.js_escape,
-        },
-        parseClosings: function (result, layerData): any {
-            if (layerData.name === "js_comment") {
-                return "";
-            }
-        }
-    });
-    Object.defineProperty(publicExports.removeComments, "name", {
-        value: "TK_CodeJS_removeComments",
-    });
 
-    const validPathOpenings = new Set(['"', "'", "`"]);
-    const validPathClosings = new Set([".js", "jsm"]);
+
     const parseFileConnections = ToolKid.getCoreModule("parsing").createTextParser({
         layerDefinition: publicExports.textLayerDefinition,
         parseClosings: function RS_connections_parseLayerJS(
@@ -110,14 +92,30 @@ type FileConnectionIndexes = [
         }
     });
 
-
-
     publicExports.readFileConnections = function TK_CodeJS_readFileConnections(text) {
         const result = <FileConnectionEntry[]>[];
         parseFileConnections({ text, result });
         return result;
     };
 
+    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
+        layerDefinition: {
+            js_comment: publicExports.textLayerDefinition.js_comment,
+            js_text: publicExports.textLayerDefinition.js_text,
+            js_escape: publicExports.textLayerDefinition.js_escape,
+        },
+        parseClosings: function (result, layerData): any {
+            if (layerData.name === "js_comment") {
+                return "";
+            }
+        }
+    });
+    Object.defineProperty(publicExports.removeComments, "name", {
+        value: "TK_CodeJS_removeComments",
+    });
+
+    const validPathOpenings = new Set(['"', "'", "`"]);
+    const validPathClosings = new Set([".js", "jsm"]);
     publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: publicExports.textLayerDefinition,
         parseClosings: function TK_CodeJS_replaceFileConnections(
