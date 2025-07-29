@@ -30,19 +30,26 @@ interface TK_Code_file {
             html_comment: {
                 patterns: [["<!--", "-->"]],
             },
+            html_tagStart: {
+                patterns: [[/<\w+/, ">"]],
+                contains: [
+                    "html_href", "html_src", "html_css",
+                    "html_insert", "html_cdw",
+                    "html_attribute",
+                ]
+            },
             html_href: {
                 patterns: [["href=\"", "\""]],
+                isROOTLayer: false,
+                layerData: { fileConnection: "preload" },
             },
             html_src: {
                 patterns: [["src=\"", "\""]],
+                isROOTLayer: false,
                 layerData: { fileConnection: "preload" },
             },
-            html_insert: {
-                patterns: [["DATA-INSERT=\"", "\""]],
-                layerData: { fileConnection: "insert" },
-            },
-
             html_css: {
+                isROOTLayer: false,
                 patterns: [["style=\"", "\""]],
                 contains: ["css_comment", "css_string", "css_url"]
             },
@@ -50,14 +57,25 @@ interface TK_Code_file {
             css_string: nonMainLayer,
             css_url: nonMainLayer,
 
+            html_insert: {
+                patterns: [[/DATA-INSERT="/i, "\""]],
+                isROOTLayer: false,
+                layerData: { fileConnection: "insert" },
+            },
             html_cdw: {
-                patterns: [["DATA-MVC=\"", "\""], ["DATA-CDW=\"", "\""]],
+                patterns: [[/DATA-MVC="/i, '"'], [/DATA-CDW="/i, '"']],
+                isROOTLayer: false,
                 contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
             },
             cdw_comment: nonMainLayer,
             cdw_import: nonMainLayer,
             cdw_importMaybe: nonMainLayer,
             cdw_insertAfter: nonMainLayer,
+
+            html_attribute: {
+                isROOTLayer: false,
+                patterns: [[/\S+="/, '"']]
+            },
         }
     );
 

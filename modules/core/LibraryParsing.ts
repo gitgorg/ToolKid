@@ -66,7 +66,9 @@ type TextParserForClosings = {
         inputs: { text: string } & Dictionary,
         layerDepth: number,
         RXResultOpening: RegExpExecArray,
-    ): void | string
+    ): void | string | [
+        positionStart: number, positionEnd: number, replacement: string
+    ]
 }
 
 
@@ -89,14 +91,10 @@ type TextParserForClosings = {
         contains?: string[],
         signals: (string | undefined)[],
     }
-    type StateForReplacing = {
-        parseTextLayered(text: TextParserInputs): void,
-        position: number,
-        result: string,
-    }
 
 
 
+    const { isArray } = Array;
     const publicExports = module.exports = <LibraryParsing_file>{};
     const doNothing = function LibraryParsing_doNothing() { };
 
@@ -214,15 +212,13 @@ type TextParserForClosings = {
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
                 RXResult.wantedSignalID = found[1];
-                if (resultString !== "") {
+                if (resultString === "") {
+                    layer.pattern.lastIndex += 1;
+                } else {
                     parseOpenings(
                         RXResult, layer.data,
                         inputs, layerDepth,
                     );
-                }
-                if (resultString === "") {
-                    layer.pattern.lastIndex += 1;
-                } else {
                     layer.pattern.lastIndex = lastIndex;
                 }
                 RXResult = <any>layer.pattern.exec(text);
@@ -278,25 +274,23 @@ type TextParserForClosings = {
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(
         inputs
     ) {
-        const state = <StateForReplacing>{ result: "", position: 0 };
-        state.parseTextLayered = publicExports.createTextParser({
+        const parser = publicExports.createTextParser({
             layerDefinition: inputs.layerDefinition,
             parseOpenings: (inputs.parseOpenings === undefined)
                 ? undefined
-                : replaceOpening.bind(null, state, inputs.parseOpenings),
+                : replaceOpening.bind(null, inputs.parseOpenings),
             parseClosings: (inputs.parseClosings === undefined)
                 ? undefined
-                : replaceClosing.bind(null, state, inputs.parseClosings)
+                : replaceClosing.bind(null, inputs.parseClosings)
         });
-        return replaceTextLayered.bind(null, state);
+        return replaceTextLayered.bind(null, parser);
     };
 
     const replaceOpening = function LibraryParsing_replaceOpening(
-        state: StateForReplacing,
         parser: TextParserForOpenings,
         RXResult: RegExpExecArray,
         layerData: { name: string } & Dictionary,
-        inputs: { text: string },
+        inputs: { text: string, result: string, position: number },
         layerDepth: number
     ) {
         const returned = parser(
@@ -307,18 +301,17 @@ type TextParserForClosings = {
             return;
         }
 
-        state.result += inputs.text.slice(
-            state.position, RXResult.index
+        inputs.result += inputs.text.slice(
+            inputs.position, RXResult.index
         ) + returned;
-        state.position = RXResult.index + RXResult[0].length;
+        inputs.position = RXResult.index + RXResult[0].length;
     };
 
     const replaceClosing = function LibraryParsing_replaceClosing(
-        state: StateForReplacing,
         parser: TextParserForClosings,
         RXResult: RegExpExecArray,
         layerData: { name: string } & Dictionary,
-        inputs: { text: string },
+        inputs: { text: string, result: string, position: number },
         layerDepth: number,
         RXOpening: RegExpExecArray
     ) {
@@ -327,26 +320,33 @@ type TextParserForClosings = {
             inputs, layerDepth,
             RXOpening
         );
-        if (typeof returned !== "string") {
+        if (isArray(returned)) {
+            inputs.result += inputs.text.slice(
+                inputs.position, returned[0]
+            ) + returned[2];
+            inputs.position = returned[1];
+            return;
+        } else if (typeof returned !== "string") {
             return;
         }
 
-        state.result += inputs.text.slice(
-            state.position, RXOpening.index
+        inputs.result += inputs.text.slice(
+            inputs.position, RXOpening.index
         ) + returned;
-        state.position = RXResult.index + RXResult[0].length;
+        inputs.position = RXResult.index + RXResult[0].length;
     };
 
     const replaceTextLayered = function LibraryParsing_replaceTextLayered(
-        state: StateForReplacing, inputs: TextParserInputs
+        parser: { (inputs: TextParserInputs): void },
+        inputs: TextParserInputs
     ) {
-        state.position = 0;
-        state.result = "";
         if (typeof inputs === "string") {
-            inputs = {text: inputs};
+            inputs = { text: inputs, result: "", position: 0 };
+        } else {
+            inputs = Object.assign({ result: "", position: 0 }, inputs);
         }
-        state.parseTextLayered(inputs);
-        return state.result + inputs.text.slice(state.position);
+        parser(inputs);
+        return inputs.result + inputs.text.slice(inputs.position);
     };
 
 

@@ -221,6 +221,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
 // s = to make . match really EVERY character...
 // v = to support all the new unicode stuff
 (function LibraryParsing_init() {
+    const { isArray } = Array;
     const publicExports = module.exports = {};
     const doNothing = function LibraryParsing_doNothing() { };
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
@@ -318,13 +319,11 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
                 RXResult.wantedSignalID = found[1];
-                if (resultString !== "") {
-                    parseOpenings(RXResult, layer.data, inputs, layerDepth);
-                }
                 if (resultString === "") {
                     layer.pattern.lastIndex += 1;
                 }
                 else {
+                    parseOpenings(RXResult, layer.data, inputs, layerDepth);
                     layer.pattern.lastIndex = lastIndex;
                 }
                 RXResult = layer.pattern.exec(text);
@@ -366,42 +365,47 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         }
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
-        const state = { result: "", position: 0 };
-        state.parseTextLayered = publicExports.createTextParser({
+        const parser = publicExports.createTextParser({
             layerDefinition: inputs.layerDefinition,
             parseOpenings: (inputs.parseOpenings === undefined)
                 ? undefined
-                : replaceOpening.bind(null, state, inputs.parseOpenings),
+                : replaceOpening.bind(null, inputs.parseOpenings),
             parseClosings: (inputs.parseClosings === undefined)
                 ? undefined
-                : replaceClosing.bind(null, state, inputs.parseClosings)
+                : replaceClosing.bind(null, inputs.parseClosings)
         });
-        return replaceTextLayered.bind(null, state);
+        return replaceTextLayered.bind(null, parser);
     };
-    const replaceOpening = function LibraryParsing_replaceOpening(state, parser, RXResult, layerData, inputs, layerDepth) {
+    const replaceOpening = function LibraryParsing_replaceOpening(parser, RXResult, layerData, inputs, layerDepth) {
         const returned = parser(RXResult, layerData, inputs, layerDepth);
         if (typeof returned !== "string") {
             return;
         }
-        state.result += inputs.text.slice(state.position, RXResult.index) + returned;
-        state.position = RXResult.index + RXResult[0].length;
+        inputs.result += inputs.text.slice(inputs.position, RXResult.index) + returned;
+        inputs.position = RXResult.index + RXResult[0].length;
     };
-    const replaceClosing = function LibraryParsing_replaceClosing(state, parser, RXResult, layerData, inputs, layerDepth, RXOpening) {
+    const replaceClosing = function LibraryParsing_replaceClosing(parser, RXResult, layerData, inputs, layerDepth, RXOpening) {
         const returned = parser(RXResult, layerData, inputs, layerDepth, RXOpening);
-        if (typeof returned !== "string") {
+        if (isArray(returned)) {
+            inputs.result += inputs.text.slice(inputs.position, returned[0]) + returned[2];
+            inputs.position = returned[1];
             return;
         }
-        state.result += inputs.text.slice(state.position, RXOpening.index) + returned;
-        state.position = RXResult.index + RXResult[0].length;
-    };
-    const replaceTextLayered = function LibraryParsing_replaceTextLayered(state, inputs) {
-        state.position = 0;
-        state.result = "";
-        if (typeof inputs === "string") {
-            inputs = { text: inputs };
+        else if (typeof returned !== "string") {
+            return;
         }
-        state.parseTextLayered(inputs);
-        return state.result + inputs.text.slice(state.position);
+        inputs.result += inputs.text.slice(inputs.position, RXOpening.index) + returned;
+        inputs.position = RXResult.index + RXResult[0].length;
+    };
+    const replaceTextLayered = function LibraryParsing_replaceTextLayered(parser, inputs) {
+        if (typeof inputs === "string") {
+            inputs = { text: inputs, result: "", position: 0 };
+        }
+        else {
+            inputs = Object.assign({ result: "", position: 0 }, inputs);
+        }
+        parser(inputs);
+        return inputs.result + inputs.text.slice(inputs.position);
     };
     // regExp flags explained on top /\
     const escapeCharsRX = new RegExp([
@@ -571,32 +575,50 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         html_comment: {
             patterns: [["<!--", "-->"]],
         },
+        html_tagStart: {
+            patterns: [[/<\w+/, ">"]],
+            contains: [
+                "html_href", "html_src", "html_css",
+                "html_insert", "html_cdw",
+                "html_attribute",
+            ]
+        },
         html_href: {
             patterns: [["href=\"", "\""]],
+            isROOTLayer: false,
+            layerData: { fileConnection: "preload" },
         },
         html_src: {
             patterns: [["src=\"", "\""]],
+            isROOTLayer: false,
             layerData: { fileConnection: "preload" },
         },
-        html_insert: {
-            patterns: [["DATA-INSERT=\"", "\""]],
-            layerData: { fileConnection: "insert" },
-        },
         html_css: {
+            isROOTLayer: false,
             patterns: [["style=\"", "\""]],
             contains: ["css_comment", "css_string", "css_url"]
         },
         css_comment: nonMainLayer,
         css_string: nonMainLayer,
         css_url: nonMainLayer,
+        html_insert: {
+            patterns: [[/DATA-INSERT="/i, "\""]],
+            isROOTLayer: false,
+            layerData: { fileConnection: "insert" },
+        },
         html_cdw: {
-            patterns: [["DATA-MVC=\"", "\""], ["DATA-CDW=\"", "\""]],
+            patterns: [[/DATA-MVC="/i, '"'], [/DATA-CDW="/i, '"']],
+            isROOTLayer: false,
             contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
         },
         cdw_comment: nonMainLayer,
         cdw_import: nonMainLayer,
         cdw_importMaybe: nonMainLayer,
         cdw_insertAfter: nonMainLayer,
+        html_attribute: {
+            isROOTLayer: false,
+            patterns: [[/\S+="/, '"']]
+        },
     });
     publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: {
