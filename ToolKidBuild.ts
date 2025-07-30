@@ -72,10 +72,10 @@ type ToolKidConfig = {
     ) {
         const filePath = filePaths.get(bundleID) as string;
         const neededBundleIDs = new Set() as Set<string>;
-        const content = [replaceFileConnections({
+        const content = replaceFileConnections({
             text: readFile(filePath).content,
             replacer: replacer.bind(null, neededBundleIDs)
-        })];
+        });
         if (!corePathCheck(filePath)) {
             return {
                 neededBundleIDs: Array.from(neededBundleIDs),

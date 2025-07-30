@@ -281,20 +281,28 @@
                 ): any {
                     if (data.name === "import") {
                         return '"hello"';
+                    } else if (data.name === "function") {
+                        const RXOpening = arguments[4];
+                        if (RXOpening[0] === "log(") {
+                            return ["/*", "log", "*/"]
+                        }
                     }
                 },
             });
             let result = parser(file);
             assertEquality({
                 "result": {
-                    value: result, shouldBe: '\
+                    value: result,
+                    shouldBe: ['\
 (function (){\n\
-    const data = "hello";\n\
+    const data = ', '"hello"', ';\n\
     //const data = require({a:1, b:2});\n\
     [1,2,3].forEach(function (value) {\n\
-        log(555, value)\n\
+        ', '/*', 'log', '*/', '\n\
     });\n\
 })();'
+                    ],
+                    toleranceDepth: 2,
                 }
             });
         }

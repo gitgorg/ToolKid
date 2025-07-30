@@ -6,11 +6,11 @@ type TK_CodeJS_file = {
     ): FileConnectionEntry[],
     removeComments(
         code: string
-    ): string,
+    ): string[],
     replaceFileConnections(inputs: {
         text: string,
         replacer(code: string): string | void
-    }): string,
+    }): string[],
 
     textLayerDefinition: TextLayerDefinition,
 }
@@ -71,7 +71,7 @@ type FileConnectionIndexes = [
             }
 
             let content = readLayerContent(inputs);
-            content = publicExports.removeComments(content).trim();
+            content = publicExports.removeComments(content).join("").trim();
             if (
                 !validPathOpenings.has(content[0])
                 || !validPathClosings.has(content.slice(-4, -1))
@@ -127,7 +127,7 @@ type FileConnectionIndexes = [
 
             const content = publicExports.removeComments(
                 readLayerContent(inputs)
-            ).trim();
+            ).join("").trim();
             if (
                 validPathOpenings.has(content[0])
                 && validPathClosings.has(content.slice(-4, -1))

@@ -511,34 +511,46 @@ fileCollection.set("LibraryFiles.js", module.exports);
     };
     const replaceOpening = function LibraryParsing_replaceOpening(parser, RXResult, layerData, inputs, layerDepth) {
         const returned = parser(RXResult, layerData, inputs, layerDepth);
-        if (typeof returned !== "string") {
-            return;
-        }
-        inputs.result += inputs.text.slice(inputs.position, RXResult.index) + returned;
-        inputs.position = RXResult.index + RXResult[0].length;
-    };
-    const replaceClosing = function LibraryParsing_replaceClosing(parser, RXResult, layerData, inputs, layerDepth, RXOpening) {
-        const returned = parser(RXResult, layerData, inputs, layerDepth, RXOpening);
         if (isArray(returned)) {
-            inputs.result += inputs.text.slice(inputs.position, returned[0]) + returned[2];
-            inputs.position = returned[1];
+            inputs.result.push(inputs.text.slice(inputs.position, RXResult.index), ...returned);
+            inputs.position = RXResult.index + RXResult[0].length;
             return;
         }
         else if (typeof returned !== "string") {
             return;
         }
-        inputs.result += inputs.text.slice(inputs.position, RXOpening.index) + returned;
+        inputs.result.push(inputs.text.slice(inputs.position, RXResult.index), returned);
+        inputs.position = RXResult.index + RXResult[0].length;
+    };
+    const replaceClosing = function LibraryParsing_replaceClosing(parser, RXResult, layerData, inputs, layerDepth, RXOpening) {
+        const returned = parser(RXResult, layerData, inputs, layerDepth, RXOpening);
+        if (isArray(returned)) {
+            if (typeof returned[0] === "number") {
+                inputs.result.push(inputs.text.slice(inputs.position, returned[0]), returned[2]);
+                inputs.position = returned[1];
+            }
+            else {
+                inputs.result.push(inputs.text.slice(inputs.position, RXOpening.index), ...returned);
+                inputs.position = RXResult.index + RXResult[0].length;
+            }
+            return;
+        }
+        else if (typeof returned !== "string") {
+            return;
+        }
+        inputs.result.push(inputs.text.slice(inputs.position, RXOpening.index), returned);
         inputs.position = RXResult.index + RXResult[0].length;
     };
     const replaceTextLayered = function LibraryParsing_replaceTextLayered(parser, inputs) {
         if (typeof inputs === "string") {
-            inputs = { text: inputs, result: "", position: 0 };
+            inputs = { text: inputs, result: [], position: 0 };
         }
         else {
-            inputs = Object.assign({ result: "", position: 0 }, inputs);
+            inputs = Object.assign({ result: [], position: 0 }, inputs);
         }
         parser(inputs);
-        return inputs.result + inputs.text.slice(inputs.position);
+        inputs.result.push(inputs.text.slice(inputs.position));
+        return inputs.result;
     };
     // regExp flags explained on top /\
     const escapeCharsRX = new RegExp([
@@ -698,7 +710,6 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
 
 "use strict";
 (function TK_CodeHTML_init() {
-    const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const CodeCDW = fileCollection.get("TK_CodeCDW.js");
     const CodeCSS = fileCollection.get("TK_CodeCSS.js");
     const { merge } = fileCollection.get("TK_DataTypesObject.js");
@@ -726,32 +737,32 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
             isROOTLayer: false,
             layerData: { fileConnection: "preload" },
         },
-        html_css: {
-            isROOTLayer: false,
-            patterns: [["style=\"", "\""]],
-            contains: ["css_comment", "css_string", "css_url"]
-        },
-        css_comment: nonMainLayer,
-        css_string: nonMainLayer,
-        css_url: nonMainLayer,
         html_insert: {
             patterns: [[/DATA-INSERT="/i, "\""]],
             isROOTLayer: false,
             layerData: { fileConnection: "insert" },
+        },
+        html_css: {
+            isROOTLayer: false,
+            patterns: [["style=\"", "\""]],
+            contains: ["css_comment", "css_string", "css_url"]
         },
         html_cdw: {
             patterns: [[/DATA-MVC="/i, '"'], [/DATA-CDW="/i, '"']],
             isROOTLayer: false,
             contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
         },
-        cdw_comment: nonMainLayer,
-        cdw_import: nonMainLayer,
-        cdw_importMaybe: nonMainLayer,
-        cdw_insertAfter: nonMainLayer,
         html_attribute: {
             isROOTLayer: false,
             patterns: [[/\S+="/, '"']]
         },
+        css_comment: nonMainLayer,
+        css_string: nonMainLayer,
+        css_url: nonMainLayer,
+        cdw_comment: nonMainLayer,
+        cdw_import: nonMainLayer,
+        cdw_importMaybe: nonMainLayer,
+        cdw_insertAfter: nonMainLayer,
     });
     publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: {
@@ -765,19 +776,6 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
     });
     Object.defineProperty(publicExports.removeComments, "name", {
         value: "TK_CodeHTML_removeComments",
-    });
-    publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
-        layerDefinition: publicExports.textLayerDefinition,
-        parseClosings: function TK_CodeHTML_replaceFileConnections(...inputs) {
-            if (inputs[1].fileConnection === undefined) {
-                return;
-            }
-            const content = publicExports.removeComments(readLayerContent(inputs)).trim();
-            return inputs[2].replacer(content);
-        }
-    });
-    Object.defineProperty(publicExports.replaceFileConnections, "name", {
-        value: "TK_CodeHTML_replaceFileConnections",
     });
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -823,7 +821,7 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
                 return;
             }
             let content = readLayerContent(inputs);
-            content = publicExports.removeComments(content).trim();
+            content = publicExports.removeComments(content).join("").trim();
             if (!validPathOpenings.has(content[0])
                 || !validPathClosings.has(content.slice(-4, -1))) {
                 return;
@@ -868,7 +866,7 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
             if (inputs[1].fileConnection === undefined) {
                 return;
             }
-            const content = publicExports.removeComments(readLayerContent(inputs)).trim();
+            const content = publicExports.removeComments(readLayerContent(inputs)).join("").trim();
             if (validPathOpenings.has(content[0])
                 && validPathClosings.has(content.slice(-4, -1))) {
                 return inputs[2].replacer(content);

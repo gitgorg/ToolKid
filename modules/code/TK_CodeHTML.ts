@@ -1,11 +1,7 @@
 interface ToolKid_file { code: TK_Code_file }
 interface TK_Code_file {
     HTML: {
-        removeComments(code: string): string,
-        replaceFileConnections(inputs: {
-            text: string,
-            replacer(code: string): string | void
-        }): string,
+        removeComments(code: string): string[],
 
         textLayerDefinition: TextLayerDefinition,
     }
@@ -14,7 +10,6 @@ interface TK_Code_file {
 
 
 (function TK_CodeHTML_init() {
-    const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const CodeCDW = <TK_Code_file["CDW"]>require("./TK_CodeCDW.js");
     const CodeCSS = <TK_Code_file["CSS"]>require("./TK_CodeCSS.js");
     const { merge } = <TK_DataTypes_file["object"]>require("../dataTypes/TK_DataTypesObject.js");
@@ -48,38 +43,37 @@ interface TK_Code_file {
                 isROOTLayer: false,
                 layerData: { fileConnection: "preload" },
             },
-            html_css: {
-                isROOTLayer: false,
-                patterns: [["style=\"", "\""]],
-                contains: ["css_comment", "css_string", "css_url"]
-            },
-            css_comment: nonMainLayer,
-            css_string: nonMainLayer,
-            css_url: nonMainLayer,
-
             html_insert: {
                 patterns: [[/DATA-INSERT="/i, "\""]],
                 isROOTLayer: false,
                 layerData: { fileConnection: "insert" },
+            },
+            html_css: {
+                isROOTLayer: false,
+                patterns: [["style=\"", "\""]],
+                contains: ["css_comment", "css_string", "css_url"]
             },
             html_cdw: {
                 patterns: [[/DATA-MVC="/i, '"'], [/DATA-CDW="/i, '"']],
                 isROOTLayer: false,
                 contains: ["cdw_comment", "cdw_import", "cdw_importMaybe", "cdw_insertAfter"]
             },
+            html_attribute: {
+                isROOTLayer: false,
+                patterns: [[/\S+="/, '"']]
+            },
+
+            css_comment: nonMainLayer,
+            css_string: nonMainLayer,
+            css_url: nonMainLayer,
+
             cdw_comment: nonMainLayer,
             cdw_import: nonMainLayer,
             cdw_importMaybe: nonMainLayer,
             cdw_insertAfter: nonMainLayer,
 
-            html_attribute: {
-                isROOTLayer: false,
-                patterns: [[/\S+="/, '"']]
-            },
         }
     );
-
-
 
     publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: {
@@ -95,24 +89,6 @@ interface TK_Code_file {
         value: "TK_CodeHTML_removeComments",
     });
 
-    publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
-        layerDefinition: publicExports.textLayerDefinition,
-        parseClosings: function TK_CodeHTML_replaceFileConnections(
-            ...inputs: Parameters<TextParserForClosings>
-        ) {
-            if (inputs[1].fileConnection === undefined) {
-                return;
-            }
-
-            const content = publicExports.removeComments(
-                readLayerContent(inputs)
-            ).trim();
-            return inputs[2].replacer(content);
-        }
-    });
-    Object.defineProperty(publicExports.replaceFileConnections, "name", {
-        value: "TK_CodeHTML_replaceFileConnections",
-    });
 
 
 

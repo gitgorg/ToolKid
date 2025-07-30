@@ -23,12 +23,12 @@ type LibraryParsing_file = {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
         parseClosings: TextParserForClosings
-    }): { (inputs: TextParserInputs): string },
+    }): { (inputs: TextParserInputs): string[] },
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings: TextParserForOpenings,
         parseClosings?: TextParserForClosings
-    }): { (inputs: TextParserInputs): string },
+    }): { (inputs: TextParserInputs): string[] },
 
     getLayerDefinition(): TextLayerDefinition,
 
@@ -57,7 +57,7 @@ type TextParserForOpenings = {
         layerData: { name: string } & Dictionary,
         inputs: { text: string } & Dictionary,
         layerDepth: number,
-    ): void | string
+    ): void | string | string[]
 }
 type TextParserForClosings = {
     (
@@ -66,7 +66,7 @@ type TextParserForClosings = {
         inputs: { text: string } & Dictionary,
         layerDepth: number,
         RXResultOpening: RegExpExecArray,
-    ): void | string | [
+    ): void | string | string[] | [
         positionStart: number, positionEnd: number, replacement: string
     ]
 }
@@ -290,20 +290,27 @@ type TextParserForClosings = {
         parser: TextParserForOpenings,
         RXResult: RegExpExecArray,
         layerData: { name: string } & Dictionary,
-        inputs: { text: string, result: string, position: number },
+        inputs: { text: string, result: string[], position: number },
         layerDepth: number
     ) {
         const returned = parser(
             RXResult, layerData,
             inputs, layerDepth,
         );
-        if (typeof returned !== "string") {
+        if (isArray(returned)) {
+            inputs.result.push(
+                inputs.text.slice(inputs.position, RXResult.index),
+                ...<string[]>returned
+            );
+            inputs.position = RXResult.index + RXResult[0].length;
+            return;
+        } else if (typeof returned !== "string") {
             return;
         }
 
-        inputs.result += inputs.text.slice(
+        inputs.result.push(inputs.text.slice(
             inputs.position, RXResult.index
-        ) + returned;
+        ), returned);
         inputs.position = RXResult.index + RXResult[0].length;
     };
 
@@ -311,7 +318,7 @@ type TextParserForClosings = {
         parser: TextParserForClosings,
         RXResult: RegExpExecArray,
         layerData: { name: string } & Dictionary,
-        inputs: { text: string, result: string, position: number },
+        inputs: { text: string, result: string[], position: number },
         layerDepth: number,
         RXOpening: RegExpExecArray
     ) {
@@ -321,18 +328,26 @@ type TextParserForClosings = {
             RXOpening
         );
         if (isArray(returned)) {
-            inputs.result += inputs.text.slice(
-                inputs.position, returned[0]
-            ) + returned[2];
-            inputs.position = returned[1];
+            if (typeof returned[0] === "number") {
+                inputs.result.push(inputs.text.slice(
+                    inputs.position, returned[0]
+                ), returned[2]);
+                inputs.position = <number>returned[1];
+            } else {
+                inputs.result.push(
+                    inputs.text.slice(inputs.position, RXOpening.index),
+                    ...<string[]>returned
+                );
+                inputs.position = RXResult.index + RXResult[0].length;
+            }
             return;
         } else if (typeof returned !== "string") {
             return;
         }
 
-        inputs.result += inputs.text.slice(
+        inputs.result.push(inputs.text.slice(
             inputs.position, RXOpening.index
-        ) + returned;
+        ), returned);
         inputs.position = RXResult.index + RXResult[0].length;
     };
 
@@ -341,12 +356,13 @@ type TextParserForClosings = {
         inputs: TextParserInputs
     ) {
         if (typeof inputs === "string") {
-            inputs = { text: inputs, result: "", position: 0 };
+            inputs = { text: inputs, result: [], position: 0 };
         } else {
-            inputs = Object.assign({ result: "", position: 0 }, inputs);
+            inputs = Object.assign({ result: [], position: 0 }, inputs);
         }
         parser(inputs);
-        return inputs.result + inputs.text.slice(inputs.position);
+        inputs.result.push(inputs.text.slice(inputs.position))
+        return inputs.result;
     };
 
 
