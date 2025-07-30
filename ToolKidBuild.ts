@@ -22,7 +22,7 @@ type ToolKidConfig = {
 
 
 (function ToolKidBuild_init() {
-    console.log(">>  activate ToolKid");
+    console.log(">>  activating ToolKid");
     const FS = require("fs");
     const { basename, resolve } = require("path");
     const libraryCore = <LibraryCore_file><any>require(
@@ -131,14 +131,13 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
             path: exportPath,
             content: [
                 LibraryBuilding.bundlerDefaults.header,
-                'console.log(">>  activate ToolKid");\n',
+                'console.log(">>  activating ToolKid");\n',
                 ...LibraryBuilding.bundleFile({
                     readBundleContent: readBundleContent.bind(null, filePaths),
                     bundleIDs: [...filePaths.keys()]
                 }), '\
 \n\nglobal.log = ToolKid.debug.terminal.logImportant;\n\
-module.exports = ToolKid;\n\
-console.log(">>  ToolKid ready");',
+module.exports = ToolKid;',
                 LibraryBuilding.bundlerDefaults.footer
             ].join("")
         });
@@ -150,5 +149,4 @@ console.log(">>  ToolKid ready");',
 
 
     Object.freeze(publicExports);
-    console.log(">>  ToolKid ready");
 })();

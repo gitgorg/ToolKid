@@ -3,7 +3,7 @@
 const fileCollection = new Map();
 
 
-console.log(">>  activate ToolKid");
+console.log(">>  activating ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
@@ -2455,5 +2455,4 @@ fileCollection.set("TK_File.js", module.exports);
 
 global.log = ToolKid.debug.terminal.logImportant;
 module.exports = ToolKid;
-console.log(">>  ToolKid ready");
 })();
