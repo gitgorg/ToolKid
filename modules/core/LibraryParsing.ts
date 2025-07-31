@@ -158,6 +158,11 @@ type TextParserForClosings = {
                     directions.push(...layers.MAIN.directions);
                 } else {
                     const subLayer = layers[key];
+                    if (subLayer === undefined) {
+                        throw [
+                            "LibraryParsing_connectTextParserLayer - unknown layer key: ", key, "inside: ", layer
+                        ];
+                    }
                     layer.signals.push(...subLayer.openings);
                     let count = subLayer.openings.length;
                     for (let i = 0; i < count; i += 1) {

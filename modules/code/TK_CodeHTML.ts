@@ -33,15 +33,16 @@ interface TK_Code_file {
                     "html_attribute",
                 ]
             },
+
             html_href: {
                 patterns: [["href=\"", "\""]],
                 isROOTLayer: false,
-                layerData: { fileConnection: "preload" },
+                layerData: { fileConnection: "optional" },
             },
             html_src: {
                 patterns: [["src=\"", "\""]],
                 isROOTLayer: false,
-                layerData: { fileConnection: "preload" },
+                layerData: { fileConnection: "optional" },
             },
             html_insert: {
                 patterns: [[/DATA-INSERT="/i, "\""]],

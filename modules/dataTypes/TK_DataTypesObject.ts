@@ -10,13 +10,11 @@ interface TK_DataTypes_file {
         ): Pick<Data, Key>,
         merge<
             First extends Dictionary,
-            Second extends Dictionary,
-            FurtherChange extends Dictionary
+            Change extends Dictionary
         >(
             base: First,
-            change: Second,
-            ...changes: FurtherChange[]
-        ): First & Second & FurtherChange,
+            ...changes: Change[]
+        ): First & Change,
     }
 }
 
@@ -41,6 +39,10 @@ interface TK_DataTypes_file {
     publicExports.merge = function TK_DataTypesObject_merge(
         base: any, ...changes
     ) {
+        if (changes.length === 0) {
+            return Object.assign({}, base);
+        }
+
         const result = Object.assign({}, base);
         const addToResult = mergeLayer.bind(null, result);
         for (let i = 0; i < changes.length; i += 1) {

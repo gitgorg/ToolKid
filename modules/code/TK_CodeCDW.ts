@@ -8,6 +8,10 @@ interface TK_Code_file {
 
 
 (function TK_CodeCDW_init() {
+    const { readLayerContent } = ToolKid.getCoreModule("parsing");
+
+
+
     const publicExports = module.exports = {} as TK_Code_file["CDW"];
 
     publicExports.textLayerDefinition = {
@@ -20,7 +24,20 @@ interface TK_Code_file {
         },
         cdw_importMaybe: {
             patterns: [["#load(", ")"]],
-            layerData: { fileConnection: "optional" },
+            layerData: {
+                fileConnection: "optional",
+                readLayerContent: function TK_CodeCDW_readImportMaybe(
+                    inputs: Parameters<TextParserForClosings>
+                ) {
+                    const content = readLayerContent(inputs)
+                        .split(",")[0].trim();
+                    return (
+                        content[0] === "'"
+                        && content.length > 2
+                        && content[content.length - 1] === "'"
+                    ) ? content.slice(1, -1) : undefined;
+                }
+            },
         },
         cdw_insertAfter: {
             patterns: [["#insertAfter(", ")"]],

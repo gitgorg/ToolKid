@@ -274,6 +274,11 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                 }
                 else {
                     const subLayer = layers[key];
+                    if (subLayer === undefined) {
+                        throw [
+                            "LibraryParsing_connectTextParserLayer - unknown layer key: ", key, "inside: ", layer
+                        ];
+                    }
                     layer.signals.push(...subLayer.openings);
                     let count = subLayer.openings.length;
                     for (let i = 0; i < count; i += 1) {
@@ -416,6 +421,9 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
             inputs = Object.assign({ result: [], position: 0 }, inputs);
         }
         parser(inputs);
+        if (typeof inputs.text.slice !== "function") {
+            console.log(222, typeof inputs.text);
+        }
         inputs.result.push(inputs.text.slice(inputs.position));
         return inputs.result;
     };
@@ -479,6 +487,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
 
 "use strict";
 (function TK_CodeCDW_init() {
+    const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
         cdw_comment: {
@@ -490,7 +499,16 @@ fileCollection.set("LibraryParsing.js", module.exports);
         },
         cdw_importMaybe: {
             patterns: [["#load(", ")"]],
-            layerData: { fileConnection: "optional" },
+            layerData: {
+                fileConnection: "optional",
+                readLayerContent: function TK_CodeCDW_readImportMaybe(inputs) {
+                    const content = readLayerContent(inputs)
+                        .split(",")[0].trim();
+                    return (content[0] === "'"
+                        && content.length > 2
+                        && content[content.length - 1] === "'") ? content.slice(1, -1) : undefined;
+                }
+            },
         },
         cdw_insertAfter: {
             patterns: [["#insertAfter(", ")"]],
@@ -507,6 +525,7 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
 
 "use strict";
 (function TK_CodeCSS_init() {
+    const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
         css_comment: {
@@ -517,7 +536,18 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
         },
         css_url: {
             patterns: [["url(", ")"]],
-            layerData: { fileConnection: "optional" }
+            layerData: {
+                fileConnection: "optional",
+                readLayerContent: function TK_CodeCSS_readURL(inputs) {
+                    const content = readLayerContent(inputs).trim();
+                    if (content[0] === "'" && content.length > 2) {
+                        return content.slice(1, -1);
+                    }
+                    else {
+                        return content.length > 1 ? content : undefined;
+                    }
+                }
+            }
         },
     };
     Object.freeze(publicExports);
@@ -544,6 +574,9 @@ fileCollection.set("TK_CodeCSS.js", module.exports);
         return result;
     };
     publicExports.merge = function TK_DataTypesObject_merge(base, ...changes) {
+        if (changes.length === 0) {
+            return Object.assign({}, base);
+        }
         const result = Object.assign({}, base);
         const addToResult = mergeLayer.bind(null, result);
         for (let i = 0; i < changes.length; i += 1) {
@@ -597,12 +630,12 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         html_href: {
             patterns: [["href=\"", "\""]],
             isROOTLayer: false,
-            layerData: { fileConnection: "preload" },
+            layerData: { fileConnection: "optional" },
         },
         html_src: {
             patterns: [["src=\"", "\""]],
             isROOTLayer: false,
-            layerData: { fileConnection: "preload" },
+            layerData: { fileConnection: "optional" },
         },
         html_insert: {
             patterns: [[/DATA-INSERT="/i, "\""]],
