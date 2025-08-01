@@ -794,19 +794,6 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         cdw_importMaybe: nonMainLayer,
         cdw_insertAfter: nonMainLayer,
     });
-    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
-        layerDefinition: {
-            html_comment: publicExports.textLayerDefinition.html_comment,
-        },
-        parseClosings: function TK_CodeHTML_removeCommentsParser(content, layerData) {
-            if (layerData.name === "js_comment") {
-                return "";
-            }
-        }
-    });
-    Object.defineProperty(publicExports.removeComments, "name", {
-        value: "TK_CodeHTML_removeComments",
-    });
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "code", subSection: "HTML", entries: publicExports });
@@ -862,35 +849,6 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
             patterns: [[/[=|:|\(]\s*\//, "/"]],
             contains: ["js_escape"]
         },
-    };
-    const parseFileConnections = ToolKid.getCoreModule("parsing").createTextParser({
-        layerDefinition: publicExports.textLayerDefinition,
-        parseClosings: function RS_connections_parseLayerJS(...inputs) {
-            if (inputs[1].fileConnection === undefined) {
-                return;
-            }
-            let content = readLayerContent(inputs);
-            content = publicExports.removeComments(content).join("").trim();
-            if (!validPathOpenings.has(content[0])
-                || !validPathClosings.has(content.slice(-4, -1))) {
-                return;
-            }
-            const closing = inputs[0];
-            const opening = inputs[4];
-            inputs[2].result.push([
-                content.slice(1, -1),
-                inputs[1].fileConnection,
-                [
-                    opening.index, opening.index + opening[0].length,
-                    closing.index, closing.index + closing[0].length,
-                ]
-            ]);
-        }
-    });
-    publicExports.readFileConnections = function TK_CodeJS_readFileConnections(text) {
-        const result = [];
-        parseFileConnections({ text, result });
-        return result;
     };
     publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: {
@@ -2116,8 +2074,9 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
             callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
-                // TODO: real test for .testFull
+                // TODO: real test for TK_DebugTestFull
                 summary.missingSuspects.delete(publicExports.testFull);
+                summary.missingSuspects.delete(publicExports.setupTests);
                 const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
                 console.log(summarizeFazit({ summary, timeInitial, timeFinal }));

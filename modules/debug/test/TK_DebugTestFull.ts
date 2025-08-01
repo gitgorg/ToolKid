@@ -7,7 +7,9 @@ interface TK_DebugTest_file {
     }): void,
     testFull(inputs: {
         title?: string
-        suspects?: any | any[]
+        suspects?: any | any[],
+        includes?: (string | RegExp)[],
+        excludes?: (string | RegExp)[],
     } & Omit<Parameters<TK_file_file["loopFiles"]>[0], "execute">): void,
 }
 
@@ -15,9 +17,6 @@ interface TK_DebugTest_file {
 
 
 (function TK_DebugTestFull_init() {
-
-
-
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     const colors = {
@@ -181,8 +180,9 @@ interface TK_DebugTest_file {
         const summary = ToolKid.debug.test.getSummary({
             suspects: inputs.suspects,
             callback: function TK_DebugTestFull_testFullHandleSummary(summary) {
-                // TODO: real test for .testFull
+                // TODO: real test for TK_DebugTestFull
                 summary.missingSuspects.delete(publicExports.testFull);
+                summary.missingSuspects.delete(publicExports.setupTests);
                 const timeFinal = Date.now() - timeStart;
                 logMissingSuspects(summary);
                 console.log(summarizeFazit({ summary, timeInitial, timeFinal }));

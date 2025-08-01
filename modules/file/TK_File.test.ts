@@ -44,4 +44,11 @@
             });
         }
     });
+
+    test({
+        subject: ToolKid.file.register,
+        execute: function placeholder() {
+            // TODO: .register can't be tested for now
+        }
+    });
 })();

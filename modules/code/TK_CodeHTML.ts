@@ -1,8 +1,6 @@
 interface ToolKid_file { code: TK_Code_file }
 interface TK_Code_file {
     HTML: {
-        removeComments(code: string): string[],
-
         textLayerDefinition: TextLayerDefinition,
     }
 }
@@ -75,21 +73,6 @@ interface TK_Code_file {
 
         }
     );
-
-    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
-        layerDefinition: {
-            html_comment: publicExports.textLayerDefinition.html_comment,
-        },
-        parseClosings: function TK_CodeHTML_removeCommentsParser(content, layerData): any {
-            if (layerData.name === "js_comment") {
-                return "";
-            }
-        }
-    });
-    Object.defineProperty(publicExports.removeComments, "name", {
-        value: "TK_CodeHTML_removeComments",
-    });
-
 
 
 
