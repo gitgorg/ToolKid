@@ -25,7 +25,7 @@ type ToolKidConfig = {
     console.log(">>  activating ToolKid");
     const FS = require("fs");
     const { basename, resolve } = require("path");
-    const libraryCore = <LibraryCore_file>require(
+    const libraryCore = <LibraryCore_file><any>/*weird any for tsc...*/require(
         resolve(__dirname, "modules/core/LibraryCore.js")
     );
     const { createPathChecker, loopFiles, readFile, writeFile } = libraryCore.getCoreModule("files");
