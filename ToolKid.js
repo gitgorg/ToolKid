@@ -554,9 +554,6 @@ fileCollection.set("LibraryFiles.js", module.exports);
             inputs = Object.assign({ result: [], position: 0 }, inputs);
         }
         parser(inputs);
-        if (typeof inputs.text.slice !== "function") {
-            console.log(222, typeof inputs.text);
-        }
         inputs.result.push(inputs.text.slice(inputs.position));
         return inputs.result;
     };
@@ -822,6 +819,10 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
 (function TK_CodeJS_init() {
     const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const publicExports = module.exports = {};
+    const stringSignals = ['"', "'", "`"];
+    const unconnectedFiles = new Set([
+        "fs", "http", "module", "path", "stream"
+    ]);
     publicExports.textLayerDefinition = {
         js_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
@@ -836,7 +837,22 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
         },
         js_import: {
             patterns: [["require(", ")"]],
-            layerData: { fileConnection: "preload" },
+            layerData: {
+                fileConnection: "preload",
+                readLayerContent: function TK_CodeJS_readImport(inputs) {
+                    let content = publicExports.removeComments(readLayerContent(inputs))
+                        .join("").split(",")[0].trim();
+                    const signalID = stringSignals.indexOf(content[0]);
+                    if (signalID === -1
+                        || content.length < 3
+                        || content[content.length - 1] !== stringSignals[signalID]) {
+                        return;
+                    }
+                    content = content.slice(1, -1);
+                    return unconnectedFiles.has(content)
+                        ? undefined : content;
+                }
+            },
         },
         js_bracket: {
             patterns: [["(", ")"], ["{", "}"]],

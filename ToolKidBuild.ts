@@ -110,8 +110,8 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
     };
 
     publicExports.write = function ToolKidBuild_write(config) {
-        const exportPath = config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js");
-        console.log(">>  write Toolkid to " + exportPath);
+        const exportPath = resolve(config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js"));
+        console.log(">>  writing Toolkid to " + exportPath);
         const filePaths = new Map([
             ["LibraryCore.js", ""], ["LibraryRegularExpression.js", ""]
         ]);
