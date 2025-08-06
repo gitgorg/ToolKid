@@ -101,7 +101,7 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
         };
     };
 
-    const replacer = function RS_build_replacer(
+    const replacer = function ToolKidBuild_replacer(
         neededBundleIDs: Set<string>, content: string
     ): string | void {
         const bundleID = basename(content.slice(1, -1));
