@@ -53,39 +53,41 @@ type CustomPromise = {
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(
             resolve, reject
         ) {
-            result.resolve = promiseDecide.bind(null, {
-                promiseData: result,
-                method: resolve,
-                state: "fulfilled"
-            });
-            result.reject = promiseDecide.bind(null, {
-                promiseData: result,
-                method: reject,
-                state: "rejected"
-            });
+            result.resolve = promiseDecide.bind(null,
+                result,
+                resolve,
+                "fulfilled"
+            );
+            result.reject = promiseDecide.bind(null,
+                result,
+                reject,
+                "rejected"
+            );
         });
         return result;
     };
 
-    const promiseDecide = function TK_DataTypesPromise_promiseDecide(bound: {
+    const promiseDecide = function TK_DataTypesPromise_promiseDecide(
         promiseData: CustomPromise,
-        method(reason: any): void,
-        state: "fulfilled" | "rejected"
-    }, data: any) {
-        const { promiseData } = bound;
-        if (promiseData.state !== "pending") {
-            console.error([
-                "TK_DataTypesPromise_createPromiseReject - promise allready " + promiseData.state + " with:",
-                promiseData.data,
-                " then tried " + bound.state + " with:",
-                data
-            ]);
+        method: { (reason: any): void },
+        state: "fulfilled" | "rejected",
+        data: any
+    ) {
+        if (promiseData.state === "pending") {
+            method(data);
+            promiseData.data = data;
+            promiseData.state = state;
             return;
         }
 
-        bound.method(data);
-        promiseData.data = data;
-        promiseData.state = bound.state;
+        console.error([
+            "TK_DataTypesPromise_createPromiseReject - promise allready " + promiseData.state + " with:",
+            promiseData.data,
+            " then tried " + state + " with:",
+            data
+        ]);
+        return;
+
     };
 
 
