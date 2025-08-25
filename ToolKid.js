@@ -2066,6 +2066,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         publicExports.setupTests(inputs);
         let timeStart = Date.now();
         ToolKid.file.loopFiles({
+            includes: ["*.test.js"],
             ...inputs,
             execute: require
         });
