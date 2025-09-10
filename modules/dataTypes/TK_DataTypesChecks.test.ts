@@ -60,25 +60,22 @@
             };
             assertEquality({
                 "known type": {
-                    value: handleDataType({
-                        typeHandlers,
-                        value: true
-                    }), shouldBe: false
+                    value: handleDataType(
+                        true, typeHandlers, [true]
+                    ), shouldBe: false
                 },
                 "unknown type": {
-                    value: handleDataType({
-                        typeHandlers,
-                        value: 10
-                    }), shouldBe: undefined
+                    value: handleDataType(
+                        10, typeHandlers, [10]
+                    ), shouldBe: undefined
                 },
             });
             typeHandlers.any = function (value: any) { return value; };
             assertEquality({
                 "fallback type": {
-                    value: handleDataType({
-                        typeHandlers,
-                        value: 10
-                    }), shouldBe: 10
+                    value: handleDataType(
+                        10, typeHandlers, [10]
+                    ), shouldBe: 10
                 },
             });
         }
@@ -89,13 +86,9 @@
                 name: "missing inputs",
                 execute: handleDataType
             }, {
-                name: "wrong input type",
-                execute: handleDataType,
-                withInputs: true
-            }, {
                 name: "missing typeHandlers",
                 execute: handleDataType,
-                withInputs: { value: true }
+                withInputs: [true]
             });
         }
     });
@@ -280,7 +273,7 @@
                 "empty": {
                     value: isObject({}), shouldBe: true
                 }, "simple": {
-                    value: isObject({simple:true}), shouldBe: true
+                    value: isObject({ simple: true }), shouldBe: true
                 },
             });
         }
@@ -292,10 +285,10 @@
                     value: isObject(null), shouldBe: false
                 },
                 "array": {
-                    value: isObject([1,2,3]), shouldBe: false
+                    value: isObject([1, 2, 3]), shouldBe: false
                 },
                 "map": {
-                    value: isObject(new Map([["a",1]])), shouldBe: false
+                    value: isObject(new Map([["a", 1]])), shouldBe: false
                 }
             });
         }

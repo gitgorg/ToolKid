@@ -5,12 +5,11 @@ interface TK_DataTypes_file { checks: TK_DataTypesChecks_file }
 interface TK_DataTypesChecks_file {
     getDataType(value: any): DataType,
     // TODO: rename to parseByDataType or somethin alike
-    handleDataType(inputs: {
+    handleDataType(
         value: any,
         typeHandlers: DataTypeParsers,
-
-        withInputs?: any[]
-    }): any,
+        withParameters: any[]
+    ): any,
 
     isArray(value: any): boolean,
     isBoolean(value: any): boolean,
@@ -48,17 +47,17 @@ type DataTypeParsers = {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
 
     const getDataType = publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
-        return <DataType>dataTypeConverters[typeof value](value);
+        return <DataType>dataTypeReturns[typeof value](value);
     };
 
-    const dataTypeConverters = {
-        bigint: function RS_h_checks_isEmptyBigint() { return "bigint"; },
-        boolean: function RS_h_checks_isEmptyBoolean() { return "boolean"; },
-        function: function RS_h_checks_isEmptyFunction() { return "function"; },
-        number: function RS_h_checks_isEmptyNumber(data: number) {
+    const dataTypeReturns = {
+        bigint: function TK_DataTypesChecks_returnTypeBigint() { return "bigint"; },
+        boolean: function TK_DataTypesChecks_returnTypeBoolean() { return "boolean"; },
+        function: function TK_DataTypesChecks_returnTypeFunction() { return "function"; },
+        number: function TK_DataTypesChecks_returnTypeNumber(data: number) {
             return Number.isNaN(data) ? "undefined" : "number";
         },
-        object: function RS_h_checks_isEmptyObject(data: any) {
+        object: function TK_DataTypesChecks_returnTypeObject(data: any) {
             if (data === null) {
                 return "undefined";
             } else if (data instanceof Array) {
@@ -67,14 +66,14 @@ type DataTypeParsers = {
                 return "object";
             }
         },
-        string: function RS_h_checks_isEmptyString() { return "string"; },
-        symbol: function RS_h_checks_isEmptySymbol() { return "symbol"; },
-        undefined: function RS_h_checks_isEmptyUndefined() { return "undefined"; }
+        string: function TK_DataTypesChecks_returnTypeString() { return "string"; },
+        symbol: function TK_DataTypesChecks_returnTypeSymbol() { return "symbol"; },
+        undefined: function TK_DataTypesChecks_returnTypeUndefined() { return "undefined"; }
     };
 
     if (typeof Element === "function") {
-        const standard = dataTypeConverters.object;
-        dataTypeConverters.object = <any>function RS_h_checks_isEmptyObjectDOM(data: any) {
+        const standard = dataTypeReturns.object;
+        dataTypeReturns.object = <any>function TK_DataTypesChecks_returnTypeObjectDOM(data: any) {
             if (data instanceof Element) {
                 return "HTML";
             } else if (data instanceof DOMTokenList) {
@@ -132,22 +131,18 @@ type DataTypeParsers = {
         return typeof value === "string" && value !== "";
     };
 
-    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(inputs) {
-        const { typeHandlers } = inputs;
-        if (typeof typeHandlers !== "object") {
-            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeParsers passed:", typeHandlers];
-        }
-
-        const { value } = inputs;
+    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(
+        value, typeHandlers, withParameters
+    ) {
         const handler = typeHandlers[getDataType(value)];
         if (handler === false) {
-            return;
+            return undefined;
         }
 
         if (typeof handler === "function") {
-            return handler(...(inputs.withInputs || [value]));
+            return handler(...withParameters);
         } else if (typeof typeHandlers.any === "function") {
-            return typeHandlers.any(...(inputs.withInputs || [value]));
+            return typeHandlers.any(...withParameters);
         }
     };
 
