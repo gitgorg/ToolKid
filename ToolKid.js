@@ -1578,9 +1578,6 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         const { config, testResult } = inputs;
         const startTime = Date.now();
         const scope = {};
-        if (typeof config.execute !== "function") {
-            log(555, config);
-        }
         if (typeof config.execute === "function") {
             try {
                 const returned = config.execute(scope);
