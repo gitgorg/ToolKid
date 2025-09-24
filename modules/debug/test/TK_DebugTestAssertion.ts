@@ -19,12 +19,22 @@ interface TK_DebugTest_file {
         } & TK_AssertConfig),
     }): void,
     assert(inputs: {
-        CONFIG?: TK_AssertConfig,
-    } & {
-        [label: string]: [value: any, shouldBe: any] | ({
+        CONFIG: TK_AssertConfig,
+        [label: string]:
+        [value: any, shouldBe: any] //short notation
+        | ({  //regular notation
             value: any,
             shouldBe: any,
-        } & TK_AssertConfig) | TK_AssertConfig,
+        } & TK_AssertConfig)
+        | TK_AssertConfig //only allowed for CONFIG property,
+    }): void,
+    assert(inputs: {
+        [label: string]:
+        [value: any, shouldBe: any] //short notation
+        | ({ //regular notation
+            value: any,
+            shouldBe: any,
+        } & TK_AssertConfig)
     }): void,
     assertEquality(inputs: {
         [name: string]: {

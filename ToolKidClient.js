@@ -965,16 +965,16 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = {};
     const getDataType = publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
-        return dataTypeConverters[typeof value](value);
+        return dataTypeReturns[typeof value](value);
     };
-    const dataTypeConverters = {
-        bigint: function RS_h_checks_isEmptyBigint() { return "bigint"; },
-        boolean: function RS_h_checks_isEmptyBoolean() { return "boolean"; },
-        function: function RS_h_checks_isEmptyFunction() { return "function"; },
-        number: function RS_h_checks_isEmptyNumber(data) {
+    const dataTypeReturns = {
+        bigint: function TK_DataTypesChecks_returnTypeBigint() { return "bigint"; },
+        boolean: function TK_DataTypesChecks_returnTypeBoolean() { return "boolean"; },
+        function: function TK_DataTypesChecks_returnTypeFunction() { return "function"; },
+        number: function TK_DataTypesChecks_returnTypeNumber(data) {
             return Number.isNaN(data) ? "undefined" : "number";
         },
-        object: function RS_h_checks_isEmptyObject(data) {
+        object: function TK_DataTypesChecks_returnTypeObject(data) {
             if (data === null) {
                 return "undefined";
             }
@@ -985,13 +985,13 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
                 return "object";
             }
         },
-        string: function RS_h_checks_isEmptyString() { return "string"; },
-        symbol: function RS_h_checks_isEmptySymbol() { return "symbol"; },
-        undefined: function RS_h_checks_isEmptyUndefined() { return "undefined"; }
+        string: function TK_DataTypesChecks_returnTypeString() { return "string"; },
+        symbol: function TK_DataTypesChecks_returnTypeSymbol() { return "symbol"; },
+        undefined: function TK_DataTypesChecks_returnTypeUndefined() { return "undefined"; }
     };
     if (typeof Element === "function") {
-        const standard = dataTypeConverters.object;
-        dataTypeConverters.object = function RS_h_checks_isEmptyObjectDOM(data) {
+        const standard = dataTypeReturns.object;
+        dataTypeReturns.object = function TK_DataTypesChecks_returnTypeObjectDOM(data) {
             if (data instanceof Element) {
                 return "HTML";
             }
@@ -1040,21 +1040,16 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
     publicExports.isString = function TK_DataTypesChecks_isString(value) {
         return typeof value === "string" && value !== "";
     };
-    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(inputs) {
-        const { typeHandlers } = inputs;
-        if (typeof typeHandlers !== "object") {
-            throw ["TK_DataTypesChecks_handleDataType - invalid DataTypeParsers passed:", typeHandlers];
-        }
-        const { value } = inputs;
+    publicExports.handleDataType = function TK_DataTypesChecks_handleDataType(value, typeHandlers, withParameters) {
         const handler = typeHandlers[getDataType(value)];
         if (handler === false) {
-            return;
+            return undefined;
         }
         if (typeof handler === "function") {
-            return handler(...(inputs.withInputs || [value]));
+            return handler(...withParameters);
         }
         else if (typeof typeHandlers.any === "function") {
-            return typeHandlers.any(...(inputs.withInputs || [value]));
+            return typeHandlers.any(...withParameters);
         }
     };
     Object.freeze(publicExports);
