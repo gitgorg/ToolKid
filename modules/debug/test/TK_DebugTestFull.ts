@@ -8,8 +8,6 @@ interface TK_DebugTest_file {
     testFull(inputs: {
         title?: string
         suspects?: any | any[],
-        includes?: (string | RegExp)[],
-        excludes?: (string | RegExp)[],
     } & Omit<Parameters<TK_file_file["loopFiles"]>[0], "execute">): void,
 }
 
@@ -172,6 +170,7 @@ interface TK_DebugTest_file {
         publicExports.setupTests(inputs);
         let timeStart = Date.now();
         ToolKid.file.loopFiles({
+            includes: ["*.test.js"],
             ...inputs,
             execute: require
         });
