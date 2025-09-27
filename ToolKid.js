@@ -689,6 +689,83 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
 fileCollection.set("TK_CodeCSS.js", module.exports);
 
 "use strict";
+(function TK_CodeParsing_init() {
+    const publicExports = module.exports = {};
+    const RXAnyChararcter = /\S/g;
+    publicExports.addIndentation = function TK_CodeParsing_addIndentation(text, indentation) {
+        if (indentation === 0
+            || (typeof indentation === "string" && indentation.length === 0)) {
+            return [text];
+        }
+        const parts = new Array(100);
+        const addition = (typeof indentation === "string")
+            ? indentation
+            : new Array(indentation).join(" ");
+        const { length } = text;
+        let position = 0;
+        let nextPosition = 0;
+        let i = 0;
+        while (position < length) {
+            nextPosition = text.indexOf("\n", position);
+            if (nextPosition === -1) {
+                break;
+            }
+            if (nextPosition === position) {
+                parts[i] = "\n";
+                i += 1;
+                position += 1;
+                continue;
+            }
+            nextPosition += 1;
+            parts[i] = text.slice(position, nextPosition);
+            parts[i + 1] = addition;
+            i += 2;
+            position = nextPosition;
+        }
+        if (position !== length) {
+            parts[i] = text.slice(position);
+            i += 1;
+        }
+        parts.length = i;
+        return parts;
+    };
+    publicExports.readIndentation = function TK_CodeParsing_readIndentation(text, position) {
+        const linestart = text.lastIndexOf("\n", position) + 1;
+        RXAnyChararcter.lastIndex = position;
+        const found = RXAnyChararcter.exec(text);
+        return (found === null)
+            ? text.slice(linestart)
+            : text.slice(linestart, found.index);
+    };
+    publicExports.removeQuotes = function TK_CodeParsing_removeQuotes(text) {
+        if (typeof text !== "string") {
+            return "";
+        }
+        text = text.trim();
+        if (text.length === 0) {
+            return "";
+        }
+        if (text[0] === "'") {
+            return (text[text.length - 1] === "'")
+                ? text.slice(1, -1) : text;
+        }
+        else if (text[0] === "\"") {
+            return (text[text.length - 1] === "\"")
+                ? text.slice(1, -1) : text;
+        }
+        else {
+            return text;
+        }
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "code", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_CodeParsing.js", module.exports);
+
+"use strict";
 (function TK_DataTypesObject_init() {
     const publicExports = module.exports = {};
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
@@ -740,9 +817,11 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
 
 "use strict";
 (function TK_CodeHTML_init() {
+    const { addIndentation } = fileCollection.get("TK_CodeParsing.js");
     const CodeCDW = fileCollection.get("TK_CodeCDW.js");
     const CodeCSS = fileCollection.get("TK_CodeCSS.js");
     const { merge } = fileCollection.get("TK_DataTypesObject.js");
+    const { createTextParser } = fileCollection.get("LibraryParsing.js");
     const publicExports = module.exports = {};
     const nonMainLayer = { isROOTLayer: false };
     publicExports.textLayerDefinition = merge(CodeCSS.textLayerDefinition, CodeCDW.textLayerDefinition, {
@@ -753,7 +832,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
             patterns: [[/<\w+/, ">"]],
             contains: [
                 "html_href", "html_src", "html_css",
-                "html_insert", "html_cdw",
+                "html_insert", "html_extend", "html_cdw",
                 "html_attribute",
             ]
         },
@@ -772,6 +851,11 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
             isROOTLayer: false,
             layerData: { fileConnection: "insert" },
         },
+        html_extend: {
+            patterns: [[/DATA-EXTEND="/i, "\""]],
+            isROOTLayer: false,
+            layerData: { fileConnection: "insert" },
+        },
         html_css: {
             isROOTLayer: false,
             patterns: [["style=\"", "\""]],
@@ -784,7 +868,10 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         },
         html_attribute: {
             isROOTLayer: false,
-            patterns: [[/\S+="/, '"']]
+            patterns: [
+                [/\S+="/, '"'],
+                [/\S+=/, /\s/],
+            ]
         },
         css_comment: nonMainLayer,
         css_string: nonMainLayer,
@@ -794,6 +881,91 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         cdw_importMaybe: nonMainLayer,
         cdw_insertAfter: nonMainLayer,
     });
+    publicExports.collectAttributes = function TK_CodeHTML_collectAttributes(text) {
+        const result = {
+            attributes: new Map(),
+            endPosition: undefined,
+            error: undefined,
+        };
+        result.error = collectAttributesParser({
+            text, result
+        });
+        return result;
+    };
+    let valueIsText = false;
+    const collectAttributesParser = createTextParser({
+        layerDefinition: {
+            html_tagStart: {
+                ...publicExports.textLayerDefinition.html_tagStart,
+                contains: ["html_attribute"],
+            },
+            html_attribute: publicExports.textLayerDefinition.html_attribute,
+        },
+        parseClosings: function TK_CodeHTML_collectAttributesParser(closing, layer, inputs, depth, opening) {
+            if (inputs.result.endPosition !== undefined) {
+                return;
+            }
+            else if (layer.name === "html_tagStart") {
+                inputs.result.endPosition = closing.index + closing[0].length;
+                return;
+            }
+            valueIsText = closing[0] === '"';
+            inputs.result.attributes.set(opening[0].slice(0, valueIsText ? -2 : -1).toLocaleLowerCase(), [
+                opening.index + opening[0].length,
+                closing.index,
+                inputs.text.slice(opening.index + opening[0].length, closing.index),
+                valueIsText
+            ]);
+        }
+    });
+    publicExports.extendTag = function TK_CodeHTML_extendTag(inputs) {
+        let collected = publicExports.collectAttributes(inputs.extensionTag);
+        if (collected instanceof Error) {
+            ToolKid.debug.terminal.logWarning("RS_parse_layerHTMLTag - DATA-EXTEND failed:", Error);
+            return [inputs.baseTag];
+        }
+        const additions = collected.attributes;
+        collected = publicExports.collectAttributes(inputs.baseTag);
+        if (collected instanceof Error || collected.endPosition === undefined) {
+            ToolKid.debug.terminal.logWarning("RS_parse_layerHTMLTag - DATA-EXTEND failed:", collected);
+            return [inputs.baseTag];
+        }
+        const { baseTag } = inputs;
+        const indentBase = inputs.indentBase || "";
+        const parts = [];
+        let position = 0;
+        let newStartStop;
+        let marked = false;
+        for (const [key, [start, stop]] of collected.attributes) {
+            if (marked === false) {
+                parts.push(baseTag.slice(position, start - key.length - 2));
+                position = start - key.length - 2;
+                parts.push('DATA-EXTENDED="', additions.get("data-extend")[2], '" ');
+                additions.delete("data-extend");
+                marked = true;
+                if (key === "data-extend") {
+                    continue;
+                }
+            }
+            newStartStop = additions.get(key);
+            if (newStartStop === undefined) {
+                continue;
+            }
+            parts.push(...addIndentation(baseTag.slice(position, start), indentBase));
+            parts.push(newStartStop[2], " ");
+            parts.push(...addIndentation(baseTag.slice(start, stop), indentBase));
+            position = stop;
+            additions.delete(key);
+        }
+        parts.push(...addIndentation(baseTag.slice(position, collected.endPosition - 1), indentBase));
+        for (const [key, [start, , content, isText]] of additions) {
+            const tagStart = start - key.length - (isText ? 2 : 1);
+            parts.push(" ", inputs.extensionTag.slice(tagStart, start), content, isText ? '"' : '');
+        }
+        parts.push(">");
+        parts.push(...addIndentation(baseTag.slice(collected.endPosition), indentBase));
+        return parts;
+    };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "code", subSection: "HTML", entries: publicExports });
@@ -890,37 +1062,6 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
 })();
 
 fileCollection.set("TK_CodeJS.js", module.exports);
-
-"use strict";
-(function TK_CodeParsing_init() {
-    const publicExports = module.exports = {};
-    publicExports.removeQuotes = function TK_CodeParsing__removeQuotes(text) {
-        if (typeof text !== "string") {
-            return "";
-        }
-        text = text.trim();
-        if (text.length === 0) {
-            return "";
-        }
-        if (text[0] === "'") {
-            return (text[text.length - 1] === "'")
-                ? text.slice(1, -1) : text;
-        }
-        else if (text[0] === "\"") {
-            return (text[text.length - 1] === "\"")
-                ? text.slice(1, -1) : text;
-        }
-        else {
-            return text;
-        }
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "code", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_CodeParsing.js", module.exports);
 
 "use strict";
 (function TK_ConnectionHTTPinit() {
