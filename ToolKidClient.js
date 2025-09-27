@@ -1502,23 +1502,22 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         ToolKid.debug.test.assert(inputs);
     };
     const createResultBase = function TK_DebugTest_createResultBase(config) {
-        if (config.assert !== undefined) {
-            config.execute = executeAssert.bind(null, config.assert);
-        }
         return {
             subject: config.subject,
-            name: config.execute.name,
+            name: typeof config.execute === "function"
+                ? config.execute.name
+                : "assert",
             time: 0
         };
     };
-    const fillErrorResult = function TK_DebugTest_fillErrorResult(testResult, error, time, failureHandler) {
-        testResult.time = time;
+    const fillErrorResult = function TK_DebugTest_fillErrorResult(testResult, error, failureHandler) {
+        testResult.time = 0;
         testResult.errorMessage = error || "Unspecified Error";
         testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: 7 })[0];
         if (failureHandler !== undefined) {
             failureHandler(testResult);
         }
-        return Object.freeze(testResult);
+        return testResult;
     };
     const isValidSubject = function TK_DebugTest_isValidSubject(subject) {
         if (typeof subject === "function") {
@@ -1571,11 +1570,10 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     const testSingle = function TK_DebugTest_testSingle(resultGroup, config) {
         const testResult = createResultBase(config);
         if (typeof config !== "object" || config === null) {
-            return fillErrorResult(testResult, ["TK_DebugTest_test - config has to be an object but is:", config], 0, resultGroup.failureHandler);
+            return testFinish(fillErrorResult(testResult, ["TK_DebugTest_test - config has to be an object but is:", config], resultGroup.failureHandler), config, {});
         }
         else if (!isValidSubject(config.subject)) {
-            const result = fillErrorResult(testResult, ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject], 0, resultGroup.failureHandler);
-            return result;
+            return testFinish(fillErrorResult(testResult, ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject], resultGroup.failureHandler), config, {});
         }
         return testExecute({
             config,
@@ -1585,36 +1583,46 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     };
     // TODO: unit tests for callback function
     const testExecute = function Test_testExecute(inputs) {
-        const { testResult } = inputs;
+        const { config, testResult } = inputs;
         const startTime = Date.now();
         const scope = {};
-        try {
-            const returned = inputs.config.execute(scope);
-            if (returned instanceof Promise) {
-                const promise = testWatchPromise({
-                    testResult,
-                    startTime,
-                    promise: returned,
-                    resultGroup: inputs.resultGroup,
-                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
-                });
-                promise.then(function Test_testExecute_handlePromise() {
-                    if (typeof inputs.config.callback === "function") {
-                        inputs.config.callback({ scope, testResult });
-                    }
-                    const { results } = inputs.resultGroup;
-                    const index = results.indexOf(promise);
-                    results[index] = testResult;
-                });
-                return promise;
+        if (typeof config.execute === "function") {
+            try {
+                const returned = config.execute(scope);
+                if (returned instanceof Promise) {
+                    const promise = testWatchPromise({
+                        testResult,
+                        startTime,
+                        promise: returned,
+                        resultGroup: inputs.resultGroup,
+                        source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
+                    });
+                    promise.then(function Test_testExecute_handlePromise() {
+                        const { results } = inputs.resultGroup;
+                        const index = results.indexOf(promise);
+                        testResult.time = Date.now() - startTime;
+                        results[index] = testFinish(testResult, config, scope);
+                    });
+                    return promise;
+                }
             }
-            testResult.time = Date.now() - startTime;
+            catch (error) {
+                fillErrorResult(testResult, error, inputs.resultGroup.failureHandler);
+            }
         }
-        catch (error) {
-            fillErrorResult(testResult, error, Date.now() - startTime, inputs.resultGroup.failureHandler);
+        else if (config.assert === undefined) {
+            throw ["TK_DebugTest_test - no valid .execute or .assert defined", config];
         }
-        if (typeof inputs.config.callback === "function") {
-            inputs.config.callback({ scope, testResult });
+        testResult.time = Date.now() - startTime;
+        return testFinish(testResult, config, scope);
+    };
+    const testFinish = function (testResult, config, scope) {
+        if (config.assert !== undefined) {
+            //log(2222, testResult)
+            executeAssert(config.assert);
+        }
+        if (typeof config.callback === "function") {
+            config.callback({ scope, testResult });
         }
         return Object.freeze(testResult);
     };
@@ -1634,8 +1642,8 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
         const { testResult } = bound;
         testResult.errorSource = bound.source;
-        fillErrorResult(testResult, reason, Date.now() - bound.startTime, bound.resultGroup.failureHandler);
-        bound.resolver(Object.freeze(testResult));
+        fillErrorResult(testResult, reason, bound.resultGroup.failureHandler);
+        bound.resolver(testResult);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
