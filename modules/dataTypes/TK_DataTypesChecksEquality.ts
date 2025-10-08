@@ -16,7 +16,7 @@ interface TK_DataTypesChecks_file {
 
 type EqualityDifference = {
     path: any[],
-    type: "different" | "unwanted" | "invalid" | "tooDeep" | EqualityDifference[],
+    type: "different" | "unwanted" | "tooDeep" | EqualityDifference[],
     value: any,
     shouldBe?: any
 }
@@ -74,49 +74,108 @@ type EqualityDifference = {
         }
     };
 
-    const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoose(
+    const typeHandler = ToolKid.dataTypes.checks.createTypeHandler({
+        array: function (shouldBe, value, path, toleranceDepth, allowAdditions) {
+            if (!(value instanceof Array)) {
+                return [{ path, type: "different", value, shouldBe }];
+            } else if (toleranceDepth === 0) {
+                return [{ path, type: "tooDeep", value, shouldBe }];
+            } else {
+                return equalLoop(
+                    path, value, shouldBe,
+                    toleranceDepth - 1, allowAdditions,
+                    readProperty.basic
+                );
+            }
+        },
+        bigint: function (shouldBe, value, path) {
+            return [{ path, type: "different", value, shouldBe }];
+        },
+        boolean: function (shouldBe, value, path) {
+            return [{ path, type: "different", value, shouldBe }];
+        },
+        function: function (shouldBe, value, path) {
+            if (shouldBe.valueChecks instanceof Array) {
+                if (shouldBe(value) === true) {
+                    return true;
+                } else {
+                    return [{ path, type: "different", value, shouldBe }];
+                }
+            } else if (shouldBe === Error) {
+                return value instanceof Error
+                    ? true : [{ path, type: "different", value, shouldBe }];
+            } else {
+                return [{ path, type: "different", value, shouldBe }];
+            }
+        },
+        map: function (shouldBe, value, path, toleranceDepth, allowAdditions) {
+            if (!(value instanceof Map)) {
+                return [{ path, type: "different", value, shouldBe }];
+            } else if (toleranceDepth === 0) {
+                return [{ path, type: "tooDeep", value, shouldBe }];
+            } else {
+                return equalLoop(
+                    path, value, shouldBe,
+                    toleranceDepth - 1, allowAdditions,
+                    readProperty.Map
+                );
+                return true;
+            }
+        },
+        number: function (shouldBe, value, path) {
+            return [{ path, type: "different", value, shouldBe }];
+        },
+        object: function (shouldBe, value, path, toleranceDepth, allowAdditions) {
+            if (typeof value !== "object" || value === null) {
+                return [{ path, type: "different", value, shouldBe }];
+            } else if (toleranceDepth === 0) {
+                return [{ path, type: "tooDeep", value, shouldBe }];
+            } else {
+                if (shouldBe instanceof Error !== value instanceof Error) {
+                    return [{ path, type: "different", value, shouldBe }];
+                }
+                if (shouldBe instanceof Set) {
+                    return (value instanceof Set)
+                        ? differentiators.set(path, value, shouldBe)
+                        : [{ path, type: "different", value, shouldBe }];
+                } else if (value instanceof Set) {
+                    return [{ path, type: "different", value, shouldBe }];
+                }
+
+                return equalLoop(
+                    path, value, shouldBe,
+                    toleranceDepth - 1, allowAdditions,
+                    readProperty.basic
+                );
+            }
+        },
+        string: function (shouldBe, value, path) {
+            return [{ path, type: "different", value, shouldBe }];
+        },
+        symbol: function (shouldBe, value, path) {
+            return [{ path, type: "different", value, shouldBe }];
+        },
+        undefined: function (shouldBe, value, path) {
+            if (Number.isNaN(shouldBe)) {
+                if (Number.isNaN(value)) {
+                    return true;
+                }
+            } else if (typeof shouldBe === typeof value) {
+                return true;
+            }
+
+            return [{ path, type: "different", value, shouldBe }];
+        },
+    });
+    const assertEqualityLoose = function TK_DataTypesChecksEquality_assertEqualityLoosepath(
         path: any[], value: any, shouldBe: any,
         toleranceDepth: number, allowAdditions: boolean
     ): true | EqualityDifference[] {
-        if (isIdentical(value, shouldBe)) {
+        if (value === shouldBe) {
             return true;
-        } else if (
-            typeof shouldBe === "function"
-            && shouldBe.valueChecks instanceof Array
-        ) {
-            if (shouldBe(value) === true) {
-                return true;
-            } else {
-                return [{ path, type: "invalid", value, shouldBe }];
-            }
-        } else if (toleranceDepth === 0) {
-            return [{ path, type: "tooDeep", value, shouldBe }];
         }
 
-        const simpleTestResult = isSimpleAndEqual(value, shouldBe, toleranceDepth);
-        if (simpleTestResult === true) {
-            return true;
-        } else if (simpleTestResult !== false) {
-            simpleTestResult.path = path;
-            return [simpleTestResult];
-        }
-
-        toleranceDepth -= 1;
-        if (value instanceof Set) {
-            return differentiators.set(path, value, shouldBe);
-        }
-
-        let reader = readProperty.basic;
-        if (value instanceof Map) {
-            reader = readProperty.Map;
-        } else if (value instanceof Set) {
-            reader = readProperty.Set;
-        }
-        return equalLoop(
-            path, value, shouldBe,
-            toleranceDepth, allowAdditions,
-            reader
-        );
+        return typeHandler(shouldBe, value, path, toleranceDepth, allowAdditions);
     };
 
     const equalLoop = function (
@@ -172,35 +231,6 @@ type EqualityDifference = {
         return key;
     };
 
-    const isIdentical = function TK_DataTypesChecksEquality_isIdentical(
-        valueA: any, valueB: any
-    ) {
-        return valueA === valueB
-            || (Number.isNaN(valueB) && Number.isNaN(valueA));
-    };
-
-    const isList = function TK_DataTypesChecksEquality_isList(value: any) {
-        return typeof value === "object" && value !== null || typeof value === "function";
-    };
-
-    const isSimpleAndDifferent = function TK_DataTypesChecksEquality_isSimpleAndDifferent(
-        valueA: any, valueB: any
-    ) {
-        return typeof valueA !== typeof valueB
-            || !isList(valueA) || !isList(valueB)
-            || valueA instanceof Error || valueB instanceof Error;
-    };
-
-    const isSimpleAndEqual = function TK_DataTypesChecksEquality_isSimpleAndEqual(
-        value: any,
-        shouldBe: any,
-        toleranceDepth: number
-    ): boolean | EqualityDifference {
-        if (isSimpleAndDifferent(value, shouldBe)) {
-            return <EqualityDifference>{ type: "different", value, shouldBe };
-        }
-        return false;
-    };
 
     const readProperty = {
         basic: function (container: any, key: any) {

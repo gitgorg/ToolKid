@@ -1,8 +1,24 @@
 (function TK_DataTypesChecks_test() {
-    const { test, assertEquality, assertFailure } = ToolKid.debug.test;
-    const { getDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isObject, isPromise, isString, handleDataType } = ToolKid.dataTypes.checks;
+    const { assert, test, assertEquality, assertFailure } = ToolKid.debug.test;
+    const { createTypeHandler, getDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isObject, isPromise, isString, handleDataType } = ToolKid.dataTypes.checks;
 
 
+
+    test({
+        subject: createTypeHandler,
+        execute: function basic() {
+            const handler = createTypeHandler({
+                "number": () => true,
+                "array": false,
+                any: () => "default"
+            });
+            assert({
+                "number": [handler(10), true],
+                "string": [handler("text"), "default"],
+                "array": [handler([]), undefined],
+            })
+        }
+    });
 
     test({
         subject: getDataType,

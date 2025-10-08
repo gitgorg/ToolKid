@@ -70,7 +70,7 @@ interface TK_Code_file {
         text, position
     ) {
         const linestart = text.lastIndexOf("\n", position) + 1;
-        RXAnyChararcter.lastIndex = position;
+        RXAnyChararcter.lastIndex = linestart;
         const found = RXAnyChararcter.exec(text);
         return (found === null)
             ? text.slice(linestart)

@@ -56,11 +56,6 @@ type TestSummary = {
                 return [
                     path + " is exceeding comparison depth"
                 ];
-            } else if (difference.type === "invalid") {
-                return [
-                    path + " did not pass test:", difference.shouldBe,
-                    "with value:", difference.value
-                ];
             } else if (difference.type === "unwanted") {
                 return [
                     "unwanted property " + path + ":", difference.value

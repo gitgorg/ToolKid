@@ -173,23 +173,7 @@ interface TK_Code_file {
         const parts = [];
         let position = 0;
         let newStartStop: any[] | undefined;
-        let marked = false;
         for (const [key, [start, stop]] of collected.attributes) {
-            if (marked === false) {
-                parts.push(baseTag.slice(position, start - key.length - 2));
-                position = start - key.length - 2;
-                parts.push(
-                    'DATA-EXTENDED="',
-                    (<any>additions.get("data-extend"))[2],
-                    '" '
-                );
-                additions.delete("data-extend");
-                marked = true;
-                if (key === "data-extend") {
-                    continue;
-                }
-            }
-
             newStartStop = additions.get(key);
             if (newStartStop === undefined) {
                 continue;

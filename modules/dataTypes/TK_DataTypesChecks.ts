@@ -3,7 +3,12 @@ interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { checks: TK_DataTypesChecks_file }
 
 interface TK_DataTypesChecks_file {
-    getDataType(value: any): DataType,
+    createTypeHandler(
+        typeHandlers: DataTypeParsers
+    ): { (value: any, ...bonus: any[]): any | void }
+    getDataType(
+        value: any
+    ): DataType,
     // TODO: rename to parseByDataType or somethin alike
     handleDataType(
         value: any,
@@ -23,7 +28,7 @@ interface TK_DataTypesChecks_file {
     isString(value: any): boolean
 }
 
-type DataType = "array" | "bigint" | "boolean" | "function" | "number" | "object" | "string" | "symbol" | "undefined" | "HTML" | "HTMLClassList";
+type DataType = "array" | "bigint" | "boolean" | "function" | "map" | "number" | "object" | "string" | "symbol" | "undefined" | "HTML" | "HTMLClassList";
 
 type DataTypeParsers = {
     any?(...inputs: any[]): any,
@@ -31,6 +36,7 @@ type DataTypeParsers = {
     bigint?: { (...inputs: any[]): any } | false,
     boolean?: { (...inputs: any[]): any } | false,
     function?: { (...inputs: any[]): any } | false,
+    map?: { (...inputs: any[]): any } | false,
     number?: { (...inputs: any[]): any } | false,
     object?: { (...inputs: any[]): any } | false,
     string?: { (...inputs: any[]): any } | false,
@@ -45,6 +51,23 @@ type DataTypeParsers = {
 
 (function TK_DataTypesChecks_init() {
     const publicExports = module.exports = <TK_DataTypesChecks_file>{};
+
+    publicExports.createTypeHandler = function TK_DataTypesChecks_createTypeHandler(typeHandlers) {
+        return function TK_DataTypesChecks_typeHandler(
+            value: any, ...bonus: any[]
+        ) {
+            const handler = typeHandlers[getDataType(value)];
+            if (handler === false) {
+                return undefined;
+            }
+
+            if (typeof handler === "function") {
+                return handler(value, ...bonus);
+            } else if (typeof typeHandlers.any === "function") {
+                return typeHandlers.any(value, ...bonus);
+            }
+        };
+    };
 
     const getDataType = publicExports.getDataType = function TK_DataTypesChecks_getDataType(value) {
         return <DataType>dataTypeReturns[typeof value](value);
@@ -62,6 +85,8 @@ type DataTypeParsers = {
                 return "undefined";
             } else if (data instanceof Array) {
                 return "array";
+            } else if (data instanceof Map) {
+                return "map";
             } else {
                 return "object";
             }
