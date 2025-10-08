@@ -28,7 +28,9 @@ type CustomPromise = {
         let missing = promises.length;
         const datas = new Array(promises.length);
         const result = publicExports.createPromise();
-        const handleSucces = function TK_DataTypesPromise_combinePromisesSuccess(position: number, data: any) {
+        const handleSucces = function TK_DataTypesPromise_combinePromisesSuccess(
+            position: number, data: any
+        ) {
             datas[position] = data;
             missing -= 1;
             if (missing === 0) {
