@@ -188,24 +188,30 @@ type TKTestResultGroup = {
         const scope = {};
         if (typeof config.execute === "function") {
             try {
-                const returned = (<Dictionary>config).execute(scope);
-                if (returned instanceof Promise) {
-                    const promise = testWatchPromise({
+                const executionPromise = (<Dictionary>config).execute(scope);
+                if (executionPromise instanceof Promise) {
+                    const resultPromiseInputs = {
                         testResult,
                         startTime,
-                        promise: returned,
+                        promise: executionPromise,
                         resultGroup: inputs.resultGroup,
                         source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
+                    };
+                    const resultPromise = <Promise<TKTestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
+                        (<Dictionary>resultPromiseInputs).resolver = resolve;
                     });
-                    promise.then(function Test_testExecute_handlePromise() {
+                    executionPromise.then(
+                        testPromiseSuccess.bind(null, resultPromiseInputs),
+                        testPromiseFailure.bind(null, resultPromiseInputs)
+                    );
+                    resultPromise.then(function Test_testExecute_handlePromise() {
                         const { results } = inputs.resultGroup;
-                        const index = results.indexOf(promise);
+                        const index = results.indexOf(resultPromise);
                         testResult.time = Date.now() - startTime;
                         results[index] = testFinish(testResult, config, scope);
                     });
-                    return promise;
+                    return resultPromise;
                 }
-
             } catch (error) {
                 fillErrorResult(
                     testResult, error,
@@ -226,32 +232,12 @@ type TKTestResultGroup = {
         scope: Dictionary,
     ) {
         if (config.assert !== undefined) {
-            //log(2222, testResult)
             executeAssert(config.assert);
         }
         if (typeof config.callback === "function") {
             config.callback({ scope, testResult });
         }
         return Object.freeze(testResult);
-    };
-
-    const testWatchPromise = function TK_DebugTest_testWatchPromise(inputs: {
-        testResult: TKTestResult,
-        startTime: number,
-        promise: Promise<any>,
-        resultGroup: TKTestResultGroup,
-        source: string,
-    }) {
-        let resolver: any;
-        const promise = <Promise<TKTestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve) {
-            resolver = resolve;
-        });
-        (<Dictionary>inputs).resolver = resolver;
-        inputs.promise.then(
-            testPromiseSuccess.bind(null, inputs),
-            testPromiseFailure.bind(null, inputs)
-        );
-        return promise;
     };
 
     const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound: {

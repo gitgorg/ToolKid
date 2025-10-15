@@ -56,7 +56,7 @@ interface TK_DebugTest_file {
     ) {
         const subjectName = (result.subject === undefined)
             ? "?"
-            : result.subject.name || "?"
+            : result.subject.name || "?";
         console.warn("\n" +
             colorText("negative",
                 ">>  " + summaryName
