@@ -101,6 +101,12 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
     let disableCount = 0;
     let originalLog: TK_DebugTerminalLog_file["logBasic"];
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
+        console.log(
+            ...publicExports.colorStrings({
+                colorName: "grey",
+                values: ["TK_DebugTerminalLog_disableLogs - " + amount]
+            })
+        );
         if (amount === false) {
             if (disableCount !== 0) {
                 disableCount = 0;

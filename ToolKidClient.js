@@ -1611,6 +1611,10 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
     let disableCount = 0;
     let originalLog;
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
+        console.log(...publicExports.colorStrings({
+            colorName: "grey",
+            values: ["TK_DebugTerminalLog_disableLogs - " + amount]
+        }));
         if (amount === false) {
             if (disableCount !== 0) {
                 disableCount = 0;
