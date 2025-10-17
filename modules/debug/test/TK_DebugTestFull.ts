@@ -188,6 +188,7 @@ interface TK_DebugTest_file {
             }
         });
         if (summary.pending.size !== 0) {
+            // TODO: display info about pending tests
             console.log(
                 colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)"
             );

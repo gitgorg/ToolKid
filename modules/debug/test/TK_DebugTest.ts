@@ -42,9 +42,13 @@ type TKTestResult = {
     errorMessage?: any,
     errorSource?: string,
 }
+type TKTestResultPromise = Promise<TKTestResult> & {
+    subject: TKTestConfig['subject'],
+    execution: TKTestConfig['execute'],
+}
 type TKTestResultGroup = {
     name: string,
-    results: (TKTestResult | Promise<TKTestResult>)[],
+    results: (TKTestResult | TKTestResultPromise)[],
     failureHandler?(
         result: TKTestResult
     ): void
@@ -197,9 +201,11 @@ type TKTestResultGroup = {
                         resultGroup: inputs.resultGroup,
                         source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                     };
-                    const resultPromise = <Promise<TKTestResult>>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
+                    const resultPromise = <TKTestResultPromise>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
                         (<Dictionary>resultPromiseInputs).resolver = resolve;
                     });
+                    resultPromise.subject = config.subject;
+                    resultPromise.execution = config.execute;
                     executionPromise.then(
                         testPromiseSuccess.bind(null, resultPromiseInputs),
                         testPromiseFailure.bind(null, resultPromiseInputs)
@@ -241,7 +247,7 @@ type TKTestResultGroup = {
     };
 
     const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound: {
-        promise: Promise<TKTestResult>,
+        promise: TKTestResultPromise,
         testResult: TKTestResult,
         startTime: number,
         resolver: GenericFunction

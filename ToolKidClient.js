@@ -1784,6 +1784,8 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
                     const resultPromise = new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
                         resultPromiseInputs.resolver = resolve;
                     });
+                    resultPromise.subject = config.subject;
+                    resultPromise.execution = config.execute;
                     executionPromise.then(testPromiseSuccess.bind(null, resultPromiseInputs), testPromiseFailure.bind(null, resultPromiseInputs));
                     resultPromise.then(function Test_testExecute_handlePromise() {
                         const { results } = inputs.resultGroup;
@@ -2265,6 +2267,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             }
         });
         if (summary.pending.size !== 0) {
+            // TODO: display info about pending tests
             console.log(colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)");
         }
     };
