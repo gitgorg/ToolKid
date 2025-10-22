@@ -176,7 +176,15 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
 
     publicExports.logBasic = logWithLevel.bind(null, "basic");
 
-
+    if (typeof process !== "undefined") {
+        process.on(
+            "unhandledRejection",
+            function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
+                publicExports.logError("UNHANDLED PROMISE REJECTION");
+                publicExports.logError(reason);
+            }
+        );
+    }
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

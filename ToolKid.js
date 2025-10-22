@@ -2688,6 +2688,12 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
     publicExports.logWarning = logWithLevel.bind(null, "warning");
     publicExports.logImportant = logWithLevel.bind(null, "important");
     publicExports.logBasic = logWithLevel.bind(null, "basic");
+    if (typeof process !== "undefined") {
+        process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
+            publicExports.logError("UNHANDLED PROMISE REJECTION");
+            publicExports.logError(reason);
+        });
+    }
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
