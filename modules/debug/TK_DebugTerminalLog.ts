@@ -162,6 +162,11 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         type: "warning" | "important" | "basic",
         ...inputs: any[]
     ) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
+
         console.warn(
             ...publicExports.colorStrings({
                 colorName: <"orange">typeColors[type],

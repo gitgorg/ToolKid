@@ -2680,6 +2680,10 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         }));
     };
     const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
         console.warn(...publicExports.colorStrings({
             colorName: typeColors[type],
             values: [getPrefix(inputs), ...inputs]
