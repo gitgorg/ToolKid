@@ -788,13 +788,13 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
     publicExports.extendTag = function TK_CodeHTML_extendTag(inputs) {
         let collected = publicExports.collectAttributes(inputs.extensionTag);
         if (collected instanceof Error) {
-            ToolKid.debug.terminal.logWarning("RS_parse_layerHTMLTag - DATA-EXTEND failed:", Error);
+            ToolKid.debug.terminal.logWarning("TK_CodeHTML_extendTag - DATA-EXTEND failed:", Error);
             return [inputs.baseTag];
         }
         const additions = collected.attributes;
         collected = publicExports.collectAttributes(inputs.baseTag);
         if (collected instanceof Error || collected.endPosition === undefined) {
-            ToolKid.debug.terminal.logWarning("RS_parse_layerHTMLTag - DATA-EXTEND failed:", collected);
+            ToolKid.debug.terminal.logWarning("TK_CodeHTML_extendTag - DATA-EXTEND failed:", collected);
             return [inputs.baseTag];
         }
         const { baseTag } = inputs;
