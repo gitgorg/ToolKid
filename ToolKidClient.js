@@ -2150,6 +2150,16 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
             ? testFailure.bind(null, value)
             : testSuccess.bind(null, value);
     };
+    publicExports.shouldBeCloseTo = function TK_DebugTestShouldPass_shouldBeCloseTo(tolerance, wanted) {
+        return ValueAsserter({
+            checks: [shouldBeCloseToCheck.bind(null, wanted, tolerance)],
+            want: "none",
+            to: "fail"
+        });
+    };
+    const shouldBeCloseToCheck = function TK_DebugTestShouldBeCloseToCheck(wanted, tolerance, value) {
+        return typeof value === "number" && value >= wanted - tolerance && value <= wanted + tolerance;
+    };
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
             throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];

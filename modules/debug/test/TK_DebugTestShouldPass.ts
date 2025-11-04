@@ -2,6 +2,10 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
+    shouldBeCloseTo(
+        tollerance: number,
+        wanted: number,
+    ): ValueAsserter,
     shouldPass(
         check: { (value: any): boolean },
         ...additionalChecks: { (value: any): boolean }[]
@@ -37,6 +41,21 @@ type ValueAsserter = {
             ? testFailure.bind(null, value)
             : testSuccess.bind(null, value);
     };
+
+    publicExports.shouldBeCloseTo = function TK_DebugTestShouldPass_shouldBeCloseTo(
+        tolerance, wanted,
+    ) {
+        return ValueAsserter({
+            checks: [shouldBeCloseToCheck.bind(null, wanted, tolerance)],
+            want: "none",
+            to: "fail"
+        });
+    };
+    const shouldBeCloseToCheck = function TK_DebugTestShouldBeCloseToCheck(
+        wanted: any, tolerance: number, value: any
+    ) {
+        return typeof value === "number" && value >= wanted - tolerance && value <= wanted + tolerance;
+    }
 
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
