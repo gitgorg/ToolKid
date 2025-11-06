@@ -540,7 +540,10 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
                 fileConnection: "optional",
                 readLayerContent: function TK_CodeCSS_readURL(inputs) {
                     const content = readLayerContent(inputs).trim();
-                    if (content[0] === "'" && content.length > 2) {
+                    const firstChar = content[0];
+                    if (content.length > 2
+                        && (firstChar === "'" || firstChar === '"')
+                        && content[content.length - 1] === firstChar) {
                         return content.slice(1, -1);
                     }
                     else {
