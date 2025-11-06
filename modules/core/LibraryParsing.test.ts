@@ -244,6 +244,30 @@
         }
     }, {
         subject: createTextParser,
+        execute: function equalClosings() {
+            const parser = createTextParser({
+                layerDefinition: {
+                    html_cdw: {
+                        patterns: [[/DATA-MVC="/i, '"'], [/DATA-CDW="/i, '"']],
+                    },
+                },
+                parseClosings: register,
+            });
+            inputList.length = 0;
+            parser('<a DATA-MVC="b" DATA-CDW="c">content</a>');
+            assertEquality({
+                "inputList": {
+                    value: inputList,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [ 14, 'html_cdw', '"', 3 ],
+                        [ 27, 'html_cdw', '"', 16 ]
+                    ]
+                }
+            });
+        }
+    }, {
+        subject: createTextParser,
         execute: function fail_parseText() {
             inputList.length = 0;
             const parser = createTextParser({

@@ -84,5 +84,53 @@
                 }
             });
         }
+    }, {
+        subject: "HTML textLayerDefinition",
+        execute: function realComplex() {
+            const contents = <any[][]>[];
+            const parser = createTextParser({
+                layerDefinition: textLayerDefinition,
+                parseClosings: function (closing, layer, inputs, depth, opening) {
+                    contents.push([
+                        layer.name, readLayerContent(arguments),
+                        opening.index, opening[0],
+                        closing.index, closing[0],
+                    ]);
+                }
+            });
+            parser('<!DOCTYPE html>\
+<html lang="de">\
+<head DATA-INSERT="head.html"></head>\
+<body DATA-CDW="\
+    && #info() | watch: [[keyDown,Alt,c],[keyDown,Alt,\'ç\']]\
+">\
+    <h1 class="hidden">TakeLaw Help Center</h1>\
+    <header DATA-INSERT="header.html"></header>\
+    <main></main>\
+    <footer DATA-INSERT="footer.html"></footer>\
+</body>\
+</html>');
+            assert({
+                "real complex values": {
+                    value: contents,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        ['html_attribute', 'de', 21, 'lang="', 29, '"'],
+                        ['html_tagStart', ' lang="de"', 15, '<html', 30, '>'],
+                        ['html_insert', 'head.html', 37, 'DATA-INSERT="', 59, '"'],
+                        ['html_tagStart', ' DATA-INSERT="head.html"', 31, '<head', 60, '>'],
+                        ['html_cdw', "    && #info() | watch: [[keyDown,Alt,c],[keyDown,Alt,'ç']]", 74, 'DATA-CDW="', 143, '"'],
+                        ['html_tagStart', ` DATA-CDW="    && #info() | watch: [[keyDown,Alt,c],[keyDown,Alt,'ç']]"`, 68, '<body', 144, '>'],
+                        ['html_attribute', 'hidden', 153, 'class="', 166, '"'],
+                        ['html_tagStart', ' class="hidden"', 149, '<h1', 167, '>'],
+                        ['html_insert', 'header.html', 204, 'DATA-INSERT="', 228, '"'],
+                        ['html_tagStart', ' DATA-INSERT="header.html"', 196, '<header', 229, '>'],
+                        ['html_tagStart', '', 243, '<main', 248, '>'],
+                        ['html_insert', 'footer.html', 268, 'DATA-INSERT="', 292, '"'],
+                        ['html_tagStart', ' DATA-INSERT="footer.html"', 260, '<footer', 293, '>']
+                    ]
+                }
+            });
+        }
     });
 })();

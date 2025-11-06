@@ -43,7 +43,7 @@ interface TK_file_file {
     };
 
     if (typeof Element !== "undefined") {
-        publicExports.loopFiles = function TK_File_loopFiles(inputs) {
+        publicExports.loopFiles = function TK_File_loopFilesClient(inputs) {
             const { includes, excludes, execute } = <Dictionary>inputs;
             if (includes instanceof Array) {
                 includes.forEach(function (pattern, index) {

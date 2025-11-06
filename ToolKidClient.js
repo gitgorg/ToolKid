@@ -280,9 +280,12 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                         ];
                     }
                     layer.signals.push(...subLayer.openings);
-                    let count = subLayer.openings.length;
+                    const count = subLayer.openings.length;
                     for (let i = 0; i < count; i += 1) {
-                        directions.push([subLayer, i]);
+                        directions.push([
+                            subLayer, //next layer
+                            subLayer.closings.indexOf(subLayer.closings[i]) //expected index for closing
+                        ]);
                     }
                 }
             });
@@ -2040,7 +2043,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
         const subjectName = (result.subject === undefined)
             ? "?"
-            : result.subject.name || "?";
+            : result.subject.name || result.subject;
         console.warn("\n" +
             colorText("negative", ">>  " + summaryName
                 + "  >  " + result.errorSource
@@ -2603,7 +2606,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         return parts[parts.length - 1];
     };
     if (typeof Element !== "undefined") {
-        publicExports.loopFiles = function TK_File_loopFiles(inputs) {
+        publicExports.loopFiles = function TK_File_loopFilesClient(inputs) {
             const { includes, excludes, execute } = inputs;
             if (includes instanceof Array) {
                 includes.forEach(function (pattern, index) {

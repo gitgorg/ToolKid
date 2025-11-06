@@ -164,9 +164,12 @@ type TextParserForClosings = {
                         ];
                     }
                     layer.signals.push(...subLayer.openings);
-                    let count = subLayer.openings.length;
+                    const count = subLayer.openings.length;
                     for (let i = 0; i < count; i += 1) {
-                        directions.push([subLayer, i]);
+                        directions.push([
+                            subLayer, //next layer
+                            subLayer.closings.indexOf(subLayer.closings[i]) //expected index for closing
+                        ]);
                     }
                 }
             });
