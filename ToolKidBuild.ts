@@ -22,7 +22,7 @@ type ToolKidConfig = {
 
 
 (function ToolKidBuild_init() {
-    console.log(">>  activating ToolKid");
+    console.log("\u001b[96m>>  activating ToolKid");
     const FS = require("fs");
     const { basename, resolve } = require("path");
     const libraryCore = <LibraryCore_file><any>/*weird any for tsc...*/require(
@@ -111,7 +111,7 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
 
     publicExports.write = function ToolKidBuild_write(config) {
         const exportPath = resolve(config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js"));
-        console.log(">>  writing Toolkid to " + exportPath);
+        console.log("\u001b[90m>>  writing Toolkid to " + exportPath);
         const filePaths = new Map([
             ["LibraryCore.js", ""], ["LibraryRegularExpression.js", ""]
         ]);
@@ -131,7 +131,7 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
             path: exportPath,
             content: [
                 LibraryBuilding.bundlerDefaults.header,
-                'console.log(">>  activating ToolKid");\n',
+                'console.log("\\u001b[96m>>  activating ToolKid");\n',
                 ...LibraryBuilding.bundleFile({
                     readBundleContent: readBundleContent.bind(null, filePaths),
                     bundleIDs: [...filePaths.keys()]

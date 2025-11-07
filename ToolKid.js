@@ -3,7 +3,7 @@
 const fileCollection = new Map();
 
 
-console.log(">>  activating ToolKid");
+console.log("\u001b[96m>>  activating ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
@@ -676,7 +676,7 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
                     const firstChar = content[0];
                     if (content.length > 2
                         && (firstChar === "'" || firstChar === '"')
-                        && content[content.length - 1] === firstChar) {
+                        && content[content.length - 1] === firstChar) { //removing quotes
                         return content.slice(1, -1);
                     }
                     else {
