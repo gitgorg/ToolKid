@@ -99,7 +99,8 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
     };
 
     let disableCount = 0;
-    let originalLog: TK_DebugTerminalLog_file["logBasic"];
+    let originalConsoleLog: TK_DebugTerminalLog_file["logBasic"];
+    let originalConsoleEror: TK_DebugTerminalLog_file["logError"];
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
         console.log(
             ...publicExports.colorStrings({
@@ -110,7 +111,8 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         if (amount === false) {
             if (disableCount !== 0) {
                 disableCount = 0;
-                console.warn = originalLog;
+                console.warn = originalConsoleLog;
+                console.error = originalConsoleEror;
             }
             return;
         }
@@ -120,8 +122,10 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         }
 
         if (disableCount === 0) {
-            originalLog = console.warn;
+            originalConsoleLog = console.warn;
+            originalConsoleEror = console.error;
             console.warn = disableLogsTick;
+            console.error = disableLogsTick;
         }
         disableCount += amount;
     };
@@ -129,7 +133,8 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
     const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
         disableCount -= 1;
         if (disableCount === 0) {
-            console.warn = originalLog;
+            console.warn = originalConsoleLog;
+            console.error = originalConsoleEror;
         }
     };
 

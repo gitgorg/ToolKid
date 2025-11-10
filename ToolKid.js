@@ -2647,7 +2647,8 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         }
     };
     let disableCount = 0;
-    let originalLog;
+    let originalConsoleLog;
+    let originalConsoleEror;
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
         console.log(...publicExports.colorStrings({
             colorName: "grey",
@@ -2656,7 +2657,8 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         if (amount === false) {
             if (disableCount !== 0) {
                 disableCount = 0;
-                console.warn = originalLog;
+                console.warn = originalConsoleLog;
+                console.error = originalConsoleEror;
             }
             return;
         }
@@ -2664,15 +2666,18 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
             throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
         }
         if (disableCount === 0) {
-            originalLog = console.warn;
+            originalConsoleLog = console.warn;
+            originalConsoleEror = console.error;
             console.warn = disableLogsTick;
+            console.error = disableLogsTick;
         }
         disableCount += amount;
     };
     const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
         disableCount -= 1;
         if (disableCount === 0) {
-            console.warn = originalLog;
+            console.warn = originalConsoleLog;
+            console.error = originalConsoleEror;
         }
     };
     publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
