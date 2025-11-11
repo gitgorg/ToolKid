@@ -3,7 +3,7 @@
 const fileCollection = new Map();
 
 
-console.log(">>  activating ToolKid");
+console.log("\u001b[96m>>  activating ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
@@ -280,9 +280,12 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                         ];
                     }
                     layer.signals.push(...subLayer.openings);
-                    let count = subLayer.openings.length;
+                    const count = subLayer.openings.length;
                     for (let i = 0; i < count; i += 1) {
-                        directions.push([subLayer, i]);
+                        directions.push([
+                            subLayer, //next layer
+                            subLayer.closings.indexOf(subLayer.closings[i]) //expected index for closing
+                        ]);
                     }
                 }
             });
@@ -537,7 +540,10 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
                 fileConnection: "optional",
                 readLayerContent: function TK_CodeCSS_readURL(inputs) {
                     const content = readLayerContent(inputs).trim();
-                    if (content[0] === "'" && content.length > 2) {
+                    const firstChar = content[0];
+                    if (content.length > 2
+                        && (firstChar === "'" || firstChar === '"')
+                        && content[content.length - 1] === firstChar) { //removing quotes
                         return content.slice(1, -1);
                     }
                     else {
@@ -1538,6 +1544,158 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
 "use strict";
+(function TK_DebugCallstack_init() {
+    const publicExports = module.exports = {};
+    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
+        const firstFrameIndex = Math.max(1, inputs.position || 1);
+        return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
+    };
+    const regExpAfterLastSlash = /[^\/\\]+$/;
+    const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
+        const filePart = part.slice(part.search(regExpAfterLastSlash));
+        return filePart.split(":")[0];
+    };
+    ;
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DebugCallstack.js", module.exports);
+
+"use strict";
+(function TK_DebugTerminalLog_init() {
+    const publicExports = module.exports = {};
+    const colorsServer = {
+        blue: "\u001b[94m",
+        cyan: "\u001b[96m",
+        green: "\u001b[32m",
+        grey: "\u001b[90m",
+        magenta: "\u001b[95m",
+        orange: "\u001b[33m",
+        red: "\u001b[31m",
+        white: "\u001b[97m"
+    };
+    const typeColors = {
+        error: "red",
+        warning: "orange",
+        important: "cyan",
+        basic: "grey",
+        none: "white"
+    };
+    publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
+        const passedInputs = {
+            colorCode: publicExports.getColorCode(inputs.colorName),
+            result: [],
+            unfinishedString: undefined
+        };
+        inputs.values.forEach(colorStrings.bind(null, passedInputs));
+        colorStringsFinish(passedInputs);
+        return passedInputs.result;
+    };
+    const colorStrings = function (inputs, value) {
+        if (typeof value === "string") {
+            if (typeof inputs.unfinishedString === "string") {
+                inputs.unfinishedString += value;
+            }
+            else {
+                inputs.unfinishedString = inputs.colorCode + value;
+            }
+        }
+        else {
+            colorStringsFinish(inputs);
+            inputs.result.push(value);
+        }
+    };
+    const colorStringsFinish = function TK_DebugTerminalLog_colorStringsFinish(inputs) {
+        if (typeof inputs.unfinishedString === "string") {
+            inputs.result.push(inputs.unfinishedString + colorsServer.white);
+            inputs.unfinishedString = undefined;
+        }
+    };
+    let disableCount = 0;
+    let originalConsoleLog;
+    let originalConsoleEror;
+    publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
+        console.log(...publicExports.colorStrings({
+            colorName: "grey",
+            values: ["TK_DebugTerminalLog_disableLogs - " + amount]
+        }));
+        if (amount === false) {
+            if (disableCount !== 0) {
+                disableCount = 0;
+                console.warn = originalConsoleLog;
+                console.error = originalConsoleEror;
+            }
+            return;
+        }
+        if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+            throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
+        }
+        if (disableCount === 0) {
+            originalConsoleLog = console.warn;
+            originalConsoleEror = console.error;
+            console.warn = disableLogsTick;
+            console.error = disableLogsTick;
+        }
+        disableCount += amount;
+    };
+    const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
+        disableCount -= 1;
+        if (disableCount === 0) {
+            console.warn = originalConsoleLog;
+            console.error = originalConsoleEror;
+        }
+    };
+    publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
+        const code = colorsServer[name];
+        if (code === undefined) {
+            throw [
+                "TK_DebugTerminalLog_getColorCode - unknown color:", name,
+                " only the following colors are known:", Object.keys(colorsServer)
+            ];
+        }
+        return code;
+    };
+    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
+        return (typeof inputs[0] === "string")
+            ? ">>  " : ">>";
+    };
+    publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
+        console.error(...publicExports.colorStrings({
+            colorName: "red",
+            values: [getPrefix(inputs), ...inputs]
+        }));
+    };
+    const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
+        console.warn(...publicExports.colorStrings({
+            colorName: typeColors[type],
+            values: [getPrefix(inputs), ...inputs]
+        }));
+    };
+    publicExports.logWarning = logWithLevel.bind(null, "warning");
+    publicExports.logImportant = logWithLevel.bind(null, "important");
+    publicExports.logBasic = logWithLevel.bind(null, "basic");
+    if (typeof process !== "undefined") {
+        process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
+            publicExports.logError("UNHANDLED PROMISE REJECTION");
+            publicExports.logError(reason);
+        });
+    }
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DebugTerminalLog.js", module.exports);
+
+"use strict";
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
     const resultGroups = new Map([["default", {
@@ -2040,7 +2198,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
         const subjectName = (result.subject === undefined)
             ? "?"
-            : result.subject.name || "?";
+            : result.subject.name || result.subject;
         console.warn("\n" +
             colorText("negative", ">>  " + summaryName
                 + "  >  " + result.errorSource
@@ -2149,6 +2307,16 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         return (mode === "fail")
             ? testFailure.bind(null, value)
             : testSuccess.bind(null, value);
+    };
+    publicExports.shouldBeCloseTo = function TK_DebugTestShouldPass_shouldBeCloseTo(tolerance, wanted) {
+        return ValueAsserter({
+            checks: [shouldBeCloseToCheck.bind(null, wanted, tolerance)],
+            want: "none",
+            to: "fail"
+        });
+    };
+    const shouldBeCloseToCheck = function TK_DebugTestShouldBeCloseToCheck(wanted, tolerance, value) {
+        return typeof value === "number" && value >= wanted - tolerance && value <= wanted + tolerance;
     };
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
@@ -2427,153 +2595,6 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
 
 "use strict";
-(function TK_DebugCallstack_init() {
-    const publicExports = module.exports = {};
-    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
-        const firstFrameIndex = Math.max(1, inputs.position || 1);
-        return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
-    };
-    const regExpAfterLastSlash = /[^\/\\]+$/;
-    const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
-        const filePart = part.slice(part.search(regExpAfterLastSlash));
-        return filePart.split(":")[0];
-    };
-    ;
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DebugCallstack.js", module.exports);
-
-"use strict";
-(function TK_DebugTerminalLog_init() {
-    const publicExports = module.exports = {};
-    const colorsServer = {
-        blue: "\u001b[94m",
-        cyan: "\u001b[96m",
-        green: "\u001b[32m",
-        grey: "\u001b[90m",
-        magenta: "\u001b[95m",
-        orange: "\u001b[33m",
-        red: "\u001b[31m",
-        white: "\u001b[97m"
-    };
-    const typeColors = {
-        error: "red",
-        warning: "orange",
-        important: "cyan",
-        basic: "grey",
-        none: "white"
-    };
-    publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
-        const passedInputs = {
-            colorCode: publicExports.getColorCode(inputs.colorName),
-            result: [],
-            unfinishedString: undefined
-        };
-        inputs.values.forEach(colorStrings.bind(null, passedInputs));
-        colorStringsFinish(passedInputs);
-        return passedInputs.result;
-    };
-    const colorStrings = function (inputs, value) {
-        if (typeof value === "string") {
-            if (typeof inputs.unfinishedString === "string") {
-                inputs.unfinishedString += value;
-            }
-            else {
-                inputs.unfinishedString = inputs.colorCode + value;
-            }
-        }
-        else {
-            colorStringsFinish(inputs);
-            inputs.result.push(value);
-        }
-    };
-    const colorStringsFinish = function TK_DebugTerminalLog_colorStringsFinish(inputs) {
-        if (typeof inputs.unfinishedString === "string") {
-            inputs.result.push(inputs.unfinishedString + colorsServer.white);
-            inputs.unfinishedString = undefined;
-        }
-    };
-    let disableCount = 0;
-    let originalLog;
-    publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
-        console.log(...publicExports.colorStrings({
-            colorName: "grey",
-            values: ["TK_DebugTerminalLog_disableLogs - " + amount]
-        }));
-        if (amount === false) {
-            if (disableCount !== 0) {
-                disableCount = 0;
-                console.warn = originalLog;
-            }
-            return;
-        }
-        if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
-            throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
-        }
-        if (disableCount === 0) {
-            originalLog = console.warn;
-            console.warn = disableLogsTick;
-        }
-        disableCount += amount;
-    };
-    const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
-        disableCount -= 1;
-        if (disableCount === 0) {
-            console.warn = originalLog;
-        }
-    };
-    publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
-        const code = colorsServer[name];
-        if (code === undefined) {
-            throw [
-                "TK_DebugTerminalLog_getColorCode - unknown color:", name,
-                " only the following colors are known:", Object.keys(colorsServer)
-            ];
-        }
-        return code;
-    };
-    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
-        return (typeof inputs[0] === "string")
-            ? ">>  " : ">>";
-    };
-    publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
-        console.error(...publicExports.colorStrings({
-            colorName: "red",
-            values: [getPrefix(inputs), ...inputs]
-        }));
-    };
-    const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
-        if (inputs.length === 0) {
-            console.log();
-            return;
-        }
-        console.warn(...publicExports.colorStrings({
-            colorName: typeColors[type],
-            values: [getPrefix(inputs), ...inputs]
-        }));
-    };
-    publicExports.logWarning = logWithLevel.bind(null, "warning");
-    publicExports.logImportant = logWithLevel.bind(null, "important");
-    publicExports.logBasic = logWithLevel.bind(null, "basic");
-    if (typeof process !== "undefined") {
-        process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
-            publicExports.logError("UNHANDLED PROMISE REJECTION");
-            publicExports.logError(reason);
-        });
-    }
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DebugTerminalLog.js", module.exports);
-
-"use strict";
 (function TK_File_init() {
     const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
     const fileRegistry = new Map();
@@ -2593,7 +2614,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         return parts[parts.length - 1];
     };
     if (typeof Element !== "undefined") {
-        publicExports.loopFiles = function TK_File_loopFiles(inputs) {
+        publicExports.loopFiles = function TK_File_loopFilesClient(inputs) {
             const { includes, excludes, execute } = inputs;
             if (includes instanceof Array) {
                 includes.forEach(function (pattern, index) {
