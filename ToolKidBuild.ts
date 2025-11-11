@@ -39,8 +39,6 @@ type ToolKidConfig = {
 
 
 
-
-
     let config;
     if (FS.existsSync(resolve("./ToolKidConfig.json"))) {
         config = <ToolKidConfig>JSON.parse(

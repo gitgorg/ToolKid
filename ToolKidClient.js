@@ -3,7 +3,7 @@
 const fileCollection = new Map();
 
 
-console.log(">>  activating ToolKid");
+console.log("\u001b[96m>>  activating ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
@@ -280,9 +280,12 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                         ];
                     }
                     layer.signals.push(...subLayer.openings);
-                    let count = subLayer.openings.length;
+                    const count = subLayer.openings.length;
                     for (let i = 0; i < count; i += 1) {
-                        directions.push([subLayer, i]);
+                        directions.push([
+                            subLayer, //next layer
+                            subLayer.closings.indexOf(subLayer.closings[i]) //expected index for closing
+                        ]);
                     }
                 }
             });
@@ -537,7 +540,10 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
                 fileConnection: "optional",
                 readLayerContent: function TK_CodeCSS_readURL(inputs) {
                     const content = readLayerContent(inputs).trim();
-                    if (content[0] === "'" && content.length > 2) {
+                    const firstChar = content[0];
+                    if (content.length > 2
+                        && (firstChar === "'" || firstChar === '"')
+                        && content[content.length - 1] === firstChar) { //removing quotes
                         return content.slice(1, -1);
                     }
                     else {
@@ -2040,7 +2046,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const logFailure = function TK_DebugTestFull_logFailure(summaryName, result) {
         const subjectName = (result.subject === undefined)
             ? "?"
-            : result.subject.name || "?";
+            : result.subject.name || result.subject;
         console.warn("\n" +
             colorText("negative", ">>  " + summaryName
                 + "  >  " + result.errorSource
@@ -2149,6 +2155,16 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         return (mode === "fail")
             ? testFailure.bind(null, value)
             : testSuccess.bind(null, value);
+    };
+    publicExports.shouldBeCloseTo = function TK_DebugTestShouldPass_shouldBeCloseTo(tolerance, wanted) {
+        return ValueAsserter({
+            checks: [shouldBeCloseToCheck.bind(null, wanted, tolerance)],
+            want: "none",
+            to: "fail"
+        });
+    };
+    const shouldBeCloseToCheck = function TK_DebugTestShouldBeCloseToCheck(wanted, tolerance, value) {
+        return typeof value === "number" && value >= wanted - tolerance && value <= wanted + tolerance;
     };
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
         if (checks.length === 0) {
@@ -2498,7 +2514,8 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         }
     };
     let disableCount = 0;
-    let originalLog;
+    let originalConsoleLog;
+    let originalConsoleEror;
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
         console.log(...publicExports.colorStrings({
             colorName: "grey",
@@ -2507,7 +2524,8 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         if (amount === false) {
             if (disableCount !== 0) {
                 disableCount = 0;
-                console.warn = originalLog;
+                console.warn = originalConsoleLog;
+                console.error = originalConsoleEror;
             }
             return;
         }
@@ -2515,15 +2533,18 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
             throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
         }
         if (disableCount === 0) {
-            originalLog = console.warn;
+            originalConsoleLog = console.warn;
+            originalConsoleEror = console.error;
             console.warn = disableLogsTick;
+            console.error = disableLogsTick;
         }
         disableCount += amount;
     };
     const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
         disableCount -= 1;
         if (disableCount === 0) {
-            console.warn = originalLog;
+            console.warn = originalConsoleLog;
+            console.error = originalConsoleEror;
         }
     };
     publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
@@ -2593,7 +2614,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         return parts[parts.length - 1];
     };
     if (typeof Element !== "undefined") {
-        publicExports.loopFiles = function TK_File_loopFiles(inputs) {
+        publicExports.loopFiles = function TK_File_loopFilesClient(inputs) {
             const { includes, excludes, execute } = inputs;
             if (includes instanceof Array) {
                 includes.forEach(function (pattern, index) {
