@@ -67,7 +67,7 @@ type TKTestResultGroup = {
 
 
 
-    const executeAssert = function assert(inputs: Dictionary) {
+    const executeAssert = function TK_DebugText_executeAssert(inputs: Dictionary) {
         ToolKid.debug.test.assert(inputs);
     };
     const createResultBase = function TK_DebugTest_createResultBase(

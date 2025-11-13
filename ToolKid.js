@@ -1684,7 +1684,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
                 results: []
             }]]);
     let currentResultGroup = resultGroups.get("default");
-    const executeAssert = function assert(inputs) {
+    const executeAssert = function TK_DebugText_executeAssert(inputs) {
         ToolKid.debug.test.assert(inputs);
     };
     const createResultBase = function TK_DebugTest_createResultBase(config) {
