@@ -28,12 +28,12 @@ type TKTestConfig = {
     execute(
         scope: Dictionary
     ): (any | Promise<any>),
-    assert?: Parameters<TK_DebugTest_file["assert"]>[0],
+    assert?: { (): Parameters<TK_DebugTest_file["assert"]>[0] },
 } | {
     execute?: (
         scope: Dictionary
     ) => (any | Promise<any>),
-    assert: Parameters<TK_DebugTest_file["assert"]>[0],
+    assert: { (): Parameters<TK_DebugTest_file["assert"]>[0] },
 })
 type TKTestResult = {
     subject: any,
@@ -67,9 +67,6 @@ type TKTestResultGroup = {
 
 
 
-    const executeAssert = function TK_DebugText_executeAssert(inputs: Dictionary) {
-        ToolKid.debug.test.assert(inputs);
-    };
     const createResultBase = function TK_DebugTest_createResultBase(
         config: TKTestConfig & { assert: any, execute: any },
     ) {
@@ -85,11 +82,12 @@ type TKTestResultGroup = {
     const fillErrorResult = function TK_DebugTest_fillErrorResult(
         testResult: TKTestResult,
         error: any,
-        failureHandler?: { (result: TKTestResult): void }
+        failureHandler?: { (result: TKTestResult): void },
+        callstackPosition=7
     ) {
         testResult.time = 0;
         testResult.errorMessage = error || "Unspecified Error";
-        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
         if (failureHandler !== undefined) {
             failureHandler(testResult);
         }
@@ -162,83 +160,119 @@ type TKTestResultGroup = {
     ) {
         const testResult = createResultBase(<any>config);
         if (typeof config !== "object" || config === null) {
-            return testFinish(fillErrorResult(testResult,
+            return testFinish(config, fillErrorResult(testResult,
                 ["TK_DebugTest_test - config has to be an object but is:", config],
                 resultGroup.failureHandler
-            ), config, {});
+            ), resultGroup, {});
         } else if (!isValidSubject(config.subject)) {
-            return testFinish(fillErrorResult(testResult,
+            return testFinish(config, fillErrorResult(testResult,
                 ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject],
                 resultGroup.failureHandler
-            ), config, {});
+            ), resultGroup, {});
         }
 
-        return testExecute({
+        return testExecute(
             config,
             testResult,
             resultGroup
-        });
+        );
     };
 
     // TODO: unit tests for callback function
 
-    const testExecute = function Test_testExecute(inputs: {
+    const testExecute = function Test_testExecute(
         config: TKTestConfig,
         testResult: TKTestResult,
         resultGroup: TKTestResultGroup
-    }) {
-        const { config, testResult } = inputs;
-        const startTime = Date.now();
-        const scope = {};
-        if (typeof config.execute === "function") {
-            try {
-                const executionPromise = (<Dictionary>config).execute(scope);
-                if (executionPromise instanceof Promise) {
-                    const resultPromiseInputs = {
-                        testResult,
-                        startTime,
-                        promise: executionPromise,
-                        resultGroup: inputs.resultGroup,
-                        source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
-                    };
-                    const resultPromise = <TKTestResultPromise>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
-                        (<Dictionary>resultPromiseInputs).resolver = resolve;
-                    });
-                    resultPromise.subject = config.subject;
-                    resultPromise.execution = config.execute;
-                    executionPromise.then(
-                        testPromiseSuccess.bind(null, resultPromiseInputs),
-                        testPromiseFailure.bind(null, resultPromiseInputs)
-                    );
-                    resultPromise.then(function Test_testExecute_handlePromise() {
-                        const { results } = inputs.resultGroup;
-                        const index = results.indexOf(resultPromise);
-                        testResult.time = Date.now() - startTime;
-                        results[index] = testFinish(testResult, config, scope);
-                    });
-                    return resultPromise;
-                }
-            } catch (error) {
-                fillErrorResult(
-                    testResult, error,
-                    inputs.resultGroup.failureHandler
-                );
+    ) {
+        if (typeof config.execute !== "function") {
+            if (config.assert === undefined) {
+                throw ["TK_DebugTest_test - no valid .execute or .assert defined", config];
             }
-        } else if (config.assert === undefined) {
-            throw ["TK_DebugTest_test - no valid .execute or .assert defined", config];
+
+            return testFinish(config, testResult, resultGroup, {});
         }
 
+        // if (typeof config.execute !== "function") {
+        //     if (config.assert === undefined) {
+        //         return testFinish(fillErrorResult(testResult,
+        //             ["TK_DebugTest_test - no valid .execute or .assert defined", config],
+        //             resultGroup.failureHandler
+        //         ), config, {});
+        //     } else {
+        //         return testFinish(config, testResult, resultGroup, {});
+        //     }
+        // }
+
+        const startTime = Date.now();
+        const scope = {};
+        try {
+            const executionPromise = (<Dictionary>config).execute(scope);
+            if (executionPromise instanceof Promise) {
+                const resultPromiseInputs = {
+                    testResult,
+                    startTime,
+                    promise: executionPromise,
+                    resultGroup,
+                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
+                };
+                const resultPromise = <TKTestResultPromise>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
+                    (<Dictionary>resultPromiseInputs).resolver = resolve;
+                });
+                resultPromise.subject = config.subject;
+                resultPromise.execution = config.execute;
+                executionPromise.then(
+                    testPromiseSuccess.bind(null, resultPromiseInputs),
+                    testPromiseFailure.bind(null, resultPromiseInputs)
+                );
+                resultPromise.then(function Test_testExecute_handlePromise() {
+                    const { results } = resultGroup;
+                    const index = results.indexOf(resultPromise);
+                    testResult.time = Date.now() - startTime;
+                    results[index] = testFinish(config, testResult, resultGroup, scope);
+                });
+                return resultPromise;
+            }
+        } catch (error) {
+            fillErrorResult(
+                testResult, error,
+                resultGroup.failureHandler
+            );
+        }
         testResult.time = Date.now() - startTime;
-        return testFinish(testResult, config, scope);
+        return testFinish(config, testResult, resultGroup, scope);
     };
 
     const testFinish = function (
-        testResult: TKTestResult,
         config: TKTestConfig,
+        testResult: TKTestResult,
+        resultGroup: TKTestResultGroup,
         scope: Dictionary,
     ) {
-        if (config.assert !== undefined) {
-            executeAssert(config.assert);
+        if (testResult.errorMessage === undefined && config.assert !== undefined) {
+            if (typeof config.assert !== "function") {
+                fillErrorResult(testResult,
+                    ["TK_DebugTest_testAssert - the testConfig.assert property has to be a function which returns the inputs for the test.assert function:", config],
+                    resultGroup.failureHandler, 8
+                );
+            } else {
+                try {
+                    const inputs = config.assert();
+                    try {
+                        ToolKid.debug.test.assert(inputs);
+                    } catch (error) {
+                        fillErrorResult(
+                            testResult, error,
+                            resultGroup.failureHandler, 8
+                        );
+                    }
+                } catch (error) {
+                    fillErrorResult(
+                        testResult, ["TK_DebugTest_testAssert - evaluating assert inputs failed:", error],
+                        resultGroup.failureHandler, 8
+                    );
+                }
+            }
         }
         if (typeof config.callback === "function") {
             config.callback({ scope, testResult });

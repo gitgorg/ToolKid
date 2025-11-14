@@ -8,7 +8,12 @@
 
     const { test, assertEquality, getResultGroup, setFailureHandler, shouldPass, switchResultGroup } = ToolKid.debug.test;
 
-    const shouldBeInteger = shouldPass(function isNumber(value) { return Number.isInteger(value) });
+    const shouldBeInteger = shouldPass(function isNumber(value) {
+        return Number.isInteger(value);
+    });
+    const shouldBeArray = shouldPass(function isArray(value) {
+        return value instanceof Array && value.length > 0;
+    });
 
     //setup helping functions
     const createPromise = function () {
@@ -121,6 +126,26 @@
     })[0];
     setTimeout(failingPromise.reject.bind(null, "asynchronous failure"), 1000);
 
+    // assert not being a function
+    test({
+        subject: test,
+        assert: <any>{ "assert 1": [true, true] }
+    });
+
+    // assert throwing
+    test({
+        subject: test,
+        assert: function () { throw ["assert 2"] }
+    });
+
+    // assert failing
+    test({
+        subject: test,
+        assert: function () { return { "assert 3": [true, false] }; }
+    });
+
+    // throw ["TK_Debug_test - invalid assert did n't fail"];
+
     switchResultGroup(currentResultGroup.name);
 
     test({
@@ -147,6 +172,24 @@
                         name: "failSynchronous",
                         time: shouldBeInteger,
                         errorMessage: ["synchronous failure"],
+                        errorSource: "TK_DebugTest.test.js",
+                    }, {
+                        subject: test,
+                        name: "assert",
+                        time: shouldBeInteger,
+                        errorMessage: shouldBeArray,
+                        errorSource: "TK_DebugTest.test.js",
+                    }, {
+                        subject: test,
+                        name: "assert",
+                        time: shouldBeInteger,
+                        errorMessage: shouldBeArray,
+                        errorSource: "TK_DebugTest.test.js",
+                    }, {
+                        subject: test,
+                        name: "assert",
+                        time: shouldBeInteger,
+                        errorMessage: shouldBeArray,
                         errorSource: "TK_DebugTest.test.js",
                     }, {
                         subject: test,
