@@ -30,7 +30,6 @@ type TestSummary = {
 (function TK_DebugTestSummary_init() {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-
     const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(
         testResult: TKTestResult
     ) {
@@ -158,6 +157,7 @@ type TestSummary = {
             setTimeout(summaryCallback.bind(null, boundData), 0);
         }
     };
+
     const summaryCallback = function TK_DebugTestSummary_summaryCallback(
         boundData: Dictionary
     ) {
