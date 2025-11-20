@@ -28,15 +28,17 @@
     const closeTo10 = shouldBeCloseTo(2, 10);
     test({
         subject: shouldBeCloseTo,
-        assert: {
-            "exact fit tested": [10, shouldBeCloseTo(2, 10)],
-            "exact fit": [closeTo10(10), true],
-            "lower": [closeTo10(9), true],
-            "lower limit": [closeTo10(8), true],
-            "too low": [closeTo10(7), false],
-            "higher": [closeTo10(11), true],
-            "higher limit": [closeTo10(12), true],
-            "too high": [closeTo10(13), false],
+        assert: function () {
+            return {
+                "exact fit tested": [10, shouldBeCloseTo(2, 10)],
+                "exact fit": [closeTo10(10), true],
+                "lower": [closeTo10(9), true],
+                "lower limit": [closeTo10(8), true],
+                "too low": [closeTo10(7), false],
+                "higher": [closeTo10(11), true],
+                "higher limit": [closeTo10(12), true],
+                "too high": [closeTo10(13), false],
+            };
         }
     });
 

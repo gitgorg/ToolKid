@@ -8,40 +8,44 @@
 
     test({
         subject: collectAttributes,
-        assert: {
-            "CONFIG": { toleranceDepth: 4 },
-            "no attributes": [collectAttributes('<a></a>'), {
-                attributes: {}, endPosition: 3
-            }],
-            "no tag ending": [collectAttributes('<a b="c"'), {
-                attributes: {}, error: Error
-            }]
+        assert: function () {
+            return {
+                "CONFIG": { toleranceDepth: 4 },
+                "no attributes": [collectAttributes('<a></a>'), {
+                    attributes: {}, endPosition: 3
+                }],
+                "no tag ending": [collectAttributes('<a b="c"'), {
+                    attributes: {}, error: Error
+                }]
+            };
         }
     });
 
     test({
         subject: extendTag,
-        assert: {
-            "complex": {
-                value: extendTag({
-                    baseTag: '\
+        assert: function () {
+            return {
+                "complex": {
+                    value: extendTag({
+                        baseTag: '\
 <a b="1" c="2" d="\n\
     3\n\
 ">',
-                    extensionTag: '\
+                        extensionTag: '\
 <A c="\n\
     one two\n\
 " d="three" e="four"\
 '
-                }).join(""),
-                shouldBe: '\
+                    }).join(""),
+                        shouldBe: '\
 <a b="1" c="\n\
     one two\n\
  2" d="three \n\
     3\n\
 " e="four">\
 '
-            }
+                }
+            };
         }
     });
 
