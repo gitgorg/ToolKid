@@ -6,21 +6,25 @@
 
     test({
         subject: parse,
-        assert: {
-            "CONFIG": {
-                toleranceDepth: 3
-            },
-            "simple": [parse(`
-                name, age, location
-                ich, 20, hier
-                du, 30, dort
-                ihr, 140, hier
-            `), [
-                ["name", "age", "location"],
-                ["ich", 20, "hier"],
-                ["du", 30, "dort"],
-                ["ihr", 140, "hier"],
-            ]]
+        assert: function () {
+            return {
+                "CONFIG": {
+                    toleranceDepth: 3
+                },
+                "simple": [
+                    parse(`
+                        name, age, location
+                        ich, 20, hier
+                        du, 30, dort
+                        ihr, 140, hier
+                    `), [
+                        ["name", "age", "location"],
+                        ["ich", 20, "hier"],
+                        ["du", 30, "dort"],
+                        ["ihr", 140, "hier"],
+                    ]
+                ]
+            }
         }
     });
 })();
