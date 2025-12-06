@@ -26,10 +26,15 @@ interface TK_DebugCallstack_file {
     };
 
     const regExpAfterLastSlash = /[^\/\\]+$/;
+    let position = 0;
     const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
-        const filePart = part.slice(part.search(regExpAfterLastSlash));
+        position = part.search(regExpAfterLastSlash);
+        if (position === 0) {
+            position = part.indexOf("at") + 3;
+        }
+        const filePart = part.slice(position);
         return filePart.split(":")[0];
-    };;
+    };
 
 
 
