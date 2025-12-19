@@ -2144,10 +2144,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         }
     };
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndConfig) {
-        const [, config] = nameAndConfig;
-        if (config.logValue === true) {
-            console.log("~ " + nameAndConfig[0] + " ~ value is:", config.value);
-        }
+        const config = nameAndConfig[1];
         if (config.shouldBe === Error) {
             let returned;
             try {
@@ -2163,13 +2160,26 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         if (returned === true) {
             return;
         }
-        const errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+        let errorMessage;
+        if (config.passOnDepthExceed !== true) {
+            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+        }
+        else {
+            const cleaned = returned.filter(isNotTooDeep);
+            if (cleaned.length === 0) {
+                return;
+            }
+            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...cleaned];
+        }
         if (typeof config.catchFailure === "function") {
             config.catchFailure(errorMessage);
         }
         else {
             errors.push(...errorMessage);
         }
+    };
+    const isNotTooDeep = function TK_DebugTestAssertion_isNotToDeep(difference) {
+        return difference.type !== "tooDeep";
     };
     const isShortConfig = (typeof Array.isArray === "function")
         ? function TK_DebugTestAssertion_isShortConfig(value) {

@@ -44,8 +44,8 @@ type TK_AssertConfig = {
             errorMessage: [description: string, ...details: any[]]
         ): void
     },
-    logValue?: true,
     toleranceDepth?: number,
+    passOnDepthExceed?: true,
 }
 
 
@@ -112,10 +112,7 @@ type TK_AssertConfig = {
         errors: (string | EqualityDifference)[],
         nameAndConfig: [testName: string, config: any]
     ) {
-        const [, config] = nameAndConfig;
-        if (config.logValue === true) {
-            console.log("~ " + nameAndConfig[0] + " ~ value is:", config.value);
-        }
+        const config = nameAndConfig[1];
         if (config.shouldBe === Error) {
             let returned;
             try {
@@ -132,12 +129,29 @@ type TK_AssertConfig = {
             return;
         }
 
-        const errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+
+        let errorMessage: any[];
+        if (config.passOnDepthExceed !== true) {
+            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+        } else {
+            const cleaned = returned.filter(isNotTooDeep);
+            if (cleaned.length === 0) {
+                return;
+            }
+
+            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...cleaned];
+        }
         if (typeof config.catchFailure === "function") {
             config.catchFailure(errorMessage);
         } else {
             errors.push(...errorMessage);
         }
+    };
+
+    const isNotTooDeep = function TK_DebugTestAssertion_isNotToDeep(
+        difference: EqualityDifference
+    ) {
+        return difference.type !== "tooDeep";
     };
 
     const isShortConfig = (typeof Array.isArray === "function")
