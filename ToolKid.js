@@ -2770,7 +2770,9 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
             formatedValues[resultIndex] = colorStringsFinish(formatedText);
             resultIndex += 1;
         }
-        return formatedValues.slice(0, resultIndex);
+        return (isClient && resultIndex > 1)
+            ? [formatedValues[0], formatedValues.slice(1, resultIndex)]
+            : formatedValues.slice(0, resultIndex);
     };
     const colorStringsFinish = function TK_DebugTerminalLog_colorStringsFinish(unfinishedString) {
         if (isClient) {
