@@ -22,6 +22,11 @@ type ToolKidConfig = {
 
 
 (function ToolKidBuild_init() {
+    const DEFAULT_INCLUDES = <string[]>[];
+    const DEFAULT_EXCLUDES = ["/DOM/"];
+
+
+
     console.log("\u001b[96m>>  activating ToolKid");
     const FS = require("fs");
     const { basename, resolve } = require("path");
@@ -41,16 +46,21 @@ type ToolKidConfig = {
 
     let config;
     if (FS.existsSync(resolve("./ToolKidConfig.json"))) {
-        config = <ToolKidConfig>JSON.parse(
-            FS.readFileSync("./ToolKidConfig.json", "utf8")
-        );
+        try {
+            config = <ToolKidConfig>JSON.parse(
+                FS.readFileSync("./ToolKidConfig.json", "utf8")
+            );
+        } catch (error) {
+            console.log("\u001b[31m>>  ToolKidConfig.json could not be parsed: " + resolve("./ToolKidConfig.json"), error);
+            config = {};
+        }
     } else {
         config = {}
     }
     loopFiles({
         path: resolve(__dirname, "modules"),
-        includes: ["*.js", ...(config.include || [])],
-        excludes: ["*.test.js", ...(config.exclude || [])],
+        includes: ["*.js", ...(config.include || DEFAULT_INCLUDES)],
+        excludes: ["*.test.js", ...(config.exclude || DEFAULT_EXCLUDES)],
         execute: require
     });
 
@@ -118,8 +128,8 @@ fileCollection.get("LibraryCore.js").registerCoreModule({\n\
                 resolve(__dirname, "modules/core"), //library core first
                 resolve(__dirname, "modules")
             ],
-            includes: ["*.js", ...(config.include || [])],
-            excludes: ["*.test.js", ...(config.exclude || [])],
+            includes: ["*.js", ...(config.include || DEFAULT_INCLUDES)],
+            excludes: ["*.test.js", ...(config.exclude || DEFAULT_EXCLUDES)],
             execute: function ToolKidBuil_executeBuildCoreModules(filePath) {
                 filePaths.set(basename(filePath), filePath);
             }
