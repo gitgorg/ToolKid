@@ -2,19 +2,25 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
+    // awaiting condition
+    condition(
+        name: string
+    ): Condition,
+
+    // creating condition
     condition(
         timeToResolve?: number
     ): Condition,
-    condition(inputs: (
-        { timeToResolve: number }
-        | { timeToReject: number }
-    ) & {
+    condition(inputs: {
+        timeToResolve: number,
         timeoutMessage?: any,
         registerWithName?: string,
-    } ): Condition,
-    condition(
-        name: string
-    ): Condition
+    }): Condition,
+    condition(inputs: {
+        timeToReject: number,
+        timeoutMessage?: any,
+        registerWithName?: string,
+    }): Condition,
 }
 
 type Condition = Promise<any> & {
