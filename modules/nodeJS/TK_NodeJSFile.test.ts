@@ -1,7 +1,7 @@
 (function TK_nodeJSFile_test() {
     const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "../../LibraryFiles/LibraryFiles.test.js"));
     const { assert, assertFailure, test } = ToolKid.debug.test;
-    const { deletePath, extendFile, isDirectory, readDirectory, readFile, writeFile } = ToolKid.nodeJS;
+    const { deletePath, extendFile, isDirectory, isUsedPath, readDirectory, readFile, writeFile } = ToolKid.nodeJS;
 
 
 
@@ -132,6 +132,30 @@
                 execute: isDirectory,
                 withInputs: "nonExistant",
                 shouldThrow: Error
+            });
+        }
+    });
+
+    test({
+        subject: isUsedPath,
+        execute: function basic() {
+            assert({
+                "directory": {
+                    value: isUsedPath(paths.directoryMixedContents),
+                    shouldBe: true
+                },
+                "empty directory": {
+                    value: isUsedPath(paths.directoryEmpty),
+                    shouldBe: true
+                },
+                "file": {
+                    value: isUsedPath(paths.file),
+                    shouldBe: true
+                },
+                "nonExistant'": {
+                    value: isUsedPath("nonExistant"),
+                    shouldBe: false
+                }
             });
         }
     });

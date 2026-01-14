@@ -11,6 +11,9 @@ interface TK_nodeJS_file {
     isDirectory(
         path: string
     ): boolean,
+    isUsedPath(
+        path: string
+    ): boolean,
     readDirectory(
         path: string
     ): string[],
@@ -58,6 +61,8 @@ interface TK_nodeJS_file {
     publicExports.isDirectory = function TK_NodeJSFile_isDirectory(path) {
         return readPathStats(path).isDirectory();
     };
+
+    publicExports.isUsedPath = isUsedPath;
 
     publicExports.readDirectory = function TK_NodeJSFile_readDirectory(path) {
         if (!isUsedPath(path) || !publicExports.isDirectory(path)) {
