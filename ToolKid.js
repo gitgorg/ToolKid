@@ -3111,6 +3111,7 @@ fileCollection.set("TK_File.js", module.exports);
     publicExports.isDirectory = function TK_NodeJSFile_isDirectory(path) {
         return readPathStats(path).isDirectory();
     };
+    publicExports.isUsedPath = isUsedPath;
     publicExports.readDirectory = function TK_NodeJSFile_readDirectory(path) {
         if (!isUsedPath(path) || !publicExports.isDirectory(path)) {
             return [];
