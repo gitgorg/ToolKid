@@ -2736,7 +2736,40 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         return;
     }
     const publicExports = module.exports = {};
-    publicExports.moveSmooth = function RS_h_DOM_moveSmooth(inputs) {
+    const addFrameHandler = function TK_DOMAnimations_addFrameHandler(funk) {
+        frameHandlers[frameHandlerCount] = funk;
+        frameHandlerCount += 1;
+        if (frameHandlerCount === 1) {
+            requestAnimationFrame(handleFrameStart);
+        }
+    };
+    let frameHandlerCount = 0;
+    let frameHandlers = new Array(100);
+    let frameHandlersAlteration = new Array(100);
+    let frameReaderCount = 0;
+    const frameReaders = new Array(100);
+    const handleFrameStart = function TK_DOMAnimations_handleFrameStart() {
+        // operations that force DOM reflow (rendering)
+        for (let i = 0; i < frameReaderCount; i += 1) {
+            frameReaders[i]();
+            frameReaders[i] = undefined;
+        }
+        frameReaderCount = 0;
+        if (frameHandlerCount === 0) {
+            return;
+        }
+        // other operations this frame - switching "active" frameHandlers
+        const length = frameHandlerCount;
+        const handlers = frameHandlers;
+        frameHandlers = frameHandlersAlteration;
+        frameHandlerCount = 0;
+        for (let i = 0; i < length; i += 1) {
+            handlers[i]();
+            handlers[i] = undefined;
+        }
+        frameHandlersAlteration = handlers;
+    };
+    publicExports.smove = function TK_DOMAnimations_smove(inputs) {
         if (inputs.element._animationTarget === inputs.targetParent) {
             return;
         }
@@ -2746,32 +2779,23 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         placeholder.style.pointerEvents = "none";
         const siblings = inputs.targetParent.children;
         inputs.targetParent.insertBefore(placeholder, siblings[inputs.targetIndex || siblings.length]);
-        if (count2 === 0) {
-            requestAnimationFrame(moveSmoothRead);
+        frameReaders[frameReaderCount] = smoveRead.bind(null, inputs, placeholder);
+        frameReaderCount += 1;
+        if (frameReaderCount === 1) {
+            addFrameHandler(smoveSwap);
         }
-        step2[count2] = [inputs, placeholder];
-        count2 += 1;
     };
-    const step2 = new Array(100);
-    let count2 = 0;
-    const moveSmoothRead = function () {
-        let element, elementBCR, placeholder, placeholderBCR, inputs;
-        for (let i = 0; i < count2; i += 1) {
-            inputs = step2[i][0];
-            element = inputs.element;
-            elementBCR = element.getBoundingClientRect();
-            placeholder = step2[i][1];
-            placeholderBCR = placeholder.getBoundingClientRect();
-            animatedSwitch[i] = [inputs, placeholder, elementBCR, placeholderBCR];
-            animatedSwitchCount += 1;
-        }
-        animatedSwitchCount = count2;
-        count2 = 0;
-        requestAnimationFrame(moveSmoothSwap);
+    const smoveRead = function TK_DOMAnimations_smoveRead(internals, placeholder) {
+        animatedSwitch[animatedSwitchCount] = [
+            internals, placeholder,
+            internals.element.getBoundingClientRect(),
+            placeholder.getBoundingClientRect()
+        ];
+        animatedSwitchCount += 1;
     };
-    const animatedSwitch = [];
     let animatedSwitchCount = 0;
-    const moveSmoothSwap = function () {
+    const animatedSwitch = new Array(100);
+    const smoveSwap = function TK_DOMAnimations_smoveSwap() {
         let element, elementBCR, placeholder, placeholderBCR, inputs;
         for (let i = 0; i < animatedSwitchCount; i += 1) {
             inputs = animatedSwitch[i][0];
@@ -2798,36 +2822,52 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
             animatedActive[i] = [inputs, placeholder, elementBCR];
         }
         animatedSwitch.length = 0;
-        requestAnimationFrame(moveSmoothAnimate);
+        animatedSwitchCount = 0;
+        addFrameHandler(smoveAnimate);
     };
     const animatedActive = [];
-    const moveSmoothAnimate = function () {
-        let element, placeholder, inputs;
+    const smoveAnimate = function TK_DOMAnimations_smoveAnimate() {
+        let element, placeholder, data;
         const length = animatedActive.length;
         for (let i = 0; i < length; i += 1) {
-            inputs = animatedActive[i];
-            element = inputs[0].element;
-            placeholder = inputs[1];
+            data = animatedActive[i];
+            const inputs = data[0];
+            element = inputs.element;
+            placeholder = data[1];
             const styleP = placeholder.style;
-            styleP.margin = (inputs[2].height / -2) + "px "
-                + (inputs[2].width / -2) + "px ";
-            const duration = (inputs[0].duration || 1) + "s";
-            styleP.setProperty("--animationDuration", duration);
+            styleP.margin = (data[2].height / -2) + "px "
+                + (data[2].width / -2) + "px ";
             placeholder.classList.add("--animated");
             const styleE = element.style;
+            const duration = (inputs.duration || 1) + "s";
+            styleP.setProperty("--animationDuration", duration);
             styleE.setProperty("--animationDuration", duration);
+            const delay = (inputs.delay || 0) + "s";
+            styleP.setProperty("--animationDelay", delay);
+            styleE.setProperty("--animationDelay", delay);
+            if (inputs.zIndex !== undefined) {
+                styleP.setProperty("--animationZ", inputs.zIndex);
+                styleE.setProperty("--animationZ", inputs.zIndex);
+            }
             element.classList.add("--animated");
             styleE.margin = "";
             delete element._animationTarget;
+            setTimeout(smoveCleanUp.bind(null, element, placeholder), (inputs.duration || 1 + delay) * 1000);
         }
         animatedActive.length = 0;
     };
+    const smoveCleanUp = function TK_DOMAnimations_smoveCleanUp(element, placeholder) {
+        element.classList.remove("--animated");
+        placeholder.remove();
+    };
     const style = document.createElement("style");
     style.textContent = `
-.--animated {
-    transition-property: margin;
-    transition-duration: var(--animationDuration);
-}`;
+        .--animated {
+            transition-property: margin;
+            transition-duration: var(--animationDuration);
+            transition-delay: var(--animationDelay);
+            z-index: var(--animationZ);
+        }`;
     document.head.appendChild(style);
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
