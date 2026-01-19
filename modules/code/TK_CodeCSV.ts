@@ -66,16 +66,16 @@ type TK_CodeCSV_file = {
     const RX_newLine = /\r\n|\r|\n/;
     publicExports.parse = function TK_CodeCSV_parse(text) {
         const linesText = text.trim().split(RX_newLine);
-        const columnCount = linesText[0].split(",").length;
         const length = linesText.length;
-        let lineArray = [] as any[];
+        let lineArray = parseLine(linesText[0]) as any[];
+        const columnCount = lineArray.length;
         const linesArray = new Array(linesText.length);
         let x = 0;
         let value;
         for (let y = 0; y < length; y += 1) {
-            lineArray = linesText[y].split(",");
+            lineArray = parseLine(linesText[y]);
             if (lineArray.length !== columnCount) {
-                console.warn("line count differs from head line:", linesText[y], lineArray, columnCount);
+                console.warn("line count differs from head line " + (y + 1), ":", [linesText[y]], columnCount + " needed columns", lineArray);
                 return linesArray;
             }
 
@@ -96,6 +96,37 @@ type TK_CodeCSV_file = {
             linesArray[y] = lineArray;
         }
         return linesArray;
+    };
+
+    const RX_separator = /(,)|(\\")|(")/g;
+    const lineParts = new Array(100);
+    const parseLine = function (text: string) {
+        RX_separator.lastIndex = 0;
+        let index = 0;
+        let found = RX_separator.exec(text);
+        let position = 0;
+        let insideString = false;
+        while (found !== null) {
+            if (insideString === false) {
+                if (found[1] !== undefined) {
+                    lineParts[index] = text.slice(position, found.index).trim();
+                    index += 1;
+                    position = found.index + 1;
+                } else {
+                    insideString = true;
+                }
+            } else {
+                if (found[3] !== undefined) {
+                    insideString = false;
+                }
+            }
+            found = RX_separator.exec(text);
+        }
+        const rest = text.slice(position).trim();
+        if (rest.length !== 0) {
+            lineParts[index] = rest;
+        }
+        return lineParts.slice(0, index + 1);
     };
 
 
