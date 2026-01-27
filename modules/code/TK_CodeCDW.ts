@@ -18,12 +18,26 @@ interface TK_Code_file {
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
         },
+        cdw_text: {
+            patterns: [["'", "'"]],
+            contains: ["cdw_textEscape", "cdw_textParse"]
+        },
+        cdw_textEscape: {
+            patterns: [["\\", /./]],
+            isROOTLayer: false
+        },
+        cdw_textParse: {
+            patterns: [["{{", "}}"]],
+            contains: ["ROOT"],
+            isROOTLayer: false
+        },
         cdw_import: {
             patterns: [["#import(", ")"]],
             layerData: { fileConnection: "insert" },
         },
         cdw_importMaybe: {
             patterns: [["#load(", ")"]],
+            contains: ["ROOT"],
             layerData: {
                 fileConnection: "optional",
                 readLayerContent: function TK_CodeCDW_readImportMaybe(

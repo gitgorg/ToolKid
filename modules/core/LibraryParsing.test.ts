@@ -47,7 +47,9 @@
         [31, 'import', 'require('],
    /*5*/[39, 'text', '"'],
         [48, 'escape', '\\('],
+        [50, 'escape', '', 48],
         [51, 'escape', '\\)'],
+        [53, 'escape', '', 51],
         [53, 'text', '"', 39],
         [54, 'import', ')', 31],
    /*10*/[61, 'comment', '//'],
@@ -232,11 +234,12 @@
             inputList.length = 0;
             parser('//comment\na = /b\\/c/');
             assertEquality({
-                "simple overlap": {
+                "simple overlap escaped": {
                     value: inputList,
                     toleranceDepth: 3,
                     shouldBe: [
                         [9, "comment", "\n", 0],
+                        [ 18, 'escape', '', 16 ],
                         [19, 'RX', '/', 14]
                     ]
                 }
@@ -260,8 +263,8 @@
                     value: inputList,
                     toleranceDepth: 3,
                     shouldBe: [
-                        [ 14, 'html_cdw', '"', 3 ],
-                        [ 27, 'html_cdw', '"', 16 ]
+                        [14, 'html_cdw', '"', 3],
+                        [27, 'html_cdw', '"', 16]
                     ]
                 }
             });

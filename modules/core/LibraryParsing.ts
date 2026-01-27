@@ -247,13 +247,13 @@ type TextParserForClosings = {
             }
 
             //    expected
-            if (resultString !== "") {
+      
                 parseClosings(
                     RXResult, layerStack[layerDepth].data,
                     inputs, layerDepth,
                     resultStack[layerDepth],
                 );
-            }
+     
             layerDepth -= 1;
             layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;

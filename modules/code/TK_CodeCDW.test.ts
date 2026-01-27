@@ -29,4 +29,59 @@ g #load() h #load('') i #load($variable)");
             });
         }
     });
+
+    test({
+        subject: createTextParser,
+        execute: function parsingCDWText() {
+            const parser = createTextParser({
+                layerDefinition: textLayerDefinition,
+                parseClosings: function (closing, layerData, inputs, depth, opening) {
+                    contents.push([
+                        opening.index,
+                        layerData.name,
+                        inputs.text.slice(opening.index, closing.index + closing[0].length)
+                    ])
+                }
+            });
+            const contents = <any[]>[];
+            parser("'single\\' double\\2'");
+            assert({
+                "quotes": {
+                    value: contents,
+                    shouldBe: [
+                        [7, 'cdw_textEscape', "\\'"],
+                        [16, 'cdw_textEscape', '\\2'],
+                        [0, 'cdw_text', "'single\\' double\\2'"]
+                    ],
+                    toleranceDepth: 3
+                }
+            });
+
+            contents.length = 0;
+            parser("'number{{2+3}} and text \\{{4+5}}'");
+            assert({
+                "quotes": {
+                    value: contents,
+                    shouldBe: [
+                        [7, 'cdw_textParse', "{{2+3}}"],
+                        [24, 'cdw_textEscape', '\\{'],
+                        [0, 'cdw_text', "'number{{2+3}} and text \\{{4+5}}'"]
+                    ],
+                    toleranceDepth: 3
+                }
+            });
+
+//             contents.length = 0;
+//             parser(`
+// && #info() | watch:[[keyDown, Alt, c],[keyDown, Alt, 'ç']]
+// && #load([
+//     path << 'state.js',
+//     callback << {:
+//         && .match.loadState($)
+//     :}
+// ])`
+//             );
+//             log(contents)
+        }
+    });
 })();

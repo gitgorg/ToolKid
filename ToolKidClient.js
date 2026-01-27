@@ -350,9 +350,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                 continue;
             }
             //    expected
-            if (resultString !== "") {
-                parseClosings(RXResult, layerStack[layerDepth].data, inputs, layerDepth, resultStack[layerDepth]);
-            }
+            parseClosings(RXResult, layerStack[layerDepth].data, inputs, layerDepth, resultStack[layerDepth]);
             layerDepth -= 1;
             layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;
@@ -493,12 +491,26 @@ fileCollection.set("LibraryParsing.js", module.exports);
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
         },
+        cdw_text: {
+            patterns: [["'", "'"]],
+            contains: ["cdw_textEscape", "cdw_textParse"]
+        },
+        cdw_textEscape: {
+            patterns: [["\\", /./]],
+            isROOTLayer: false
+        },
+        cdw_textParse: {
+            patterns: [["{{", "}}"]],
+            contains: ["ROOT"],
+            isROOTLayer: false
+        },
         cdw_import: {
             patterns: [["#import(", ")"]],
             layerData: { fileConnection: "insert" },
         },
         cdw_importMaybe: {
             patterns: [["#load(", ")"]],
+            contains: ["ROOT"],
             layerData: {
                 fileConnection: "optional",
                 readLayerContent: function TK_CodeCDW_readImportMaybe(inputs) {
