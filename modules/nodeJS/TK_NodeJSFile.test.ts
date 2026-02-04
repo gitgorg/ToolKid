@@ -1,5 +1,5 @@
 (function TK_nodeJSFile_test() {
-    const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "../../LibraryFiles/LibraryFiles.test.js"));
+    const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "../../modules/core/LibraryFiles.test.js"));
     const { assert, assertFailure, test } = ToolKid.debug.test;
     const { deletePath, extendFile, isDirectory, isUsedPath, readDirectory, readFile, writeFile } = ToolKid.nodeJS;
 
