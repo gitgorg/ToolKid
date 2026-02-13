@@ -9,12 +9,12 @@ interface TK_DataTypes_file {
             }
         ): Pick<Data, Key>,
         merge<
-            First extends Dictionary,
-            Change extends Dictionary
+            Base extends Dictionary,
+            Extension extends Dictionary
         >(
-            base: First,
-            ...changes: Change[]
-        ): First & Change,
+            base: Base,
+            ...changes: Extension[]
+        ): Base & Extension,
     }
 }
 

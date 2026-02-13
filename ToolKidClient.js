@@ -491,6 +491,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
         },
+        //text
         cdw_text: {
             patterns: [["'", "'"]],
             contains: ["cdw_textEscape", "cdw_textParse"]
@@ -504,6 +505,23 @@ fileCollection.set("LibraryParsing.js", module.exports);
             contains: ["ROOT"],
             isROOTLayer: false
         },
+        cdw_funkDeclare: {
+            patterns: [["{:", ":}"]],
+            contains: ["ROOT"]
+        },
+        cdw_funkCall: {
+            patterns: [["(", ")"]],
+            contains: ["ROOT"]
+        },
+        cdw_closure: {
+            patterns: [["{{", "}}"]],
+            contains: ["ROOT"]
+        },
+        cdw_list: {
+            patterns: [["[", "]"]],
+            contains: ["ROOT"]
+        },
+        // file connections
         cdw_import: {
             patterns: [["#import(", ")"]],
             layerData: { fileConnection: "insert" },

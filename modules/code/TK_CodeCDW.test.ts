@@ -71,17 +71,56 @@ g #load() h #load('') i #load($variable)");
                 }
             });
 
-//             contents.length = 0;
-//             parser(`
-// && #info() | watch:[[keyDown, Alt, c],[keyDown, Alt, 'ç']]
-// && #load([
-//     path << 'state.js',
-//     callback << {:
-//         && .match.loadState($)
-//     :}
-// ])`
-//             );
-//             log(contents)
+            contents.length = 0;
+            parser(`
+&& #info() | watch:[[keyDown, Alt, c],[keyDown, Alt, 'ç']]
+&& #load([
+    path << 'state.js',
+    callback << {:
+        && .match.loadState($)
+    :}
+])`
+            );
+            assert({
+                "real code": {
+                    value: contents,
+                    shouldBe: [
+                        [9, 'cdw_funkCall', '()'],
+                        [21, 'cdw_list', '[keyDown, Alt, c]'],
+                        [54, 'cdw_text', "'ç'"],
+                        [39, 'cdw_list', "[keyDown, Alt, 'ç']"],
+                        [20, 'cdw_list', "[[keyDown, Alt, c],[keyDown, Alt, 'ç']]"],
+                        [83, 'cdw_text', "'state.js'"],
+                        [141, 'cdw_funkCall', '($)'],
+                        [
+                            111,
+                            'cdw_funkDeclare',
+                            '{:\n        && .match.loadState($)\n    :}'
+                        ],
+                        [
+                            69,
+                            'cdw_list',
+                            '[\n' +
+                            "    path << 'state.js',\n" +
+                            '    callback << {:\n' +
+                            '        && .match.loadState($)\n' +
+                            '    :}\n' +
+                            ']'
+                        ],
+                        [
+                            63,
+                            'cdw_importMaybe',
+                            '#load([\n' +
+                            "    path << 'state.js',\n" +
+                            '    callback << {:\n' +
+                            '        && .match.loadState($)\n' +
+                            '    :}\n' +
+                            '])'
+                        ]
+                    ],
+                    toleranceDepth: 3,
+                },
+            });
         }
     });
 })();
