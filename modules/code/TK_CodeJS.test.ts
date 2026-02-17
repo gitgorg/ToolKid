@@ -39,13 +39,13 @@
         subject: readLayerContent,
         execute: function readingImportContents() {
             const contents = <string[]>[];
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     js_import: textLayerDefinition.js_import
                 },
-                parseClosings: function () {
-                    contents.push(readLayerContent(arguments))
-                }
+                parsers: new Map(<any>[
+                    [function () {contents.push(readLayerContent(arguments)) }, ">*"]
+                ]),
             });
             parser('\
 a require("b.js") c require(\'d.js\') e require("f\')\

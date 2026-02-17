@@ -10,13 +10,15 @@
         subject: readLayerContent,
         execute: function readingContents() {
             const contents = <string[]>[];
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     cdw_importMaybe: textLayerDefinition.cdw_importMaybe
                 },
-                parseClosings: function () {
-                    contents.push(readLayerContent(arguments))
-                }
+                parsers: new Map([
+                    [function () {
+                        contents.push(readLayerContent(arguments))
+                    }, ">*"]
+                ])
             });
             parser("\
 a #load('b.cdw') c #load(d.js) e #load('f.css', '.test.value')\
@@ -33,15 +35,17 @@ g #load() h #load('') i #load($variable)");
     test({
         subject: createTextParser,
         execute: function parsingCDWText() {
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: textLayerDefinition,
-                parseClosings: function (closing, layerData, inputs, depth, opening) {
-                    contents.push([
-                        opening.index,
-                        layerData.name,
-                        inputs.text.slice(opening.index, closing.index + closing[0].length)
-                    ])
-                }
+                parsers: new Map([
+                    [function (closing, layerData, inputs, depth, opening) {
+                        contents.push([
+                            opening.index,
+                            layerData.name,
+                            inputs.text.slice(opening.index, closing.index + closing[0].length)
+                        ])
+                    }, ">*"]
+                ])
             });
             const contents = <any[]>[];
             parser("'single\\' double\\2'");

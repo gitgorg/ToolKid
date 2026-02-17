@@ -10,13 +10,15 @@
         subject: readLayerContent,
         execute: function readingContents() {
             const contents = <string[]>[];
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     css_url: textLayerDefinition.css_url
                 },
-                parseClosings: function () {
-                    contents.push(readLayerContent(arguments))
-                }
+                parsers: new Map([
+                    [function () {
+                        contents.push(readLayerContent(arguments))
+                    }, ">*"]
+                ])
             });
             parser("\
 a url('b.cdw') c url(d.js) e url()");

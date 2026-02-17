@@ -37,7 +37,7 @@
 " d="three" e="four"\
 '
                     }).join(""),
-                        shouldBe: '\
+                    shouldBe: '\
 <a b="1" c="\n\
     one two\n\
  2" d="three \n\
@@ -53,7 +53,7 @@
         subject: "HTML textLayerDefinition",
         execute: function readingContents() {
             const contents = <any[][]>[];
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     html_comment: textLayerDefinition.html_comment,
                     html_tagStart: merge(textLayerDefinition.html_tagStart, {
@@ -61,13 +61,15 @@
                     }),
                     html_attribute: textLayerDefinition.html_attribute
                 },
-                parseClosings: function (closing, layer, inputs, depth, opening) {
-                    contents.push([
-                        layer.name, readLayerContent(arguments),
-                        opening.index, opening[0],
-                        closing.index, closing[0],
-                    ]);
-                }
+                parsers: new Map([
+                    [function (closing, layer, inputs, depth, opening) {
+                        contents.push([
+                            layer.name, readLayerContent(arguments),
+                            opening.index, opening[0],
+                            closing.index, closing[0],
+                        ]);
+                    }, ">*"]
+                ])
             });
             parser('\
 <html>\
@@ -92,15 +94,17 @@
         subject: "HTML textLayerDefinition",
         execute: function realComplex() {
             const contents = <any[][]>[];
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: textLayerDefinition,
-                parseClosings: function (closing, layer, inputs, depth, opening) {
-                    contents.push([
-                        layer.name, readLayerContent(arguments),
-                        opening.index, opening[0],
-                        closing.index, closing[0],
-                    ]);
-                }
+                parsers: new Map([
+                    [function (closing, layer, inputs, depth, opening) {
+                        contents.push([
+                            layer.name, readLayerContent(arguments),
+                            opening.index, opening[0],
+                            closing.index, closing[0],
+                        ]);
+                    }, ">*"]
+                ])
             });
             parser('<!DOCTYPE html>\
 <html lang="de">\

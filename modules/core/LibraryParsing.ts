@@ -10,14 +10,11 @@ interface LibraryCore_file {
 type LibraryParsing_file = {
     createTextParser(inputs: {
         layerDefinition: TextLayerDefinition,
-        parseOpenings?: TextParserForOpenings,
-        parseClosings: TextParserForClosings
-    }): { (inputs: TextParserInputs): void | Error },
-    createTextParser(inputs: {
-        layerDefinition: TextLayerDefinition,
-        parseOpenings: TextParserForOpenings,
-        parseClosings?: TextParserForClosings
-    }): { (inputs: TextParserInputs): void | Error },
+        parsers: Map<
+            TextParserForOpenings | TextParserForClosings | "SKIP" | "REMOVE",
+            string[] | string
+        >,
+    }): TextParser | Error,
 
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
@@ -50,7 +47,7 @@ type TextLayerDefinition = {
     }
 }
 
-type TextParserInputs = string | ({ text: string } & Dictionary)
+type TextParserInputs = string | { text: string } & Dictionary
 type TextParserForOpenings = {
     (
         RXResult: RegExpExecArray,
@@ -71,21 +68,23 @@ type TextParserForClosings = {
     ]
 }
 
+type TextParser = { (
+    inputs: string | { text: string } & Dictionary
+): void | Error }
+
 
 
 (function LibraryParsing_init() {
     type LayerDataSlim = {
-        data: {
-            name: string
-        } & Dictionary,
+        data: { name: string } & Dictionary,
         directions: (
-            [layer: LayerDataSlim, expectedID: number]
-            | undefined
+            [layer: LayerDataSlim, expectedID: number] | undefined
         )[],
         pattern: RegExp,
+        parseOpening: TextParserForOpenings,
+        parseClosing: TextParserForClosings,
     }
     type LayerData = LayerDataSlim & {
-        isMain?: false,
         openings: string[],
         closings: (string | undefined)[],
         contains?: string[],
@@ -94,42 +93,179 @@ type TextParserForClosings = {
 
 
 
-    const { isArray } = Array;
     const publicExports = module.exports = <LibraryParsing_file>{};
-    const doNothing = function LibraryParsing_doNothing() { };
+    const skipLayer = function LibraryParsing_skipLayer() { };
 
     publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
+        const analysed = a_analyseTextParserConfig(<any>inputs);
+        if (analysed instanceof Error) {
+            return analysed;
+        }
+
         const layers = <{ [key: string]: LayerData }>{
-            MAIN: <LayerData><any>{
+            ROOT: <LayerData><any>{
                 data: { name: "ROOT" },
                 openings: [],
                 closings: [],
                 contains: []
             }
         };
-        Object.entries(inputs.layerDefinition).forEach(a_createTextParserLayer.bind(null, layers));
-        Object.values(layers).forEach(b_connectTextParserLayers.bind(null, layers));
-        Object.values(layers).forEach(c_cleanUpTextParserLayer);
-        return d_parseTextLayered.bind(null,
-            layers.MAIN,
-            inputs.parseOpenings || doNothing,
-            inputs.parseClosings || doNothing
+        const { layerDefinition } = inputs;
+        const { removedLayers } = analysed;
+        for (const [layerName, parsers] of Object.entries(analysed.layerParsers)) {
+            b_createTextParserLayer(
+                <any>layerDefinition[layerName],
+                layers, removedLayers,
+                layerName, parsers
+            );
+        }
+        Object.values(layers).forEach(
+            c_connectTextParserLayers.bind(null, layers, removedLayers)
         );
+        Object.values(layers).forEach(
+            d_cleanUpTextParserLayer
+        );
+        return e_parseTextLayer.bind(null, layers.ROOT);
     };
 
-    const a_createTextParserLayer = function LibraryParsing_createTextParserLayer(
-        layers: { [key: string]: LayerData }, [key, layerData]: [string, Dictionary]
+
+
+    const a_analyseTextParserConfig = function LibraryParsing_analyseTextParserConfig(
+        inputs: Parameters<LibraryParsing_file["createTextParser"]>[0],
     ) {
-        const layer = <any>{
+        const { layerDefinition } = inputs;
+        const layerParsers = {} as {
+            [layerName: string]: [
+                opening: TextParserForOpenings,
+                closing: TextParserForClosings
+            ]
+        };
+        const removedLayers = <Set<string>>new Set();
+
+        let parserSet: [
+            opening: TextParserForOpenings,
+            closing: TextParserForClosings
+        ];
+        let layerName = "";
+        for (let [parser, names] of inputs.parsers.entries()) {
+            if (parser === "SKIP") {
+                parser = skipLayer;
+            } else if (typeof parser !== "function" && parser !== "REMOVE") {
+                const error = new Error("invalid parser");
+                (<Dictionary>error).details = {
+                    names, parser
+                };
+                return error;
+            }
+
+            if (typeof names === "string") {
+                names = [names];
+            } else if (!(names instanceof Array)) {
+                const error = new Error("invalid layer names");
+                (<Dictionary>error).details = {
+                    parser, layerNames: names,
+                };
+                return error;
+            }
+
+            for (layerName of names) {
+                if (layerName[0] === "<") {
+                    layerName = layerName.slice(1);
+                    parserSet = layerParsers[layerName] || [parser, skipLayer];
+                    parserSet[0] = <TextParserForOpenings>parser;
+                } else if (layerName[0] === ">") {
+                    layerName = layerName.slice(1);
+                    parserSet = layerParsers[layerName] || [skipLayer, parser];
+                    parserSet[1] = <TextParserForClosings>parser;
+                } else {
+                    parserSet = layerParsers[layerName] || [parser, parser];
+                }
+                if (
+                    layerDefinition[layerName] !== undefined
+                    || layerName === "*"
+                ) {
+                    layerParsers[layerName] = parserSet;
+                    continue
+                }
+
+                const error = new Error("unknown layer name");
+                (<Dictionary>error).details = {
+                    layerName, validLayerNames: Object.keys(layerDefinition)
+                };
+                return error;
+            }
+        }
+
+        const wildCards = layerParsers["*"];
+        delete layerParsers["*"];
+        const error = <Error & { details: string }>new Error("missing parser");
+        for (const name of Object.keys(layerDefinition)) {
+            parserSet = layerParsers[name];
+            if (parserSet === undefined) {
+                if (wildCards === undefined) {
+                    error.details = "parsers for: " + name;
+                    return error;
+                }
+
+                parserSet = <any>wildCards.slice(0);
+            }
+            if (parserSet[0] === undefined) {
+                if (wildCards[0] === undefined) {
+                    error.details = "opening for: " + name;
+                    return error;
+                }
+
+                parserSet[0] = wildCards[0];
+            }
+            if (parserSet[1] === undefined) {
+                if (wildCards[1] === undefined) {
+                    error.details = "closing for:" + name;
+                    return error;
+                }
+
+                parserSet[1] = wildCards[1];
+            }
+            if ((<any>parserSet).includes("REMOVE")) {
+                removedLayers.add(name);
+            } else {
+                layerParsers[name] = parserSet;
+            }
+        }
+        // oder according to layerDefinition
+        const orderedParsers = <Dictionary>{};
+        for (layerName of Object.keys(layerDefinition)) {
+            if (layerParsers[layerName] !== undefined) {
+                orderedParsers[layerName] = layerParsers[layerName];
+            }
+        }
+        return {
+            layerParsers: orderedParsers,
+            removedLayers,
+        }
+    };
+
+    const b_createTextParserLayer = function LibraryParsing_createTextParserLayer(
+        layerConfig: Dictionary,
+        layers: { [name: string]: LayerData },
+        removedLayers: Set<string>,
+        layerName: string,
+        parsers: [TextParserForOpenings, TextParserForClosings]
+    ) {
+        if (removedLayers.has(layerName)) {
+            return;
+        }
+
+        const layer = layers[layerName] = <any>{
             openings: [],
             closings: [],
-            contains: layerData.contains,
-            data: (typeof layerData.layerData === "object")
-                ? Object.assign({}, layerData.layerData, { name: key })
-                : { name: key }
+            parseOpening: parsers[0],
+            parseClosing: parsers[1],
+            contains: layerConfig.contains,
+            data: (typeof layerConfig.layerData === "object")
+                ? Object.assign({}, layerConfig.layerData, { name: layerName })
+                : { name: layerName }
         };
-        layers[key] = layer;
-        layerData.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(
+        layerConfig.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(
             pattern: any
         ) {
             if (pattern instanceof Array) {
@@ -140,45 +276,56 @@ type TextParserForClosings = {
                 layer.closings.push(undefined);
             }
         });
-        if (layerData.isROOTLayer !== false) {
-            (<string[]>layers.MAIN.contains).push(key);
+        if (layerConfig.isROOTLayer !== false) {
+            (<string[]>layers.ROOT.contains).push(layerName);
         }
     };
 
-    const b_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(
-        layers: { [key: string]: LayerData }, layer: LayerData
+    const c_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(
+        layers: { [key: string]: LayerData },
+        removedLayers: Set<string>,
+        layer: LayerData,
     ) {
         layer.signals = layer.closings.slice(0);
-        const count = layer.signals.length;
-        const directions = layer.directions = Array(count);
-        if (layer.contains instanceof Array) {
-            layer.contains.forEach(function LibraryParsing_connectTextParserLayer(key: string) {
-                if (key === "ROOT") {
-                    layer.signals.push(...layers.MAIN.signals);
-                    directions.push(...layers.MAIN.directions);
-                } else {
-                    const subLayer = layers[key];
-                    if (subLayer === undefined) {
-                        throw [
-                            "LibraryParsing_connectTextParserLayer - unknown layer key: ", key, "inside: ", layer
-                        ];
-                    }
-                    layer.signals.push(...subLayer.openings);
-                    const count = subLayer.openings.length;
-                    for (let i = 0; i < count; i += 1) {
-                        directions.push([
-                            subLayer, //next layer
-                            subLayer.closings.indexOf(subLayer.closings[i]) //expected index for closing
-                        ]);
-                    }
-                }
-            });
+        const directions = layer.directions = Array(layer.signals.length);
+        if (!(layer.contains instanceof Array) || layer.contains.length === 0) {
+            // regExp flags explained on top /\
+            layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gs");
+            return;
         }
+
+        layer.contains.forEach(function LibraryParsing_connectTextParserLayer(
+            name: string
+        ) {
+            if (removedLayers.has(name)) {
+                return;
+            }
+
+            if (name === "ROOT") {
+                layer.signals.push(...layers.ROOT.signals);
+                directions.push(...layers.ROOT.directions);
+            } else {
+                const subLayer = layers[name];
+                if (subLayer === undefined) {
+                    throw [
+                        "LibraryParsing_connectTextParserLayer - unknown layer key: ", name, "inside: ", layer
+                    ];
+                }
+                layer.signals.push(...subLayer.openings);
+                const count = subLayer.openings.length;
+                for (let i = 0; i < count; i += 1) {
+                    directions.push([
+                        subLayer, //next layer
+                        subLayer.closings.indexOf(subLayer.closings[i]) //expected index for closing
+                    ]);
+                }
+            }
+        });
         // regExp flags explained on top /\
         layer.pattern = new RegExp("(" + layer.signals.join(")|(") + ")", "gs");
     };
 
-    const c_cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(
+    const d_cleanUpTextParserLayer = function LibraryParsing_cleanUpTextParserLayer(
         layer: Dictionary
     ) {
         delete layer.openings;
@@ -188,10 +335,8 @@ type TextParserForClosings = {
         Object.freeze(layer.data);
     };
 
-    const d_parseTextLayered = function LibraryParsing_parseTextLayered(
+    const e_parseTextLayer = function LibraryParsing_parseTextLayer(
         layer: LayerDataSlim,
-        parseOpenings: TextParserForOpenings,
-        parseClosings: TextParserForClosings,
         inputs: { text: string },
     ): void | Error {
         if (typeof inputs === "string") {
@@ -200,30 +345,35 @@ type TextParserForClosings = {
         const { text } = inputs;
         let layerDepth = 0;
         let lastIndex = layer.pattern.lastIndex = 0;
-        let RXResult = <RegExpExecArray & { wantedSignalID: number }>layer.pattern.exec(text);
+        let RXResult = layer.pattern.exec(text);
         const layerStack = new Array(20);
         layerStack[0] = layer;
         const resultStack = new Array(20);
         resultStack[0] = RXResult;
         let resultString = "";
-        let signalID = 0;
+        let signalIndex = 1;
+        const wantedSignalIDs = new Array(20);
         let found: any;
         while (RXResult !== null) {
+            signalIndex = 1;
+            while (RXResult[signalIndex] === undefined) {
+                signalIndex += 1;
+            }
             lastIndex = layer.pattern.lastIndex;
             resultString = RXResult[0];
-            signalID = RXResult.indexOf(resultString, 1) - 1;
+            signalIndex -= 1;
             //opening
-            if (layer.directions[signalID] !== undefined) {
-                found = layer.directions[signalID]
+            if (layer.directions[signalIndex] !== undefined) {
+                found = layer.directions[signalIndex]
                 layer = found[0];
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
                 resultStack[layerDepth] = RXResult;
-                RXResult.wantedSignalID = found[1];
+                wantedSignalIDs[layerDepth] = found[1];
                 if (resultString === "") {
                     layer.pattern.lastIndex += 1;
                 } else {
-                    parseOpenings(
+                    layer.parseOpening(
                         RXResult, layer.data,
                         inputs, layerDepth,
                     );
@@ -236,45 +386,35 @@ type TextParserForClosings = {
             //closing
 
             //    unexpected
-            if (resultStack[layerDepth].wantedSignalID !== signalID) {
+            if (wantedSignalIDs[layerDepth] !== signalIndex) {
                 if (resultString === "") {
                     layer.pattern.lastIndex += 1;
-                } else {
-                    layer.pattern.lastIndex = lastIndex;
                 }
                 RXResult = <any>layer.pattern.exec(text);
                 continue;
             }
 
             //    expected
-      
-                parseClosings(
-                    RXResult, layerStack[layerDepth].data,
-                    inputs, layerDepth,
-                    resultStack[layerDepth],
-                );
-     
+
+            layer.parseClosing(
+                RXResult, layerStack[layerDepth].data,
+                inputs, layerDepth,
+                resultStack[layerDepth],
+            );
+
             layerDepth -= 1;
             layer = layerStack[layerDepth];
             layer.pattern.lastIndex = lastIndex;
             RXResult = <any>layer.pattern.exec(text);
         }
-        if (layerDepth !== 0) {
-            const error = <Error & {
-                layerStack: any[],
-                resultStack: any[]
-            }>new Error("not all layers closed");
-            error.layerStack = layerStack.slice(1, layerDepth + 1);
-            error.resultStack = resultStack.slice(1, layerDepth + 1);
-            // log(777, "not all layers closed inside:", inputs.text.slice(0, 50))
-            // for (let i = 1; i <= layerDepth; i += 1) {
-            //     layer = layerStack[i];
-            //     RXResult = resultStack[i];
-            //     log("depth", i, layer.data.name, [RXResult[0]], RXResult.index, [inputs.text.slice(RXResult.index, RXResult.index + 23)]
-            //     )
-            // }
-            return error;
+        if (layerDepth === 0) {
+            return;
         }
+
+        const error = <any>new Error("not all layers closed");
+        error.layerStack = layerStack.slice(1, layerDepth + 1);
+        error.resultStack = resultStack.slice(1, layerDepth + 1);
+        return error;
     };
 
 
@@ -282,14 +422,22 @@ type TextParserForClosings = {
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(
         inputs
     ) {
+        const parsers = new Map();
+        if (inputs.parseOpenings !== undefined) {
+            parsers.set(
+                replaceOpening.bind(null, inputs.parseOpenings),
+                "<*"
+            );
+        }
+        if (inputs.parseClosings !== undefined) {
+            parsers.set(
+                replaceClosing.bind(null, inputs.parseClosings),
+                ">*"
+            );
+        }
         const parser = publicExports.createTextParser({
             layerDefinition: inputs.layerDefinition,
-            parseOpenings: (inputs.parseOpenings === undefined)
-                ? undefined
-                : replaceOpening.bind(null, inputs.parseOpenings),
-            parseClosings: (inputs.parseClosings === undefined)
-                ? undefined
-                : replaceClosing.bind(null, inputs.parseClosings)
+            parsers
         });
         return replaceTextLayered.bind(null, parser);
     };
@@ -305,7 +453,7 @@ type TextParserForClosings = {
             RXResult, layerData,
             inputs, layerDepth,
         );
-        if (isArray(returned)) {
+        if (returned instanceof Array && returned.length !== 0) {
             inputs.result.push(
                 inputs.text.slice(inputs.position, RXResult.index),
                 ...<string[]>returned
@@ -335,7 +483,7 @@ type TextParserForClosings = {
             inputs, layerDepth,
             RXOpening
         );
-        if (isArray(returned)) {
+        if (returned instanceof Array && returned.length !== 0) {
             if (typeof returned[0] === "number") {
                 inputs.result.push(inputs.text.slice(
                     inputs.position, returned[0]

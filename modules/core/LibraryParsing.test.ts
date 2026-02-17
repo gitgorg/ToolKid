@@ -3,7 +3,7 @@
         createTextParser, createTextReplacer, getLayerDefinition, readLayerContent
     } = <LibraryParsing_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryParsing.js"));
 
-    const { assertEquality, /*assertFailure,*/ shouldPass, test } = ToolKid.debug.test;
+    const { assert, assertEquality, /*assertFailure,*/ shouldPass, test } = ToolKid.debug.test;
     const shouldPassObject = shouldPass(ToolKid.dataTypes.checks.isObject)
 
 
@@ -39,36 +39,6 @@
         log(555, value)\n\
     });\n\
 })();';
-    const fileParserInputs = [
-   /*0*/[0, 'bracket', '('],
-        [10, 'bracket', '('],
-        [11, 'bracket', ')', 10],
-        [12, 'bracket', '{'],
-        [31, 'import', 'require('],
-   /*5*/[39, 'text', '"'],
-        [48, 'escape', '\\('],
-        [50, 'escape', '', 48],
-        [51, 'escape', '\\)'],
-        [53, 'escape', '', 51],
-        [53, 'text', '"', 39],
-        [54, 'import', ')', 31],
-   /*10*/[61, 'comment', '//'],
-        [96, 'comment', '\n', 61],
-        [101, 'bracket', '['],
-        [107, 'bracket', ']', 101],
-        [109, 'function', 'forEach('],
-   /*15*/[126, 'bracket', '('],
-        [132, 'bracket', ')', 126],
-        [134, 'bracket', '{'],
-        [144, 'function', 'log('],
-        [158, 'function', ')', 144],
-  /*20*/[164, 'bracket', '}', 134],
-        [165, 'function', ')', 109],
-        [168, 'bracket', '}', 12],
-        [169, 'bracket', ')', 0],
-        [170, 'bracket', '('],
-  /*25*/[171, 'bracket', ')', 170]
-    ];
 
     const inputList = <any[]>[];
     const register = <TextParserForOpenings & TextParserForClosings>function (
@@ -91,17 +61,47 @@
         subject: createTextParser,
         execute: function parseLayered() {
             inputList.length = 0;
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: layersJS,
-                parseOpenings: register,
-                parseClosings: register,
+                parsers: new Map(<any>[
+                    [register, ["*"]],
+                ]),
             });
             parser(file);
             assertEquality({
                 "js": {
                     value: inputList,
                     toleranceDepth: 3,
-                    shouldBe: fileParserInputs
+                    shouldBe: [
+                        [0, 'bracket', '('], //0
+                        [10, 'bracket', '('],
+                        [11, 'bracket', ')', 10],
+                        [12, 'bracket', '{'],
+                        [31, 'import', 'require('],
+                        [39, 'text', '"'], //5
+                        [48, 'escape', '\\('],
+                        [50, 'escape', '', 48],
+                        [51, 'escape', '\\)'],
+                        [53, 'escape', '', 51],
+                        [53, 'text', '"', 39],
+                        [54, 'import', ')', 31],
+                        [61, 'comment', '//'], //10
+                        [96, 'comment', '\n', 61],
+                        [101, 'bracket', '['],
+                        [107, 'bracket', ']', 101],
+                        [109, 'function', 'forEach('],
+                        [126, 'bracket', '('], //15
+                        [132, 'bracket', ')', 126],
+                        [134, 'bracket', '{'],
+                        [144, 'function', 'log('],
+                        [158, 'function', ')', 144],
+                        [164, 'bracket', '}', 134], //20
+                        [165, 'function', ')', 109],
+                        [168, 'bracket', '}', 12],
+                        [169, 'bracket', ')', 0],
+                        [170, 'bracket', '('],
+                        [171, 'bracket', ')', 170] //25
+                    ]
                 }
             });
         }
@@ -126,7 +126,7 @@
                     push(arguments);
                 }
             };
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     bracket: {
                         patterns: [["(", ")"], ["[", "]"], ["{", "}"]],
@@ -148,7 +148,9 @@
                         contains: ["ROOT"]
                     },
                 },
-                parseClosings,
+                parsers: new Map([
+                    [parseClosings, ">*"]
+                ]),
             });
             parser("require(a);");
             assertEquality({
@@ -198,7 +200,7 @@
     }, {
         subject: createTextParser,
         execute: function overlapingDefinitions() {
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     comment: {
                         patterns: [
@@ -217,7 +219,9 @@
                         ],
                     },
                 },
-                parseClosings: register,
+                parsers: new Map([
+                    [register, ">*"]
+                ]),
             });
             inputList.length = 0;
             parser('//comment\na = /b/');
@@ -239,7 +243,7 @@
                     toleranceDepth: 3,
                     shouldBe: [
                         [9, "comment", "\n", 0],
-                        [ 18, 'escape', '', 16 ],
+                        [18, 'escape', '', 16],
                         [19, 'RX', '/', 14]
                     ]
                 }
@@ -248,13 +252,15 @@
     }, {
         subject: createTextParser,
         execute: function equalClosings() {
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     html_cdw: {
                         patterns: [[/DATA-MVC="/i, '"'], [/DATA-CDW="/i, '"']],
                     },
                 },
-                parseClosings: register,
+                parsers: new Map([
+                    [register, ">*"]
+                ]),
             });
             inputList.length = 0;
             parser('<a DATA-MVC="b" DATA-CDW="c">content</a>');
@@ -273,18 +279,16 @@
         subject: createTextParser,
         execute: function fail_parseText() {
             inputList.length = 0;
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     bracket: layersJS.bracket,
                 },
-                parseClosings: register,
+                parsers: new Map(<any>[
+                    [register, [">bracket"]],
+                    ["REMOVE", ["*"]]
+                ])
             });
 
-            // assertFailure({
-            //     name: "broken brackets",
-            //     execute: parser,
-            //     withInputs: ["a(b[c)];"]
-            // })
             parser("a(b[c)];");
             assertEquality({
                 "broken bracket": {
@@ -296,7 +300,111 @@
                 },
             });
         }
+    })
+
+
+
+    test({
+        subject: createTextParser,
+        execute: function specifics_basic() {
+            inputList.length = 0;
+            const parser = <TextParser>createTextParser({
+                layerDefinition: {
+                    bracket: layersJS.bracket,
+                    function: layersJS.function
+                },
+                parsers: new Map(<any>[
+                    [register, [">bracket", ">function"]]
+                ])
+            });
+
+            parser("{a:(require(b)[c])}");
+            assertEquality({
+                "broken bracket": {
+                    value: inputList,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [13, 'function', ')', 4],
+                        [16, 'bracket', ']', 14],
+                        [17, 'bracket', ')', 3],
+                        [18, 'bracket', '}', 0]
+                    ]
+                },
+            });
+        }
+    }, {
+        subject: createTextParser,
+        execute: function specifics_remove() {
+            inputList.length = 0;
+            const parser = <TextParser>createTextParser({
+                layerDefinition: layersJS,
+                parsers: new Map(<any>[
+                    [register, [">bracket", ">function"]],
+                    ["REMOVE", ["*"]]
+                ])
+            });
+            parser("{a:(require(b)[c])}");
+            assertEquality({
+                "broken bracket": {
+                    value: inputList,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [13, 'function', ')', 4],
+                        [16, 'bracket', ']', 14],
+                        [17, 'bracket', ')', 3],
+                        [18, 'bracket', '}', 0]
+                    ]
+                },
+            });
+        }
+    }, {
+        subject: createTextParser,
+        execute: function specifics_skip() {
+            inputList.length = 0;
+            const parser = <TextParser>createTextParser({
+                layerDefinition: layersJS,
+                parsers: new Map(<any>[
+                    [register, [">bracket", ">function"]],
+                    ["SKIP", ["import"]],
+                    ["REMOVE", ["*"]]
+                ])
+            });
+            parser("{a:(require(b)[c])}");
+            assertEquality({
+                "broken bracket": {
+                    value: inputList,
+                    toleranceDepth: 3,
+                    shouldBe: [
+                        [16, 'bracket', ']', 14],
+                        [17, 'bracket', ')', 3],
+                        [18, 'bracket', '}', 0]
+                    ]
+                },
+            });
+        }
     });
+
+    test({
+        subject: createTextParser,
+        execute: function specifics_missingLayers() {
+            assert({
+                "parser": {
+                    value: createTextParser({
+                        layerDefinition: layersJS,
+                        parsers: new Map(<any>[
+                            [register, [">bracket", ">function"]],
+                            ["SKIP", ["import"]]
+                        ])
+                    }),
+                    toleranceDepth: 3,
+                    shouldBe: new Error(),
+                    allowAdditions: true
+                },
+            });
+        }
+    });
+
+
 
     test({
         subject: createTextReplacer,
@@ -356,13 +464,15 @@
         subject: readLayerContent,
         execute: function simpleContents() {
             let contents = <string[]>[];
-            const parser = createTextParser({
+            const parser = <TextParser>createTextParser({
                 layerDefinition: {
                     bracket: layersJS.bracket
                 },
-                parseClosings: function () {
-                    contents.push(readLayerContent(arguments));
-                }
+                parsers: new Map([
+                    [function () {
+                        contents.push(readLayerContent(arguments));
+                    }, ">*"]
+                ]),
             });
             parser("a(b[c)d]e)f");
             assertEquality({

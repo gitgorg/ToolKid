@@ -117,7 +117,7 @@ interface TK_Code_file {
     };
 
     let valueIsText = false;
-    const collectAttributesParser = createTextParser({
+    const collectAttributesParser = <TextParser>createTextParser({
         layerDefinition: {
             html_tagStart: {
                 ...publicExports.textLayerDefinition.html_tagStart,
@@ -125,33 +125,41 @@ interface TK_Code_file {
             },
             html_attribute: publicExports.textLayerDefinition.html_attribute,
         },
-        parseClosings: function TK_CodeHTML_collectAttributesParser(
-            closing, layer, inputs, depth, opening
-        ) {
-            if (inputs.result.endPosition !== undefined) {
-                return;
-            } else if (layer.name === "html_tagStart") {
-                inputs.result.endPosition = closing.index + closing[0].length;
-                return;
-            }
+        parsers: new Map([
+            [function TK_CodeHTML_collectAttributesParser(
+                closing, layer, inputs, depth, opening
+            ) {
+                if (inputs.result.endPosition !== undefined) {
+                    return;
+                } else if (layer.name === "html_tagStart") {
+                    inputs.result.endPosition = closing.index + closing[0].length;
+                    return;
+                }
 
-            valueIsText = closing[0] === '"';
-            inputs.result.attributes.set(
-                opening[0].slice(0,
-                    valueIsText ? -2 : -1
-                ).toLocaleLowerCase(),
-                [
-                    opening.index + opening[0].length,
-                    closing.index,
-                    inputs.text.slice(
+                valueIsText = closing[0] === '"';
+                inputs.result.attributes.set(
+                    opening[0].slice(0,
+                        valueIsText ? -2 : -1
+                    ).toLocaleLowerCase(),
+                    [
                         opening.index + opening[0].length,
-                        closing.index
-                    ),
-                    valueIsText
-                ]
-            );
-        }
+                        closing.index,
+                        inputs.text.slice(
+                            opening.index + opening[0].length,
+                            closing.index
+                        ),
+                        valueIsText
+                    ]
+                );
+            }, ">*"]
+        ])
     });
+    if (collectAttributesParser instanceof Error) {
+        throw [
+            "TK_CodeHTML_init - failed to create collectAttribuesParser:",
+            collectAttributesParser
+        ]
+    }
 
     publicExports.extendTag = function TK_CodeHTML_extendTag(inputs) {
         let collected = publicExports.collectAttributes(inputs.extensionTag);
