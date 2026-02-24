@@ -11,6 +11,18 @@
         assert: function () {
             return {
                 "CONFIG": { toleranceDepth: 4 },
+                "simple": [collectAttributes('<a b="c"></a>'), {
+                    attributes: new Map([
+                        ["b", [6, 7, "c", true]]
+                    ]), endPosition: 9
+                }]
+            };
+        }
+    }, {
+        subject: collectAttributes,
+        assert: function () {
+            return {
+                "CONFIG": { toleranceDepth: 4 },
                 "no attributes": [collectAttributes('<a></a>'), {
                     attributes: {}, endPosition: 3
                 }],

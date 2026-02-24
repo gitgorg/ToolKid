@@ -133,6 +133,12 @@ interface TK_Code_file {
                     return;
                 } else if (layer.name === "html_tagStart") {
                     inputs.result.endPosition = closing.index + closing[0].length;
+                }
+            }, ">html_tagStart"],
+            [function TK_CodeHTML_collectAttributesParser(
+                closing, layer, inputs, depth, opening
+            ) {
+                if (inputs.result.endPosition !== undefined) {
                     return;
                 }
 
@@ -151,7 +157,7 @@ interface TK_Code_file {
                         valueIsText
                     ]
                 );
-            }, ">*"]
+            }, ">html_attribute"]
         ])
     });
     if (collectAttributesParser instanceof Error) {

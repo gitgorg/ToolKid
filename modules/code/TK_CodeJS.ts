@@ -14,16 +14,6 @@ type TK_CodeJS_file = {
 
 
 
-type FileConnectionEntry = [
-    name: string, priority: "inserts" | "maybe" | "needed", FileConnectionIndexes
-]
-type FileConnectionIndexes = [
-    openingStart: number, openingEnd: number,
-    closingStart: number, closingEnd: number,
-]
-
-
-
 (function TK_CodeJS_init() {
     const { readLayerContent } = ToolKid.getCoreModule("parsing");
 

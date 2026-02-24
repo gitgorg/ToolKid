@@ -1176,6 +1176,10 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
                     }
                     else if (layer.name === "html_tagStart") {
                         inputs.result.endPosition = closing.index + closing[0].length;
+                    }
+                }, ">html_tagStart"],
+            [function TK_CodeHTML_collectAttributesParser(closing, layer, inputs, depth, opening) {
+                    if (inputs.result.endPosition !== undefined) {
                         return;
                     }
                     valueIsText = closing[0] === '"';
@@ -1185,7 +1189,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
                         inputs.text.slice(opening.index + opening[0].length, closing.index),
                         valueIsText
                     ]);
-                }, ">*"]
+                }, ">html_attribute"]
         ])
     });
     if (collectAttributesParser instanceof Error) {
