@@ -1057,7 +1057,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
     });
     if (collectAttributesParser instanceof Error) {
         throw [
-            "TK_CodeHTML - defining collectAttribuesParser failed:",
+            "TK_CodeHTML_init - failed to create collectAttribuesParser:",
             collectAttributesParser
         ];
     }
