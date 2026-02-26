@@ -18,6 +18,9 @@ interface TK_Code_file {
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
         },
+        cdw_newLine: {
+            patterns: ["&&"]
+        },
 
         //text
         cdw_text: {

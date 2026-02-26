@@ -44,7 +44,8 @@ g #load() h #load('') i #load($variable)");
                             layerData.name,
                             inputs.text.slice(opening.index, closing.index + closing[0].length)
                         ])
-                    }, ">*"]
+                    }, ">*"],
+                    <any>["REMOVE", "cdw_newLine"]
                 ])
             });
             const contents = <any[]>[];

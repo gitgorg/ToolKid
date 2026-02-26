@@ -603,6 +603,9 @@ fileCollection.set("LibraryParsing.js", module.exports);
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
         },
+        cdw_newLine: {
+            patterns: ["&&"]
+        },
         //text
         cdw_text: {
             patterns: [["'", "'"]],
