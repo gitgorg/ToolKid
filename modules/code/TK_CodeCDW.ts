@@ -17,6 +17,7 @@ interface TK_Code_file {
     publicExports.textLayerDefinition = {
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
+            contains: ["cdw_comment"],
         },
         cdw_newLine: {
             patterns: ["&&"]
@@ -28,7 +29,7 @@ interface TK_Code_file {
             contains: ["cdw_textEscape", "cdw_textParse"]
         },
         cdw_textEscape: {
-            patterns: [["\\", /./]],
+            patterns: [/\\./],
             isROOTLayer: false
         },
         cdw_textParse: {

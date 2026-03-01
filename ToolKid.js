@@ -498,6 +498,7 @@ fileCollection.set("LibraryFiles.js", module.exports);
             else {
                 layer.openings.push(getTextFromRX(pattern));
                 layer.closings.push(undefined);
+                // layer.parseClosing = skipLayer;
             }
         });
         if (layerConfig.isROOTLayer !== false) {
@@ -735,6 +736,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
     publicExports.textLayerDefinition = {
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
+            contains: ["cdw_comment"],
         },
         cdw_newLine: {
             patterns: ["&&"]
@@ -745,7 +747,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
             contains: ["cdw_textEscape", "cdw_textParse"]
         },
         cdw_textEscape: {
-            patterns: [["\\", /./]],
+            patterns: [/\\./],
             isROOTLayer: false
         },
         cdw_textParse: {

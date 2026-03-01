@@ -274,6 +274,7 @@ type TextParser = { (
             } else {
                 layer.openings.push(getTextFromRX(pattern));
                 layer.closings.push(undefined);
+                // layer.parseClosing = skipLayer;
             }
         });
         if (layerConfig.isROOTLayer !== false) {
