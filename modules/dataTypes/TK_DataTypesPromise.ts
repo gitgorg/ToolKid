@@ -88,8 +88,6 @@ type CustomPromise = {
             " then tried " + state + " with:",
             data
         ]);
-        return;
-
     };
 
 
