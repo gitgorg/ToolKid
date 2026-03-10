@@ -1856,7 +1856,6 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
             " then tried " + state + " with:",
             data
         ]);
-        return;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
