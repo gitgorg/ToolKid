@@ -15,6 +15,9 @@ interface TK_Code_file {
     const publicExports = module.exports = {} as TK_Code_file["CDW"];
 
     publicExports.textLayerDefinition = {
+
+        //TOP PRIORITY
+
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
             contains: ["cdw_comment"],
@@ -22,8 +25,7 @@ interface TK_Code_file {
         cdw_newLine: {
             patterns: ["&&"]
         },
-
-        //text
+        //texts
         cdw_text: {
             patterns: [["'", "'"]],
             contains: ["cdw_textEscape", "cdw_textParse"]
@@ -38,6 +40,22 @@ interface TK_Code_file {
             isROOTLayer: false
         },
 
+        //MEDIUM PRIORITY
+
+        cdw_closure: {
+            patterns: [["{{", "}}"]],
+            contains: ["ROOT"]
+        },
+        //lists
+        cdw_list: {
+            patterns: [["[","]"]],
+            contains: ["cdw_listSeparator", "ROOT"],
+        },
+        cdw_listSeparator: {
+            patterns: [","],
+            isROOTLayer: false,
+        },
+        //functions
         cdw_funkDeclare: {
             patterns: [["{:", ":}"]],
             contains: ["ROOT"]
@@ -46,14 +64,34 @@ interface TK_Code_file {
             patterns: [["(",")"]],
             contains: ["ROOT"]
         },
-        cdw_closure: {
-            patterns: [["{{", "}}"]],
-            contains: ["ROOT"]
-        },
 
-        cdw_list: {
-            patterns: [["[","]"]],
-            contains: ["ROOT"]
+        //LOW PRIORITY
+
+        // basic values
+        cdw_null: {
+            patterns: ["null"]
+        },
+        cdw_true: {
+            patterns: ["true"]
+        },
+        cdw_false: {
+            patterns: ["false"]
+        },
+        cdw_number: {
+            patterns:[/\d[\d_\.]*/]
+        },
+        // operators
+        cdw_plus: {
+            patterns: ["+"]
+        },
+        cdw_minus: {
+            patterns: ["-"]
+        },
+        cdw_star: {
+            patterns: ["*"]
+        },
+        cdw_slash: {
+            patterns: ["/"]
         },
 
         // file connections

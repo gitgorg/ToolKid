@@ -68,9 +68,11 @@ type TextParserForClosings = {
     ]
 }
 
-type TextParser = { (
-    inputs: string | { text: string } & Dictionary
-): void | Error }
+type TextParser = {
+    (
+        inputs: string | { text: string } & Dictionary
+    ): void | Error
+}
 
 
 
@@ -119,9 +121,19 @@ type TextParser = { (
                 layerName, parsers
             );
         }
+        const errors = <Dictionary[]>[];
         Object.values(layers).forEach(
-            c_connectTextParserLayers.bind(null, layers, removedLayers)
+            c_connectTextParserLayers.bind(null, layers, removedLayers, errors)
         );
+        if (errors.length !== 0) {
+            const error = <Dictionary>new Error("unknown layers");
+            error.details = {
+                unknownLayerKeys: errors,
+                validLayerKeys: Object.keys(layers),
+            };
+            return error;
+        };
+
         Object.values(layers).forEach(
             d_cleanUpTextParserLayer
         );
@@ -285,6 +297,7 @@ type TextParser = { (
     const c_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(
         layers: { [key: string]: LayerData },
         removedLayers: Set<string>,
+        errors: any[],
         layer: LayerData,
     ) {
         layer.signals = layer.closings.slice(0);
@@ -308,10 +321,10 @@ type TextParser = { (
             } else {
                 const subLayer = layers[name];
                 if (subLayer === undefined) {
-                    throw [
-                        "LibraryParsing_connectTextParserLayer - unknown layer key: ", name, "inside: ", layer
-                    ];
+                    errors.push(name);
+                    return;
                 }
+
                 layer.signals.push(...subLayer.openings);
                 const count = subLayer.openings.length;
                 for (let i = 0; i < count; i += 1) {

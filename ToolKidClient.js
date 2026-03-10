@@ -241,7 +241,17 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         for (const [layerName, parsers] of Object.entries(analysed.layerParsers)) {
             b_createTextParserLayer(layerDefinition[layerName], layers, removedLayers, layerName, parsers);
         }
-        Object.values(layers).forEach(c_connectTextParserLayers.bind(null, layers, removedLayers));
+        const errors = [];
+        Object.values(layers).forEach(c_connectTextParserLayers.bind(null, layers, removedLayers, errors));
+        if (errors.length !== 0) {
+            const error = new Error("unknown layers");
+            error.details = {
+                unknownLayerKeys: errors,
+                validLayerKeys: Object.keys(layers),
+            };
+            return error;
+        }
+        ;
         Object.values(layers).forEach(d_cleanUpTextParserLayer);
         return e_parseTextLayer.bind(null, layers.ROOT);
     };
@@ -372,7 +382,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
             layers.ROOT.contains.push(layerName);
         }
     };
-    const c_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(layers, removedLayers, layer) {
+    const c_connectTextParserLayers = function LibraryParsing_connectTextParserLayers(layers, removedLayers, errors, layer) {
         layer.signals = layer.closings.slice(0);
         const directions = layer.directions = Array(layer.signals.length);
         if (!(layer.contains instanceof Array) || layer.contains.length === 0) {
@@ -391,9 +401,8 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
             else {
                 const subLayer = layers[name];
                 if (subLayer === undefined) {
-                    throw [
-                        "LibraryParsing_connectTextParserLayer - unknown layer key: ", name, "inside: ", layer
-                    ];
+                    errors.push(name);
+                    return;
                 }
                 layer.signals.push(...subLayer.openings);
                 const count = subLayer.openings.length;
@@ -601,14 +610,15 @@ fileCollection.set("LibraryParsing.js", module.exports);
     const { readLayerContent } = ToolKid.getCoreModule("parsing");
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
+        //TOP PRIORITY
+        cdw_newLine: {
+            patterns: ["&&"]
+        },
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
             contains: ["cdw_comment"],
         },
-        cdw_newLine: {
-            patterns: ["&&"]
-        },
-        //text
+        //texts
         cdw_text: {
             patterns: [["'", "'"]],
             contains: ["cdw_textEscape", "cdw_textParse"]
@@ -622,6 +632,21 @@ fileCollection.set("LibraryParsing.js", module.exports);
             contains: ["ROOT"],
             isROOTLayer: false
         },
+        //MEDIUM PRIORITY
+        cdw_closure: {
+            patterns: [["{{", "}}"]],
+            contains: ["ROOT"]
+        },
+        //lists
+        cdw_list: {
+            patterns: [["[", "]"]],
+            contains: ["cdw_listSeparator", "ROOT"],
+        },
+        cdw_listSeparator: {
+            patterns: [","],
+            isROOTLayer: false,
+        },
+        //functions
         cdw_funkDeclare: {
             patterns: [["{:", ":}"]],
             contains: ["ROOT"]
@@ -630,13 +655,32 @@ fileCollection.set("LibraryParsing.js", module.exports);
             patterns: [["(", ")"]],
             contains: ["ROOT"]
         },
-        cdw_closure: {
-            patterns: [["{{", "}}"]],
-            contains: ["ROOT"]
+        //LOW PRIORITY
+        // basic values
+        cdw_null: {
+            patterns: ["null"]
         },
-        cdw_list: {
-            patterns: [["[", "]"]],
-            contains: ["ROOT"]
+        cdw_true: {
+            patterns: ["true"]
+        },
+        cdw_false: {
+            patterns: ["false"]
+        },
+        cdw_number: {
+            patterns: [/\d[\d_\.]*/]
+        },
+        // operators
+        cdw_plus: {
+            patterns: ["+"]
+        },
+        cdw_minus: {
+            patterns: ["-"]
+        },
+        cdw_star: {
+            patterns: ["*"]
+        },
+        cdw_slash: {
+            patterns: ["/"]
         },
         // file connections
         cdw_import: {
@@ -964,6 +1008,13 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
     const { createTextParser } = fileCollection.get("LibraryParsing.js");
     const publicExports = module.exports = {};
     const nonMainLayer = { isROOTLayer: false };
+    const subLayersDefinitons = {};
+    for (let key in CodeCSS.textLayerDefinition) {
+        subLayersDefinitons[key] = nonMainLayer;
+    }
+    for (let key in CodeCDW.textLayerDefinition) {
+        subLayersDefinitons[key] = nonMainLayer;
+    }
     publicExports.textLayerDefinition = merge(CodeCSS.textLayerDefinition, CodeCDW.textLayerDefinition, {
         html_comment: {
             patterns: [["<!--", "-->"]],
@@ -1013,14 +1064,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
                 [/\S+=/, /\s/],
             ]
         },
-        css_comment: nonMainLayer,
-        css_string: nonMainLayer,
-        css_url: nonMainLayer,
-        cdw_comment: nonMainLayer,
-        cdw_import: nonMainLayer,
-        cdw_importMaybe: nonMainLayer,
-        cdw_insertAfter: nonMainLayer,
-    });
+    }, subLayersDefinitons);
     publicExports.collectAttributes = function TK_CodeHTML_collectAttributes(text) {
         const result = {
             attributes: new Map(),

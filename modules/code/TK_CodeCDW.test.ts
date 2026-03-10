@@ -65,10 +65,13 @@ g #load() h #load('') i #load($variable)");
             contents.length = 0;
             parser("'number{{2+3}} and text \\{{4+5}}'");
             assert({
-                "quotes": {
+                "quotes2": {
                     value: contents,
                     shouldBe: [
-                        [7, 'cdw_textParse', "{{2+3}}"],
+                        [9, 'cdw_number', '2'],
+                        [10, 'cdw_plus', '+'],
+                        [11, 'cdw_number', '3'],
+                        [7, 'cdw_textParse', '{{2+3}}'],
                         [24, 'cdw_textEscape', '\\{'],
                         [0, 'cdw_text', "'number{{2+3}} and text \\{{4+5}}'"]
                     ],
@@ -91,11 +94,17 @@ g #load() h #load('') i #load($variable)");
                     value: contents,
                     shouldBe: [
                         [9, 'cdw_funkCall', '()'],
+                        [29, 'cdw_listSeparator', ','],
+                        [34, 'cdw_listSeparator', ','],
                         [21, 'cdw_list', '[keyDown, Alt, c]'],
+                        [38, 'cdw_listSeparator', ','],
+                        [47, 'cdw_listSeparator', ','],
+                        [52, 'cdw_listSeparator', ','],
                         [54, 'cdw_text', "'ç'"],
                         [39, 'cdw_list', "[keyDown, Alt, 'ç']"],
                         [20, 'cdw_list', "[[keyDown, Alt, c],[keyDown, Alt, 'ç']]"],
                         [83, 'cdw_text', "'state.js'"],
+                        [93, 'cdw_listSeparator', ','],
                         [141, 'cdw_funkCall', '($)'],
                         [
                             111,
