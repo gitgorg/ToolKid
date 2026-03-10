@@ -37,6 +37,13 @@ interface TK_Code_file {
     const publicExports = module.exports = {} as TK_Code_file["HTML"];
 
     const nonMainLayer = <any>{ isROOTLayer: false };
+    const subLayersDefinitons = <Dictionary>{};
+    for (let key in CodeCSS.textLayerDefinition) {
+        subLayersDefinitons[key] = nonMainLayer;
+    }
+    for (let key in CodeCDW.textLayerDefinition) {
+        subLayersDefinitons[key] = nonMainLayer;
+    }
     publicExports.textLayerDefinition = merge(
         CodeCSS.textLayerDefinition,
         CodeCDW.textLayerDefinition,
@@ -90,16 +97,8 @@ interface TK_Code_file {
                     [/\S+=/, /\s/],
                 ]
             },
-
-            css_comment: nonMainLayer,
-            css_string: nonMainLayer,
-            css_url: nonMainLayer,
-
-            cdw_comment: nonMainLayer,
-            cdw_import: nonMainLayer,
-            cdw_importMaybe: nonMainLayer,
-            cdw_insertAfter: nonMainLayer,
-        }
+        },
+        subLayersDefinitons
     );
 
 
