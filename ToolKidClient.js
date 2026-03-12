@@ -611,12 +611,12 @@ fileCollection.set("LibraryParsing.js", module.exports);
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
         //TOP PRIORITY
-        cdw_newLine: {
-            patterns: ["&&"]
-        },
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
             contains: ["cdw_comment"],
+        },
+        cdw_newLine: {
+            patterns: ["&&"]
         },
         //texts
         cdw_text: {
