@@ -744,9 +744,6 @@ fileCollection.set("LibraryParsing.js", module.exports);
     const publicExports = module.exports = {};
     publicExports.textLayerDefinition = {
         //TOP PRIORITY
-        cdw_newLine: {
-            patterns: ["&&"]
-        },
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
             contains: ["cdw_comment"],
@@ -770,13 +767,20 @@ fileCollection.set("LibraryParsing.js", module.exports);
             patterns: [["{{", "}}"]],
             contains: ["ROOT"]
         },
+        cdw_newLine: {
+            patterns: ["&&"]
+        },
         //lists
         cdw_list: {
             patterns: [["[", "]"]],
-            contains: ["cdw_listSeparator", "ROOT"],
+            contains: ["cdw_listSeparator", "cdw_listAssignment", "ROOT"],
         },
         cdw_listSeparator: {
             patterns: [","],
+            isROOTLayer: false,
+        },
+        cdw_listAssignment: {
+            patterns: ["<<"],
             isROOTLayer: false,
         },
         //functions
@@ -802,6 +806,9 @@ fileCollection.set("LibraryParsing.js", module.exports);
         cdw_number: {
             patterns: [/\d[\d_\.]*/]
         },
+        cdw_variableDeclaration: {
+            patterns: [/\$\$\S+/]
+        },
         // operators
         cdw_plus: {
             patterns: ["+"]
@@ -814,6 +821,9 @@ fileCollection.set("LibraryParsing.js", module.exports);
         },
         cdw_slash: {
             patterns: ["/"]
+        },
+        cdw_assignment: {
+            patterns: ["<<"]
         },
         // file connections
         cdw_import: {
@@ -838,6 +848,9 @@ fileCollection.set("LibraryParsing.js", module.exports);
             patterns: [["#insertAfter(", ")"]],
             layerData: { fileConnection: "optional" },
         },
+        cdw_textFallback: {
+            patterns: [/\w+/]
+        }
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {

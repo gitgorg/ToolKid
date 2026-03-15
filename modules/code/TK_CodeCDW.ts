@@ -22,9 +22,6 @@ interface TK_Code_file {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
             contains: ["cdw_comment"],
         },
-        cdw_newLine: {
-            patterns: ["&&"]
-        },
         //texts
         cdw_text: {
             patterns: [["'", "'"]],
@@ -46,13 +43,20 @@ interface TK_Code_file {
             patterns: [["{{", "}}"]],
             contains: ["ROOT"]
         },
+        cdw_newLine: {
+            patterns: ["&&"]
+        },
         //lists
         cdw_list: {
-            patterns: [["[","]"]],
-            contains: ["cdw_listSeparator", "ROOT"],
+            patterns: [["[", "]"]],
+            contains: ["cdw_listSeparator", "cdw_listAssignment", "ROOT"],
         },
         cdw_listSeparator: {
             patterns: [","],
+            isROOTLayer: false,
+        },
+        cdw_listAssignment: {
+            patterns: ["<<"],
             isROOTLayer: false,
         },
         //functions
@@ -61,7 +65,7 @@ interface TK_Code_file {
             contains: ["ROOT"]
         },
         cdw_funkCall: {
-            patterns: [["(",")"]],
+            patterns: [["(", ")"]],
             contains: ["ROOT"]
         },
 
@@ -78,7 +82,10 @@ interface TK_Code_file {
             patterns: ["false"]
         },
         cdw_number: {
-            patterns:[/\d[\d_\.]*/]
+            patterns: [/\d[\d_\.]*/]
+        },
+        cdw_variableDeclaration: {
+            patterns: [/\$\$\S+/]
         },
         // operators
         cdw_plus: {
@@ -92,6 +99,9 @@ interface TK_Code_file {
         },
         cdw_slash: {
             patterns: ["/"]
+        },
+        cdw_assignment: {
+            patterns: ["<<"]
         },
 
         // file connections
@@ -121,6 +131,10 @@ interface TK_Code_file {
             patterns: [["#insertAfter(", ")"]],
             layerData: { fileConnection: "optional" },
         },
+
+        cdw_textFallback: {
+            patterns: [/\w+/]
+        }
     };
 
 
