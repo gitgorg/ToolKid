@@ -2499,6 +2499,13 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         TKTest.setFailureHandler(logFailure.bind(null, name));
     };
     const shortenData = function TK_DebugTestFull_shortenValue(list) {
+        if (typeof list === "function") {
+            const name = list.name;
+            list = list.toString();
+            if (name !== undefined && list.slice(0, 10) === "function (") {
+                list = "function " + name + list.slice(9);
+            }
+        }
         return ToolKid.dataTypes.list.shorten({
             list,
             maxLength: (typeof list === "string" ? 200 : 30),
