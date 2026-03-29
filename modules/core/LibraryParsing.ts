@@ -14,18 +14,19 @@ type LibraryParsing_file = {
             TextParserForOpenings | TextParserForClosings | "SKIP" | "REMOVE",
             string[] | string
         >,
+        debug?: true
     }): TextParser | Error,
 
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
         parseClosings: TextParserForClosings
-    }): { (inputs: TextParserInputs): string[] },
+    }): { (inputs: TextParserInputs): string[] } | Error,
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings: TextParserForOpenings,
         parseClosings?: TextParserForClosings
-    }): { (inputs: TextParserInputs): string[] },
+    }): { (inputs: TextParserInputs): string[] } | Error,
 
     getLayerDefinition(): TextLayerDefinition,
 
@@ -114,30 +115,43 @@ type TextParser = {
         };
         const { layerDefinition } = inputs;
         const { removedLayers } = analysed;
+        const errors = <Dictionary[]>[];
         for (const [layerName, parsers] of Object.entries(analysed.layerParsers)) {
             b_createTextParserLayer(
                 <any>layerDefinition[layerName],
                 layers, removedLayers,
-                layerName, parsers
+                layerName, parsers, errors
             );
         }
-        const errors = <Dictionary[]>[];
+        if (errors.length !== 0) {
+            return createError("invalid layers", errors);
+        };
+
         Object.values(layers).forEach(
             c_connectTextParserLayers.bind(null, layers, removedLayers, errors)
         );
         if (errors.length !== 0) {
-            const error = <Dictionary>new Error("unknown layers");
-            error.details = {
+            return createError("unknown layers", {
                 unknownLayerKeys: errors,
                 validLayerKeys: Object.keys(layers),
-            };
-            return error;
+            });
         };
 
         Object.values(layers).forEach(
             d_cleanUpTextParserLayer
         );
+        if (inputs.debug === true) {
+            console.log("parser layers:", layers);
+        }
         return e_parseTextLayer.bind(null, layers.ROOT);
+    };
+
+    const createError = function LibraryParsing_createError(
+        message: string, details?: any
+    ): Error {
+        const error = <any>new Error(message);
+        error.details = details;
+        return error;
     };
 
 
@@ -163,21 +177,15 @@ type TextParser = {
             if (parser === "SKIP") {
                 parser = skipLayer;
             } else if (typeof parser !== "function" && parser !== "REMOVE") {
-                const error = new Error("invalid parser");
-                (<Dictionary>error).details = {
-                    names, parser
-                };
-                return error;
+                return createError("invalid parser", { names, parser });
             }
 
             if (typeof names === "string") {
                 names = [names];
             } else if (!(names instanceof Array)) {
-                const error = new Error("invalid layer names");
-                (<Dictionary>error).details = {
+                return createError("invalid layer names", {
                     parser, layerNames: names,
-                };
-                return error;
+                });
             }
 
             for (layerName of names) {
@@ -197,42 +205,35 @@ type TextParser = {
                     || layerName === "*"
                 ) {
                     layerParsers[layerName] = parserSet;
-                    continue
+                } else {
+                    return createError("unknown layer name", {
+                        layerName, validLayerNames: Object.keys(layerDefinition)
+                    });
                 }
-
-                const error = new Error("unknown layer name");
-                (<Dictionary>error).details = {
-                    layerName, validLayerNames: Object.keys(layerDefinition)
-                };
-                return error;
             }
         }
 
         const wildCards = layerParsers["*"];
         delete layerParsers["*"];
-        const error = <Error & { details: string }>new Error("missing parser");
         for (const name of Object.keys(layerDefinition)) {
             parserSet = layerParsers[name];
             if (parserSet === undefined) {
                 if (wildCards === undefined) {
-                    error.details = "parsers for: " + name;
-                    return error;
+                    return createError("missing parser", "parsers for: " + name);
                 }
 
                 parserSet = <any>wildCards.slice(0);
             }
             if (parserSet[0] === undefined) {
                 if (wildCards[0] === undefined) {
-                    error.details = "opening for: " + name;
-                    return error;
+                    return createError("missing parser", "opening for: " + name);
                 }
 
                 parserSet[0] = wildCards[0];
             }
             if (parserSet[1] === undefined) {
                 if (wildCards[1] === undefined) {
-                    error.details = "closing for:" + name;
-                    return error;
+                    return createError("missing parser", "closing for: " + name);
                 }
 
                 parserSet[1] = wildCards[1];
@@ -261,15 +262,18 @@ type TextParser = {
         layers: { [name: string]: LayerData },
         removedLayers: Set<string>,
         layerName: string,
-        parsers: [TextParserForOpenings, TextParserForClosings]
+        parsers: [TextParserForOpenings, TextParserForClosings],
+        errors: any[],
     ) {
         if (removedLayers.has(layerName)) {
             return;
         }
 
-        const layer = layers[layerName] = <any>{
-            openings: [],
-            closings: [],
+        const openings = <(string)[]>[];
+        const closings = <(string | undefined)[]>[];
+        layers[layerName] = <any>{
+            openings,
+            closings,
             parseOpening: parsers[0],
             parseClosing: parsers[1],
             contains: layerConfig.contains,
@@ -281,11 +285,26 @@ type TextParser = {
             pattern: any
         ) {
             if (pattern instanceof Array) {
-                layer.openings.push(getTextFromRX(pattern[0]));
-                layer.closings.push(getTextFromRX(pattern[1]));
+                let text = getTextFromRX(pattern[0]);
+                if (text instanceof Array) {
+                    errors.push({ layerName, pattern, error: text[0] })
+                } else {
+                    openings.push(<string>text);
+                }
+                text = getTextFromRX(pattern[1]);
+                if (text instanceof Array) {
+                    errors.push({ layerName, pattern, error: text[0] })
+                } else {
+                    closings.push(<string>text);
+                }
             } else {
-                layer.openings.push(getTextFromRX(pattern));
-                layer.closings.push(undefined);
+                const text = getTextFromRX(pattern);
+                if (text instanceof Array) {
+                    errors.push({ layerName, pattern, error: text[0] })
+                } else {
+                    openings.push(<string>text);
+                }
+                closings.push(undefined);
                 // layer.parseClosing = skipLayer;
             }
         });
@@ -425,10 +444,10 @@ type TextParser = {
             return;
         }
 
-        const error = <any>new Error("not all layers closed");
-        error.layerStack = layerStack.slice(1, layerDepth + 1);
-        error.resultStack = resultStack.slice(1, layerDepth + 1);
-        return error;
+        return createError("not all layers closed", {
+            layerStack: layerStack.slice(1, layerDepth + 1),
+            resultStack: resultStack.slice(1, layerDepth + 1)
+        });
     };
 
 
@@ -453,7 +472,9 @@ type TextParser = {
             layerDefinition: inputs.layerDefinition,
             parsers
         });
-        return replaceTextLayered.bind(null, parser);
+        return (parser instanceof Error)
+            ? parser
+            : replaceTextLayered.bind(null, parser);
     };
 
     const replaceOpening = function LibraryParsing_replaceOpening(
@@ -574,13 +595,18 @@ type TextParser = {
         };
     };
 
-    const getTextFromRX = function LibraryParsing_getTextFromRX(value: string | RegExp) {
+    const RX_bracket = /[^\\]\(/;
+    const getTextFromRX = function LibraryParsing_getTextFromRX(
+        value: string | RegExp
+    ): string | any[] {
         if (value instanceof RegExp) {
-            return value.source;
+            return RX_bracket.test(value.source)
+                ? ["RegExp capturing groups are not supported"]
+                : value.source;
         } else if (typeof value === "string") {
             return escapeRX(value);
         } else {
-            return value;
+            return ["pattern must be string or RegExp"];
         }
     };
 

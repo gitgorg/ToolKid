@@ -371,22 +371,32 @@ fileCollection.set("LibraryFiles.js", module.exports);
         };
         const { layerDefinition } = inputs;
         const { removedLayers } = analysed;
-        for (const [layerName, parsers] of Object.entries(analysed.layerParsers)) {
-            b_createTextParserLayer(layerDefinition[layerName], layers, removedLayers, layerName, parsers);
-        }
         const errors = [];
+        for (const [layerName, parsers] of Object.entries(analysed.layerParsers)) {
+            b_createTextParserLayer(layerDefinition[layerName], layers, removedLayers, layerName, parsers, errors);
+        }
+        if (errors.length !== 0) {
+            return createError("invalid layers", errors);
+        }
+        ;
         Object.values(layers).forEach(c_connectTextParserLayers.bind(null, layers, removedLayers, errors));
         if (errors.length !== 0) {
-            const error = new Error("unknown layers");
-            error.details = {
+            return createError("unknown layers", {
                 unknownLayerKeys: errors,
                 validLayerKeys: Object.keys(layers),
-            };
-            return error;
+            });
         }
         ;
         Object.values(layers).forEach(d_cleanUpTextParserLayer);
+        if (inputs.debug === true) {
+            console.log("parser layers:", layers);
+        }
         return e_parseTextLayer.bind(null, layers.ROOT);
+    };
+    const createError = function LibraryParsing_createError(message, details) {
+        const error = new Error(message);
+        error.details = details;
+        return error;
     };
     const a_analyseTextParserConfig = function LibraryParsing_analyseTextParserConfig(inputs) {
         const { layerDefinition } = inputs;
@@ -399,21 +409,15 @@ fileCollection.set("LibraryFiles.js", module.exports);
                 parser = skipLayer;
             }
             else if (typeof parser !== "function" && parser !== "REMOVE") {
-                const error = new Error("invalid parser");
-                error.details = {
-                    names, parser
-                };
-                return error;
+                return createError("invalid parser", { names, parser });
             }
             if (typeof names === "string") {
                 names = [names];
             }
             else if (!(names instanceof Array)) {
-                const error = new Error("invalid layer names");
-                error.details = {
+                return createError("invalid layer names", {
                     parser, layerNames: names,
-                };
-                return error;
+                });
             }
             for (layerName of names) {
                 if (layerName[0] === "<") {
@@ -432,38 +436,33 @@ fileCollection.set("LibraryFiles.js", module.exports);
                 if (layerDefinition[layerName] !== undefined
                     || layerName === "*") {
                     layerParsers[layerName] = parserSet;
-                    continue;
                 }
-                const error = new Error("unknown layer name");
-                error.details = {
-                    layerName, validLayerNames: Object.keys(layerDefinition)
-                };
-                return error;
+                else {
+                    return createError("unknown layer name", {
+                        layerName, validLayerNames: Object.keys(layerDefinition)
+                    });
+                }
             }
         }
         const wildCards = layerParsers["*"];
         delete layerParsers["*"];
-        const error = new Error("missing parser");
         for (const name of Object.keys(layerDefinition)) {
             parserSet = layerParsers[name];
             if (parserSet === undefined) {
                 if (wildCards === undefined) {
-                    error.details = "parsers for: " + name;
-                    return error;
+                    return createError("missing parser", "parsers for: " + name);
                 }
                 parserSet = wildCards.slice(0);
             }
             if (parserSet[0] === undefined) {
                 if (wildCards[0] === undefined) {
-                    error.details = "opening for: " + name;
-                    return error;
+                    return createError("missing parser", "opening for: " + name);
                 }
                 parserSet[0] = wildCards[0];
             }
             if (parserSet[1] === undefined) {
                 if (wildCards[1] === undefined) {
-                    error.details = "closing for:" + name;
-                    return error;
+                    return createError("missing parser", "closing for: " + name);
                 }
                 parserSet[1] = wildCards[1];
             }
@@ -486,13 +485,15 @@ fileCollection.set("LibraryFiles.js", module.exports);
             removedLayers,
         };
     };
-    const b_createTextParserLayer = function LibraryParsing_createTextParserLayer(layerConfig, layers, removedLayers, layerName, parsers) {
+    const b_createTextParserLayer = function LibraryParsing_createTextParserLayer(layerConfig, layers, removedLayers, layerName, parsers, errors) {
         if (removedLayers.has(layerName)) {
             return;
         }
-        const layer = layers[layerName] = {
-            openings: [],
-            closings: [],
+        const openings = [];
+        const closings = [];
+        layers[layerName] = {
+            openings,
+            closings,
             parseOpening: parsers[0],
             parseClosing: parsers[1],
             contains: layerConfig.contains,
@@ -502,12 +503,30 @@ fileCollection.set("LibraryFiles.js", module.exports);
         };
         layerConfig.patterns.forEach(function LibraryParsing_createTextParserLayerBrackets(pattern) {
             if (pattern instanceof Array) {
-                layer.openings.push(getTextFromRX(pattern[0]));
-                layer.closings.push(getTextFromRX(pattern[1]));
+                let text = getTextFromRX(pattern[0]);
+                if (text instanceof Array) {
+                    errors.push({ layerName, pattern, error: text[0] });
+                }
+                else {
+                    openings.push(text);
+                }
+                text = getTextFromRX(pattern[1]);
+                if (text instanceof Array) {
+                    errors.push({ layerName, pattern, error: text[0] });
+                }
+                else {
+                    closings.push(text);
+                }
             }
             else {
-                layer.openings.push(getTextFromRX(pattern));
-                layer.closings.push(undefined);
+                const text = getTextFromRX(pattern);
+                if (text instanceof Array) {
+                    errors.push({ layerName, pattern, error: text[0] });
+                }
+                else {
+                    openings.push(text);
+                }
+                closings.push(undefined);
                 // layer.parseClosing = skipLayer;
             }
         });
@@ -618,10 +637,10 @@ fileCollection.set("LibraryFiles.js", module.exports);
         if (layerDepth === 0) {
             return;
         }
-        const error = new Error("not all layers closed");
-        error.layerStack = layerStack.slice(1, layerDepth + 1);
-        error.resultStack = resultStack.slice(1, layerDepth + 1);
-        return error;
+        return createError("not all layers closed", {
+            layerStack: layerStack.slice(1, layerDepth + 1),
+            resultStack: resultStack.slice(1, layerDepth + 1)
+        });
     };
     publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
         const parsers = new Map();
@@ -635,7 +654,9 @@ fileCollection.set("LibraryFiles.js", module.exports);
             layerDefinition: inputs.layerDefinition,
             parsers
         });
-        return replaceTextLayered.bind(null, parser);
+        return (parser instanceof Error)
+            ? parser
+            : replaceTextLayered.bind(null, parser);
     };
     const replaceOpening = function LibraryParsing_replaceOpening(parser, RXResult, layerData, inputs, layerDepth) {
         const returned = parser(RXResult, layerData, inputs, layerDepth);
@@ -714,15 +735,18 @@ fileCollection.set("LibraryFiles.js", module.exports);
             },
         };
     };
+    const RX_bracket = /[^\\]\(/;
     const getTextFromRX = function LibraryParsing_getTextFromRX(value) {
         if (value instanceof RegExp) {
-            return value.source;
+            return RX_bracket.test(value.source)
+                ? ["RegExp capturing groups are not supported"]
+                : value.source;
         }
         else if (typeof value === "string") {
             return escapeRX(value);
         }
         else {
-            return value;
+            return ["pattern must be string or RegExp"];
         }
     };
     publicExports.readLayerContent = function LibraryParsing_readLayerContent(inputs) {
@@ -747,9 +771,6 @@ fileCollection.set("LibraryParsing.js", module.exports);
         cdw_comment: {
             patterns: [["//", /\n|$/], ["/*", "*/"]],
             contains: ["cdw_comment"],
-        },
-        cdw_newLine: {
-            patterns: ["&&"]
         },
         //texts
         cdw_text: {
@@ -796,6 +817,9 @@ fileCollection.set("LibraryParsing.js", module.exports);
             contains: ["ROOT"]
         },
         //LOW PRIORITY
+        cdw_pathSeparator: {
+            patterns: [/\./]
+        },
         // basic values
         cdw_null: {
             patterns: ["null"]
@@ -810,7 +834,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
             patterns: [/\d[\d_\.]*/]
         },
         cdw_variableDeclaration: {
-            patterns: [/\$\$\S+/]
+            patterns: [/\$\$\w+/]
         },
         // operators
         cdw_plus: {

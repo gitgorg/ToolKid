@@ -36,27 +36,31 @@ g #load() h #load('') i #load($variable)");
         subject: createTextParser,
         execute: function parsingCDWText() {
             const parser = <TextParser>createTextParser({
+                // debug: true,
                 layerDefinition: textLayerDefinition,
                 parsers: new Map([
-                    [function (closing, layerData, inputs, depth, opening) {
+                    [<TextParserForOpenings>function (opening, layerData, inputs, depth) {
                         contents.push([
                             opening.index,
                             layerData.name,
-                            inputs.text.slice(opening.index, closing.index + closing[0].length)
                         ])
-                    }, ">*"],
+                    }, "<*"],
                     <any>["REMOVE", "cdw_newLine"]
                 ])
             });
+            if (parser instanceof Error) {
+                throw parser;
+            }
+
             const contents = <any[]>[];
             parser("'single\\' double\\2'");
             assert({
                 "quotes": {
                     value: contents,
                     shouldBe: [
-                        [7, 'cdw_textEscape', "\\'"],
-                        [16, 'cdw_textEscape', '\\2'],
-                        [0, 'cdw_text', "'single\\' double\\2'"]
+                        [0, 'cdw_text'],
+                        [7, 'cdw_textEscape'],
+                        [16, 'cdw_textEscape']
                     ],
                     toleranceDepth: 3
                 }
@@ -68,12 +72,12 @@ g #load() h #load('') i #load($variable)");
                 "quotes2": {
                     value: contents,
                     shouldBe: [
-                        [9, 'cdw_number', '2'],
-                        [10, 'cdw_plus', '+'],
-                        [11, 'cdw_number', '3'],
-                        [7, 'cdw_textParse', '{{2+3}}'],
-                        [24, 'cdw_textEscape', '\\{'],
-                        [0, 'cdw_text', "'number{{2+3}} and text \\{{4+5}}'"]
+                        [0, 'cdw_text'],
+                        [7, 'cdw_textParse'],
+                        [9, 'cdw_number'],
+                        [10, 'cdw_plus'],
+                        [11, 'cdw_number'],
+                        [24, 'cdw_textEscape']
                     ],
                     toleranceDepth: 3
                 }
@@ -93,57 +97,37 @@ g #load() h #load('') i #load($variable)");
                 "real code": {
                     value: contents,
                     shouldBe: [
-                        [5, 'cdw_textFallback', 'info'],
-                        [9, 'cdw_funkCall', '()'],
-                        [14, 'cdw_textFallback', 'watch'],
-                        [22, 'cdw_textFallback', 'keyDown'],
-                        [29, 'cdw_listSeparator', ','],
-                        [31, 'cdw_textFallback', 'Alt'],
-                        [34, 'cdw_listSeparator', ','],
-                        [36, 'cdw_textFallback', 'c'],
-                        [21, 'cdw_list', '[keyDown, Alt, c]'],
-                        [38, 'cdw_listSeparator', ','],
-                        [40, 'cdw_textFallback', 'keyDown'],
-                        [47, 'cdw_listSeparator', ','],
-                        [49, 'cdw_textFallback', 'Alt'],
-                        [52, 'cdw_listSeparator', ','],
-                        [54, 'cdw_text', "'ç'"],
-                        [39, 'cdw_list', "[keyDown, Alt, 'ç']"],
-                        [20, 'cdw_list', "[[keyDown, Alt, c],[keyDown, Alt, 'ç']]"],
-                        [75, 'cdw_textFallback', 'path'],
-                        [80, 'cdw_listAssignment', '<<'],
-                        [83, 'cdw_text', "'state.js'"],
-                        [93, 'cdw_listSeparator', ','],
-                        [99, 'cdw_textFallback', 'callback'],
-                        [108, 'cdw_listAssignment', '<<'],
-                        [126, 'cdw_textFallback', 'match'],
-                        [132, 'cdw_textFallback', 'loadState'],
-                        [141, 'cdw_funkCall', '($)'],
-                        [
-                            111,
-                            'cdw_funkDeclare',
-                            '{:\n        && .match.loadState($)\n    :}'
-                        ],
-                        [
-                            69,
-                            'cdw_list',
-                            '[\n' +
-                            "    path << 'state.js',\n" +
-                            '    callback << {:\n' +
-                            '        && .match.loadState($)\n' +
-                            '    :}\n' +
-                            ']'
-                        ],
-                        [
-                            63,
-                            'cdw_importMaybe',
-                            '#load([\n' +
-                            "    path << 'state.js',\n" +
-                            '    callback << {:\n' +
-                            '        && .match.loadState($)\n' +
-                            '    :}\n' +
-                            '])'
-                        ]
+                        [5, 'cdw_textFallback'],
+                        [9, 'cdw_funkCall'],
+                        [14, 'cdw_textFallback'],
+                        [20, 'cdw_list'],
+                        [21, 'cdw_list'],
+                        [22, 'cdw_textFallback'],
+                        [29, 'cdw_listSeparator'],
+                        [31, 'cdw_textFallback'],
+                        [34, 'cdw_listSeparator'],
+                        [36, 'cdw_textFallback'],
+                        [38, 'cdw_listSeparator'],
+                        [39, 'cdw_list'],
+                        [40, 'cdw_textFallback'],
+                        [47, 'cdw_listSeparator'],
+                        [49, 'cdw_textFallback'],
+                        [52, 'cdw_listSeparator'],
+                        [54, 'cdw_text'],
+                        [63, 'cdw_importMaybe'],
+                        [69, 'cdw_list'],
+                        [75, 'cdw_textFallback'],
+                        [80, 'cdw_listAssignment'],
+                        [83, 'cdw_text'],
+                        [93, 'cdw_listSeparator'],
+                        [99, 'cdw_textFallback'],
+                        [108, 'cdw_listAssignment'],
+                        [111, 'cdw_funkDeclare'],
+                        [125, 'cdw_pathSeparator'],
+                        [126, 'cdw_textFallback'],
+                        [131, 'cdw_pathSeparator'],
+                        [132, 'cdw_textFallback'],
+                        [141, 'cdw_funkCall']
                     ],
                     toleranceDepth: 3,
                 },

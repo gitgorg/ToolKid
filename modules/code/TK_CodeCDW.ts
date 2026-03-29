@@ -71,6 +71,9 @@ interface TK_Code_file {
 
         //LOW PRIORITY
 
+        cdw_pathSeparator: {
+            patterns: [/\./]
+        },
         // basic values
         cdw_null: {
             patterns: ["null"]
@@ -85,7 +88,7 @@ interface TK_Code_file {
             patterns: [/\d[\d_\.]*/]
         },
         cdw_variableDeclaration: {
-            patterns: [/\$\$\S+/]
+            patterns: [/\$\$\w+/]
         },
         // operators
         cdw_plus: {
