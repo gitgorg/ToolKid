@@ -40,6 +40,7 @@ type Condition = Promise<any> & {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
     const registeredConditions = new Map();
+    const waitingConditions = <Map<string, Condition[]>>new Map();
     publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
         if (typeof inputs === "string") {
             const found = registeredConditions.get(inputs);
@@ -47,8 +48,19 @@ type Condition = Promise<any> & {
                 return found;
             }
 
+            let queue = waitingConditions.get(inputs);
             const result = conditionCreate();
-            result.reject("unregistered condition: \"" + inputs + "\"");
+            if (queue === undefined) {
+                queue = [result];
+                waitingConditions.set(inputs, queue);
+            } else {
+                queue.push(result);
+            }
+            setTimeout(function () {
+                if (registeredConditions.get(inputs) === undefined) {
+                    result.reject("unregistered condition: \"" + inputs + "\"");
+                }
+            }, 5000);
             return result;
         }
 
@@ -63,10 +75,28 @@ type Condition = Promise<any> & {
         if (typeof (<any>inputs).timeToResolve === "number" || typeof (<any>inputs).timeToReject === "number") {
             watchPromiseDuration(<any>inputs, result);
         }
-        if (typeof inputs.registerWithName === "string") {
-            registeredConditions.set(inputs.registerWithName, result);
+        if (typeof inputs.registerWithName !== "string") {
+            return result;
+        }
+
+        const name = inputs.registerWithName;
+        registeredConditions.set(name, result);
+        const queue = waitingConditions.get(name);
+        if (queue !== undefined) {
+            result
+                .then(triggerConditions.bind(null, queue, "resolve"))
+                .catch(triggerConditions.bind(null, queue, "reject"));
+            waitingConditions.delete(name);
         }
         return result;
+    };
+
+    const triggerConditions = function TK_DebugTestCondition_triggerConditions(
+        queue: Condition[], mode:"resolve"|"reject", value:any
+    ) {
+        for (const condition of queue) {
+            condition[mode](value);
+        }
     };
 
     const conditionCreate = function TK_DebugTestCondition_conditionCreate() {
