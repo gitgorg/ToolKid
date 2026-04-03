@@ -9,6 +9,7 @@
         "noImplicitThis": true,
         "noUnusedLocals": true,
         "strictNullChecks": true,
+        "types": ["node"],
         "target": "ES2021"
     },
     "exclude": [
