@@ -143,7 +143,7 @@ type TextParser = {
         if (inputs.debug === true) {
             console.log("parser layers:", layers);
         }
-        return e_parseTextLayer.bind(null, layers.ROOT);
+        return <TextParser>e_parseTextLayer.bind(null, layers.ROOT);
     };
 
     const createError = function LibraryParsing_createError(
@@ -207,7 +207,7 @@ type TextParser = {
                     layerParsers[layerName] = parserSet;
                 } else {
                     return createError("unknown layer name", {
-                        layerName, validLayerNames: Object.keys(layerDefinition)
+                        layerName, validLayerNames: Object.keys(layerDefinition).sort()
                     });
                 }
             }

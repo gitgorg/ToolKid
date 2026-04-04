@@ -409,7 +409,7 @@
     test({
         subject: createTextReplacer,
         execute: function replaceLayered() {
-            const parser = createTextReplacer({
+            const parser = <GenericFunction>createTextReplacer({
                 layerDefinition: layersJS,
                 parseClosings: function (
                     RXResult, data

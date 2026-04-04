@@ -72,7 +72,7 @@ type TK_CodeJS_file = {
 
 
 
-    publicExports.removeComments = ToolKid.getCoreModule("parsing").createTextReplacer({
+    publicExports.removeComments = <GenericFunction>ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: {
             js_comment: publicExports.textLayerDefinition.js_comment,
             js_text: publicExports.textLayerDefinition.js_text,
@@ -84,13 +84,20 @@ type TK_CodeJS_file = {
             }
         }
     });
-    Object.defineProperty(publicExports.removeComments, "name", {
-        value: "TK_CodeJS_removeComments",
-    });
+    if (publicExports.removeComments instanceof Error) {
+        console.warn(
+            "TK_CodeJS_removeComments couldn't be created:",
+            publicExports.removeComments
+        );
+    } else {
+        Object.defineProperty(publicExports.removeComments, "name", {
+            value: "TK_CodeJS_removeComments",
+        });
+    }
 
     const validPathOpenings = new Set(['"', "'", "`"]);
     const validPathClosings = new Set([".js", "jsm"]);
-    publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
+    publicExports.replaceFileConnections = <GenericFunction>ToolKid.getCoreModule("parsing").createTextReplacer({
         layerDefinition: publicExports.textLayerDefinition,
         parseClosings: function TK_CodeJS_replaceFileConnections(
             ...inputs: Parameters<TextParserForClosings>
@@ -110,9 +117,16 @@ type TK_CodeJS_file = {
             }
         }
     });
-    Object.defineProperty(publicExports.replaceFileConnections, "name", {
-        value: "TK_CodeJS_replaceFileConnections",
-    });
+    if (publicExports.replaceFileConnections instanceof Error) {
+        console.warn(
+            "TK_CodeJS_replaceFileConnections couldn't be created:",
+            publicExports.replaceFileConnections
+        );
+    } else {
+        Object.defineProperty(publicExports.replaceFileConnections, "name", {
+            value: "TK_CodeJS_replaceFileConnections",
+        });
+    }
 
 
 

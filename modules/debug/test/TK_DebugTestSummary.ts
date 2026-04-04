@@ -6,12 +6,12 @@ interface TK_DebugTest_file {
         name?: string,
         suspects?: any[],
         callback?(
-            summary: TestSummary
+            summary: TKTestSummary
         ): void
-    }): TestSummary
+    }): TKTestSummary
 }
 
-type TestSummary = {
+type TKTestSummary = {
     name: string,
     testCount: number,
     failures: TKTestResult[],
@@ -22,15 +22,15 @@ type TestSummary = {
     pending: Set<Promise<TKTestResult>>,
     missingSuspects: Set<any>,
     testedSuspects: Set<any>,
-    callback?: (summary: TestSummary) => void
+    callback?: (summary: TKTestSummary) => void
 }
 
 
 
-(function TK_DebugTestSummary_init() {
+(function TK_DebugTKTestSummary_init() {
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-    const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(
+    const beautifyDifferences = function TK_DebugTKTestSummary_beautifyDifferences(
         testResult: TKTestResult
     ) {
         const { errorMessage } = testResult;
@@ -87,7 +87,7 @@ type TestSummary = {
         });
     };
 
-    const getAllMethods = function TK_DebugTestSummary_getAllMethods(suspect: any) {
+    const getAllMethods = function TK_DebugTKTestSummary_getAllMethods(suspect: any) {
         const result = <any[]>[];
         if (typeof suspect === "function") {
             result[0] = suspect;
@@ -101,7 +101,7 @@ type TestSummary = {
         return result;
     };
 
-    const registerSuspect = function TK_DebugTestSummary_registerSuspect(
+    const registerSuspect = function TK_DebugTKTestSummary_registerSuspect(
         suspectList: Set<any>, suspect: any
     ) {
         const methods = getAllMethods(suspect);
@@ -112,8 +112,8 @@ type TestSummary = {
         }
     };
 
-    let pendingSummaries = <TestSummary[]>[];
-    publicExports.getSummary = function TK_DebugTestSummary_getSummary(
+    let pendingSummaries = <TKTestSummary[]>[];
+    publicExports.getSummary = function TK_DebugTKTestSummary_getSummary(
         inputs = {}
     ) {
         const { suspects, callback } = inputs;
@@ -140,7 +140,7 @@ type TestSummary = {
             inputs,
             pendingCount: summary.pending.size
         };
-        summary.pending.forEach(function TK_DebugTestSummary_watchPromise(
+        summary.pending.forEach(function TK_DebugTKTestSummary_watchPromise(
             promise
         ) {
             promise.then(summaryCallbackCheck.bind(null, boundData));
@@ -148,7 +148,7 @@ type TestSummary = {
         return summary;
     };
 
-    const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(
+    const summaryCallbackCheck = function TK_DebugTKTestSummary_summaryCallbackCheck(
         boundData: Dictionary
     ) {
         boundData.pendingCount -= 1;
@@ -158,7 +158,7 @@ type TestSummary = {
         }
     };
 
-    const summaryCallback = function TK_DebugTestSummary_summaryCallback(
+    const summaryCallback = function TK_DebugTKTestSummary_summaryCallback(
         boundData: Dictionary
     ) {
         delete boundData.pendingCallback;
@@ -173,7 +173,7 @@ type TestSummary = {
         missingSuspects: Set<any>
     }) {
         const resultGroupName = inputs.name;
-        const summary: TestSummary = {
+        const summary: TKTestSummary = {
             name: resultGroupName,
             testCount: 0,
             failures: [],
@@ -188,8 +188,8 @@ type TestSummary = {
         return summary;
     };
 
-    const getSummaryFinal = function TK_DebugTestSummary_getSummaryFinal(
-        summary: TestSummary
+    const getSummaryFinal = function TK_DebugTKTestSummary_getSummaryFinal(
+        summary: TKTestSummary
     ) {
         const pos = pendingSummaries.indexOf(summary);
         if (pos !== -1) {
@@ -202,9 +202,9 @@ type TestSummary = {
         }
     };
 
-    const summaryHandlePromise = function TK_DebugTestSummary_summaryHandlePromise(
+    const summaryHandlePromise = function TK_DebugTKTestSummary_summaryHandlePromise(
         bound: {
-            summary: TestSummary,
+            summary: TKTestSummary,
             promise: Promise<TKTestResult>
         },
         result: TKTestResult
@@ -219,7 +219,7 @@ type TestSummary = {
     };
 
     const summaryRegisterResult = function TK_DebugTest_summaryRegisterResult(
-        summary: TestSummary,
+        summary: TKTestSummary,
         testResult: TKTestResult | Promise<TKTestResult>
     ) {
         summary.testCount += 1;
@@ -246,8 +246,8 @@ type TestSummary = {
     };
 
     // TODO: find the duplicate for TK_nodeJS_writeFile and remove this
-    const removeSuspect = function TK_DebugTestSummary_removeSuspect(
-        summary: TestSummary, subject: any
+    const removeSuspect = function TK_DebugTKTestSummary_removeSuspect(
+        summary: TKTestSummary, subject: any
     ) {
         if (summary.testedSuspects.has(subject)) {
             return;
@@ -260,7 +260,7 @@ type TestSummary = {
             && typeof subject === "function"
         ) {
             const { name } = subject;
-            missingSuspects.forEach(function TK_DebugTestSummary_removeSuspectFind(suspect) {
+            missingSuspects.forEach(function TK_DebugTKTestSummary_removeSuspectFind(suspect) {
                 if (
                     typeof suspect === "function"
                     && suspect.name === name

@@ -306,7 +306,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                 }
                 else {
                     return createError("unknown layer name", {
-                        layerName, validLayerNames: Object.keys(layerDefinition)
+                        layerName, validLayerNames: Object.keys(layerDefinition).sort()
                     });
                 }
             }
@@ -698,7 +698,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
             patterns: ["false"]
         },
         cdw_number: {
-            patterns: [/\d[\d_\.]*/]
+            patterns: [/\d[\d_]*/]
         },
         cdw_variableDeclaration: {
             patterns: [/\$\$\w+/]
@@ -1259,9 +1259,14 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
             }
         }
     });
-    Object.defineProperty(publicExports.removeComments, "name", {
-        value: "TK_CodeJS_removeComments",
-    });
+    if (publicExports.removeComments instanceof Error) {
+        console.warn("TK_CodeJS_removeComments couldn't be created:", publicExports.removeComments);
+    }
+    else {
+        Object.defineProperty(publicExports.removeComments, "name", {
+            value: "TK_CodeJS_removeComments",
+        });
+    }
     const validPathOpenings = new Set(['"', "'", "`"]);
     const validPathClosings = new Set([".js", "jsm"]);
     publicExports.replaceFileConnections = ToolKid.getCoreModule("parsing").createTextReplacer({
@@ -1277,9 +1282,14 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
             }
         }
     });
-    Object.defineProperty(publicExports.replaceFileConnections, "name", {
-        value: "TK_CodeJS_replaceFileConnections",
-    });
+    if (publicExports.replaceFileConnections instanceof Error) {
+        console.warn("TK_CodeJS_replaceFileConnections couldn't be created:", publicExports.replaceFileConnections);
+    }
+    else {
+        Object.defineProperty(publicExports.replaceFileConnections, "name", {
+            value: "TK_CodeJS_replaceFileConnections",
+        });
+    }
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "code", subSection: "JS", entries: publicExports });
@@ -2626,9 +2636,9 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
 fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 
 "use strict";
-(function TK_DebugTestSummary_init() {
+(function TK_DebugTKTestSummary_init() {
     const publicExports = module.exports = {};
-    const beautifyDifferences = function TK_DebugTestSummary_beautifyDifferences(testResult) {
+    const beautifyDifferences = function TK_DebugTKTestSummary_beautifyDifferences(testResult) {
         const { errorMessage } = testResult;
         if (!(errorMessage instanceof Array)
             || errorMessage[0] !== "string"
@@ -2681,7 +2691,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
             errorMessage: [testResult.errorMessage[0], ...subMessages]
         });
     };
-    const getAllMethods = function TK_DebugTestSummary_getAllMethods(suspect) {
+    const getAllMethods = function TK_DebugTKTestSummary_getAllMethods(suspect) {
         const result = [];
         if (typeof suspect === "function") {
             result[0] = suspect;
@@ -2694,7 +2704,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         });
         return result;
     };
-    const registerSuspect = function TK_DebugTestSummary_registerSuspect(suspectList, suspect) {
+    const registerSuspect = function TK_DebugTKTestSummary_registerSuspect(suspectList, suspect) {
         const methods = getAllMethods(suspect);
         if (methods.length === 0) {
             suspectList.add(suspect);
@@ -2704,7 +2714,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         }
     };
     let pendingSummaries = [];
-    publicExports.getSummary = function TK_DebugTestSummary_getSummary(inputs = {}) {
+    publicExports.getSummary = function TK_DebugTKTestSummary_getSummary(inputs = {}) {
         const { suspects, callback } = inputs;
         let missingSuspects = new Set();
         if (suspects !== undefined) {
@@ -2724,19 +2734,19 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
             inputs,
             pendingCount: summary.pending.size
         };
-        summary.pending.forEach(function TK_DebugTestSummary_watchPromise(promise) {
+        summary.pending.forEach(function TK_DebugTKTestSummary_watchPromise(promise) {
             promise.then(summaryCallbackCheck.bind(null, boundData));
         });
         return summary;
     };
-    const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(boundData) {
+    const summaryCallbackCheck = function TK_DebugTKTestSummary_summaryCallbackCheck(boundData) {
         boundData.pendingCount -= 1;
         if (boundData.pendingCount === 0 && boundData.pendingCallback === undefined) {
             boundData.pendingCallback = true;
             setTimeout(summaryCallback.bind(null, boundData), 0);
         }
     };
-    const summaryCallback = function TK_DebugTestSummary_summaryCallback(boundData) {
+    const summaryCallback = function TK_DebugTKTestSummary_summaryCallback(boundData) {
         delete boundData.pendingCallback;
         if (boundData.pendingCount === 0) {
             publicExports.getSummary(Object.assign({}, boundData.inputs, {
@@ -2758,7 +2768,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         inputs.results.forEach(summaryRegisterResult.bind(null, summary));
         return summary;
     };
-    const getSummaryFinal = function TK_DebugTestSummary_getSummaryFinal(summary) {
+    const getSummaryFinal = function TK_DebugTKTestSummary_getSummaryFinal(summary) {
         const pos = pendingSummaries.indexOf(summary);
         if (pos !== -1) {
             pendingSummaries.splice(pos, 1);
@@ -2769,7 +2779,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
             callback(summary);
         }
     };
-    const summaryHandlePromise = function TK_DebugTestSummary_summaryHandlePromise(bound, result) {
+    const summaryHandlePromise = function TK_DebugTKTestSummary_summaryHandlePromise(bound, result) {
         const { summary } = bound;
         summary.pending.delete(bound.promise);
         summary.testCount -= 1;
@@ -2800,7 +2810,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         }
     };
     // TODO: find the duplicate for TK_nodeJS_writeFile and remove this
-    const removeSuspect = function TK_DebugTestSummary_removeSuspect(summary, subject) {
+    const removeSuspect = function TK_DebugTKTestSummary_removeSuspect(summary, subject) {
         if (summary.testedSuspects.has(subject)) {
             return;
         }
@@ -2809,7 +2819,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         if (missingSuspects.delete(subject) === false
             && typeof subject === "function") {
             const { name } = subject;
-            missingSuspects.forEach(function TK_DebugTestSummary_removeSuspectFind(suspect) {
+            missingSuspects.forEach(function TK_DebugTKTestSummary_removeSuspectFind(suspect) {
                 if (typeof suspect === "function"
                     && suspect.name === name
                     && suspect.toString() === subject.toString()) {

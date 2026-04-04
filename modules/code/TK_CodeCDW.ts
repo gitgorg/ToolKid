@@ -85,7 +85,7 @@ interface TK_Code_file {
             patterns: ["false"]
         },
         cdw_number: {
-            patterns: [/\d[\d_\.]*/]
+            patterns: [/\d[\d_]*/]
         },
         cdw_variableDeclaration: {
             patterns: [/\$\$\w+/]

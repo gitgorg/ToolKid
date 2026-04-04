@@ -9,7 +9,8 @@
         "noImplicitThis": true,
         "noUnusedLocals": true,
         "strictNullChecks": true,
-        "target": "ES2021"
+        "target": "ES2021",
+        "types": ["node"]
     },
     "exclude": [
         "node_modules"

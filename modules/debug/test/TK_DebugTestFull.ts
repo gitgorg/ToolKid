@@ -85,7 +85,7 @@ interface TK_DebugTest_file {
     };
 
     const summarizeFazitSync = function TK_DebugTestFull_summarizeFazitSync(inputs: {
-        summary: TestSummary,
+        summary: TKTestSummary,
         timeInitial: number
     }) {
         const { summary } = inputs;
@@ -108,7 +108,7 @@ interface TK_DebugTest_file {
     };
 
     const summarizeFazit = function TK_DebugTestFull_summarizeFazit(inputs: {
-        summary: TestSummary,
+        summary: TKTestSummary,
         timeInitial: number,
         timeFinal: number
     }) {
@@ -127,7 +127,7 @@ interface TK_DebugTest_file {
             );
     };
 
-    const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary: TestSummary) {
+    const logMissingSuspects = function TK_DebugTestFull_logMissingSuspects(summary: TKTestSummary) {
         const { missingSuspects } = summary;
         if (missingSuspects.size !== 0) {
             console.error("\n" +
