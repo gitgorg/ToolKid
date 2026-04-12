@@ -808,7 +808,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
             isROOTLayer: false,
         },
         //functions
-        cdw_funkDeclare: {
+        cdw_funkBody: {
             patterns: [["{:", ":}"]],
             contains: ["ROOT"]
         },
