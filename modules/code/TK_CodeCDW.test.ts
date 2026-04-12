@@ -122,7 +122,7 @@ g #load() h #load('') i #load($variable)");
                         [93, 'cdw_listSeparator'],
                         [99, 'cdw_textFallback'],
                         [108, 'cdw_listAssignment'],
-                        [111, 'cdw_funkDeclare'],
+                        [111, 'cdw_funkBody'],
                         [125, 'cdw_pathSeparator'],
                         [126, 'cdw_textFallback'],
                         [131, 'cdw_pathSeparator'],

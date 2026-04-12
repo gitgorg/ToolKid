@@ -60,7 +60,7 @@ interface TK_Code_file {
             isROOTLayer: false,
         },
         //functions
-        cdw_funkDeclare: {
+        cdw_funkBody: {
             patterns: [["{:", ":}"]],
             contains: ["ROOT"]
         },
