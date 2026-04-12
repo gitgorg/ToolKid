@@ -119,7 +119,6 @@ type EqualityDifference = {
                     toleranceDepth - 1, allowAdditions,
                     readProperty.Map
                 );
-                return true;
             }
         },
         number: function (shouldBe, value, path) {

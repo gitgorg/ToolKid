@@ -27,25 +27,28 @@ type CustomPromise = {
 
         let missing = promises.length;
         const datas = new Array(promises.length);
-        const result = publicExports.createPromise();
+        const combined = publicExports.createPromise();
         const handleSucces = function TK_DataTypesPromise_combinePromisesSuccess(
             position: number, data: any
         ) {
             datas[position] = data;
             missing -= 1;
-            if (missing === 0) {
-                result.resolve(datas);
+            if (missing === 0 && combined.state === "pending") {
+                combined.resolve(datas);
             }
         };
-        const handleFailure = function TK_DataTypesPromise_combinePromisesFailure(data: any) {
-            if (result.state === "pending") {
-                result.reject(data);
+        const handleFailure = function TK_DataTypesPromise_combinePromisesFailure(
+            position: number, reason: any
+        ) {
+            datas[position] = reason;
+            if (combined.state === "pending") {
+                combined.reject(reason);
             }
         };
         promises.forEach(function TK_DataTypesPromise_combinePromisesWatch(promise, position) {
-            promise.then(handleSucces.bind(null, position), handleFailure);
+            promise.then(handleSucces.bind(null, position), handleFailure.bind(null, position));
         });
-        return result.promise;
+        return combined.promise;
     };
 
     publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
