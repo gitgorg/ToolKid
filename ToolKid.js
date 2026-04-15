@@ -2448,27 +2448,30 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
     const registeredConditions = new Map();
     const waitingConditions = new Map();
     publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
-        if (typeof inputs === "string") {
-            const found = registeredConditions.get(inputs);
-            if (found !== undefined) {
-                return found;
-            }
-            let queue = waitingConditions.get(inputs);
-            const result = conditionCreate();
-            if (queue === undefined) {
-                queue = [result];
-                waitingConditions.set(inputs, queue);
-            }
-            else {
-                queue.push(result);
-            }
-            setTimeout(function () {
-                if (registeredConditions.get(inputs) === undefined) {
-                    result.reject("unregistered condition: \"" + inputs + "\"");
-                }
-            }, 5000);
-            return result;
+        if (typeof inputs !== "string") {
+            return createCondition(inputs);
         }
+        const found = registeredConditions.get(inputs);
+        if (found !== undefined) {
+            return found;
+        }
+        let queue = waitingConditions.get(inputs);
+        const result = conditionCreate();
+        if (queue === undefined) {
+            queue = [result];
+            waitingConditions.set(inputs, queue);
+        }
+        else {
+            queue.push(result);
+        }
+        setTimeout(function () {
+            if (registeredConditions.get(inputs) === undefined) {
+                result.reject("waiting for unknown condition: \"" + inputs + "\"");
+            }
+        }, 5000);
+        return result;
+    };
+    const createCondition = publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
         if (inputs === undefined) {
             return conditionCreate();
         }
@@ -2531,7 +2534,10 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
             : ["reject", inputs.timeToReject];
         setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
             if (promise.done !== true) {
-                promise[config[0]](inputs.timeoutMessage || "timeout");
+                promise[config[0]](inputs.timeoutMessage
+                    || (inputs.registerWithName === undefined
+                        ? "timeout"
+                        : inputs.registerWithName + " timed out"));
             }
         }, config[1]);
     };
