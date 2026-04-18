@@ -1,5 +1,5 @@
 (function TK_DebugTest_test() {
-    const { assertFailure, assertEquality, condition, shouldPass, test } = ToolKid.debug.test;
+    const { assertFailure, assertEquality, createCondition, condition, shouldPass, test } = ToolKid.debug.test;
 
 
     const isFunction = function (value: any) {
@@ -14,11 +14,11 @@
 
 
 
-    const referenceCondition = condition();
+    const referenceCondition = createCondition();
     test({
         subject: referenceCondition.resolve,
         execute: async function createAndResolve() {
-            const promise = condition();
+            const promise = createCondition();
             assertEquality({
                 "should be Promise": {
                     value: promise,
@@ -60,7 +60,7 @@
     }, {
         subject: referenceCondition.reject,
         execute: async function createAndReject() {
-            const promise = condition();
+            const promise = createCondition();
             promise.reject(400);
             await assertFailure({
                 name: "promise",
@@ -78,12 +78,14 @@
         subject: condition,
         execute: async function registeredConditions() {
             await assertFailure({
-                name: "not yet registered condition",
-                execute: condition("debug.test.condition1"),
-                shouldThrow: "unregistered condition: \"debug.test.condition1\""
+                name: "unknown condition",
+                execute: condition("debug.test.conditionNever")
             });
-
-            let promise = condition({
+        }
+    }, {
+        subject: createCondition,
+        execute: async function registeredConditions() {
+            let promise = createCondition({
                 timeToReject: 1000,
                 registerWithName: "debug.test.condition1",
             });
@@ -95,17 +97,16 @@
                 }
             });
 
-            promise = condition({
+            promise = createCondition({
                 timeToReject: 0,
                 registerWithName: "debug.test.condition2"
             });
             await assertFailure({
                 name: "outtimed registered condition",
                 execute: condition("debug.test.condition2"),
-                shouldThrow: "timeout"
             });
 
-            promise = condition({
+            promise = createCondition({
                 timeToReject: 1000,
                 registerWithName: "debug.test.condition3"
             });

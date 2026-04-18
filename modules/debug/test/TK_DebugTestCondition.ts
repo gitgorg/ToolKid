@@ -7,16 +7,15 @@ interface TK_DebugTest_file {
         name: string
     ): Condition,
 
-    // creating condition
-    condition(
+    createCondition(
         timeToResolve?: number
     ): Condition,
-    condition(inputs: {
+    createCondition(inputs: {
         timeToResolve: number,
         timeoutMessage?: any,
         registerWithName?: string,
     }): Condition,
-    condition(inputs: {
+    createCondition(inputs: {
         timeToReject: number,
         timeoutMessage?: any,
         registerWithName?: string,
@@ -42,28 +41,32 @@ type Condition = Promise<any> & {
     const registeredConditions = new Map();
     const waitingConditions = <Map<string, Condition[]>>new Map();
     publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
-        if (typeof inputs === "string") {
-            const found = registeredConditions.get(inputs);
-            if (found !== undefined) {
-                return found;
-            }
-
-            let queue = waitingConditions.get(inputs);
-            const result = conditionCreate();
-            if (queue === undefined) {
-                queue = [result];
-                waitingConditions.set(inputs, queue);
-            } else {
-                queue.push(result);
-            }
-            setTimeout(function () {
-                if (registeredConditions.get(inputs) === undefined) {
-                    result.reject("unregistered condition: \"" + inputs + "\"");
-                }
-            }, 5000);
-            return result;
+        if (typeof inputs !== "string") {
+            return createCondition(<Parameters<TK_DebugTest_file["createCondition"]>[0]>inputs);
         }
 
+        const found = registeredConditions.get(inputs);
+        if (found !== undefined) {
+            return found;
+        }
+
+        let queue = waitingConditions.get(inputs);
+        const result = conditionCreate();
+        if (queue === undefined) {
+            queue = [result];
+            waitingConditions.set(inputs, queue);
+        } else {
+            queue.push(result);
+        }
+        setTimeout(function () {
+            if (registeredConditions.get(inputs) === undefined) {
+                result.reject("waiting for unknown condition: \"" + inputs + "\"");
+            }
+        }, 5000);
+        return result;
+    };
+
+    const createCondition = publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
         if (inputs === undefined) {
             return conditionCreate();
         }
@@ -92,7 +95,7 @@ type Condition = Promise<any> & {
     };
 
     const triggerConditions = function TK_DebugTestCondition_triggerConditions(
-        queue: Condition[], mode:"resolve"|"reject", value:any
+        queue: Condition[], mode: "resolve" | "reject", value: any
     ) {
         for (const condition of queue) {
             condition[mode](value);
@@ -133,13 +136,20 @@ type Condition = Promise<any> & {
         timeToResolve?: number,
         timeToReject?: number,
         timeoutMessage: string,
+        registerWithName?: string,
     }, promise: Condition) {
         const config = (typeof inputs.timeToResolve === "number")
             ? ["resolve", inputs.timeToResolve] as ["resolve", number]
             : ["reject", inputs.timeToReject] as ["reject", number];
         setTimeout(function TK_DebugTestCondition_watchPromiseDurationCheck() {
             if (promise.done !== true) {
-                promise[config[0]](inputs.timeoutMessage || "timeout");
+                promise[config[0]](
+                    inputs.timeoutMessage
+                    || (inputs.registerWithName === undefined
+                        ? "timeout"
+                        : inputs.registerWithName + " timed out"
+                    )
+                );
             }
         }, config[1]);
 

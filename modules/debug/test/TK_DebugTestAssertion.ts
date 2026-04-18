@@ -54,7 +54,7 @@ type TK_AssertConfig = {
     const defaultConfig = {};
     const publicExports = module.exports = <TK_DebugTest_file>{};
 
-    publicExports.assert = function TK_DebugTestAssertion_assert(...inputs: any[]) {
+    publicExports.assert = function TK_DebugTestAssertion_assert(...inputs:any[]) {
         const errors = <(string | EqualityDifference)[]>[];
         if (inputs.length === 3) {
             assertEqualityPerName(errors, [inputs[0], { value: inputs[1], shouldBe: inputs[2] }]);
@@ -79,7 +79,7 @@ type TK_AssertConfig = {
     const assertComplex = function TK_DebugTestAssertion_assertComplex(
         errors: (string | EqualityDifference)[],
         baseConfig: TK_AssertConfig,
-        nameAndConfig: [string, Dictionary],
+        nameAndConfig: [string, any],
     ) {
         const [, config] = nameAndConfig;
         if (isShortConfig(config)) {
