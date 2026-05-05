@@ -15,24 +15,64 @@ type LibraryParsing_file = {
             string[] | string
         >,
         debug?: true
-    }): TextParser | Error,
+    }): TextParser | (Error & { details: any }),
+
+    createTextParserLayers(inputs: {
+        layerDefinition: TextLayerDefinition,
+        parsers: Map<
+            TextParserForOpenings | TextParserForClosings | "SKIP" | "REMOVE",
+            string[] | string
+        >,
+        debug?: true
+    }): {
+        [key: string]: TextLayer,
+        ROOT: TextLayer
+    } | (Error & { details: any }),
 
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings?: TextParserForOpenings,
         parseClosings: TextParserForClosings
-    }): { (inputs: TextParserInputs): string[] } | Error,
+    }): {
+        (
+            inputs: string | { text: string } & Dictionary
+        ): string[]
+    } | Error,
     createTextReplacer(inputs: {
         layerDefinition: TextLayerDefinition,
         parseOpenings: TextParserForOpenings,
         parseClosings?: TextParserForClosings
-    }): { (inputs: TextParserInputs): string[] } | Error,
+    }): {
+        (
+            inputs: string | { text: string } & Dictionary
+        ): string[]
+    } | Error,
 
-    getLayerDefinition(): TextLayerDefinition,
+    parseTextLayers(
+        layer: TextLayer,
+        inputs: string | { text: string },
+    ): (Error & {
+        details: {
+            layerStack: any[],
+            resultStack: any[]
+        }
+    }) | void,
 
     readLayerContent(
         inputs: IArguments | Parameters<TextParserForClosings>
-    ): string
+    ): string,
+
+    skipLayer(): void
+}
+
+type TextLayer = {
+    data: { name: string } & Dictionary,
+    directions: (
+        [layer: TextLayer, expectedID: number] | undefined
+    )[],
+    pattern: RegExp,
+    parseOpening: TextParserForOpenings,
+    parseClosing: TextParserForClosings,
 }
 
 type TextLayerDefinition = {
@@ -48,15 +88,17 @@ type TextLayerDefinition = {
     }
 }
 
-type TextParserInputs = string | { text: string } & Dictionary
-type TextParserForOpenings = {
+type TextParser = {
     (
-        RXResult: RegExpExecArray,
-        layerData: { name: string } & Dictionary,
-        inputs: { text: string } & Dictionary,
-        layerDepth: number,
-    ): void | string | string[]
+        inputs: string | ({ text: string } & Dictionary)
+    ): void | (Error & {
+        details: {
+            layerStack: any[];
+            resultStack: any[];
+        }
+    })
 }
+
 type TextParserForClosings = {
     (
         RXResultClosing: RegExpExecArray,
@@ -69,25 +111,19 @@ type TextParserForClosings = {
     ]
 }
 
-type TextParser = {
+type TextParserForOpenings = {
     (
-        inputs: string | { text: string } & Dictionary
-    ): void | Error
+        RXResult: RegExpExecArray,
+        layerData: { name: string } & Dictionary,
+        inputs: { text: string } & Dictionary,
+        layerDepth: number,
+    ): void | string | string[]
 }
 
 
 
 (function LibraryParsing_init() {
-    type LayerDataSlim = {
-        data: { name: string } & Dictionary,
-        directions: (
-            [layer: LayerDataSlim, expectedID: number] | undefined
-        )[],
-        pattern: RegExp,
-        parseOpening: TextParserForOpenings,
-        parseClosing: TextParserForClosings,
-    }
-    type LayerData = LayerDataSlim & {
+    type LayerData = TextLayer & {
         openings: string[],
         closings: (string | undefined)[],
         contains?: string[],
@@ -97,22 +133,25 @@ type TextParser = {
 
 
     const publicExports = module.exports = <LibraryParsing_file>{};
-    const skipLayer = function LibraryParsing_skipLayer() { };
+    publicExports.skipLayer = function LibraryParsing_skipLayer() { };
 
-    publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
-        const analysed = a_analyseTextParserConfig(<any>inputs);
+    publicExports.createTextParserLayers = function LibraryParsing_setupTextParserLayers(inputs) {
+        const analysed = a_analyseTextParserConfig(inputs);
         if (analysed instanceof Error) {
             return analysed;
         }
 
-        const layers = <{ [key: string]: LayerData }>{
-            ROOT: <LayerData><any>{
-                data: { name: "ROOT" },
-                openings: [],
-                closings: [],
-                contains: []
-            }
-        };
+        const layers = <{
+            [key: string]: LayerData,
+            ROOT: LayerData
+        }>{
+                ROOT: <LayerData><any>{
+                    data: { name: "ROOT" },
+                    openings: [],
+                    closings: [],
+                    contains: []
+                }
+            };
         const { layerDefinition } = inputs;
         const { removedLayers } = analysed;
         const errors = <Dictionary[]>[];
@@ -143,21 +182,11 @@ type TextParser = {
         if (inputs.debug === true) {
             console.log("parser layers:", layers);
         }
-        return <TextParser>e_parseTextLayer.bind(null, layers.ROOT);
+        return layers;
     };
-
-    const createError = function LibraryParsing_createError(
-        message: string, details?: any
-    ): Error {
-        const error = <any>new Error(message);
-        error.details = details;
-        return error;
-    };
-
-
 
     const a_analyseTextParserConfig = function LibraryParsing_analyseTextParserConfig(
-        inputs: Parameters<LibraryParsing_file["createTextParser"]>[0],
+        inputs: Parameters<LibraryParsing_file["createTextParserLayers"]>[0],
     ) {
         const { layerDefinition } = inputs;
         const layerParsers = {} as {
@@ -175,7 +204,7 @@ type TextParser = {
         let layerName = "";
         for (let [parser, names] of inputs.parsers.entries()) {
             if (parser === "SKIP") {
-                parser = skipLayer;
+                parser = publicExports.skipLayer;
             } else if (typeof parser !== "function" && parser !== "REMOVE") {
                 return createError("invalid parser", { names, parser });
             }
@@ -191,11 +220,11 @@ type TextParser = {
             for (layerName of names) {
                 if (layerName[0] === "<") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [parser, skipLayer];
+                    parserSet = layerParsers[layerName] || [parser, publicExports.skipLayer];
                     parserSet[0] = <TextParserForOpenings>parser;
                 } else if (layerName[0] === ">") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [skipLayer, parser];
+                    parserSet = layerParsers[layerName] || [publicExports.skipLayer, parser];
                     parserSet[1] = <TextParserForClosings>parser;
                 } else {
                     parserSet = layerParsers[layerName] || [parser, parser];
@@ -368,10 +397,79 @@ type TextParser = {
         Object.freeze(layer.data);
     };
 
-    const e_parseTextLayer = function LibraryParsing_parseTextLayer(
-        layer: LayerDataSlim,
-        inputs: { text: string },
-    ): void | Error {
+
+
+    const createError = function LibraryParsing_createError<Details>(
+        message: string, details: Details
+    ): Error & { details: Details } {
+        const error = <any>new Error(message);
+        error.details = details;
+        return error;
+    };
+
+    publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
+        const layers = publicExports.createTextParserLayers(inputs);
+        return (layers instanceof Error)
+            ? layers
+            : publicExports.parseTextLayers.bind(null, <TextLayer>layers.ROOT);
+    };
+
+    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(
+        inputs
+    ) {
+        const parsers = new Map();
+        if (inputs.parseOpenings !== undefined) {
+            parsers.set(
+                replaceOpening.bind(null, inputs.parseOpenings),
+                "<*"
+            );
+        }
+        if (inputs.parseClosings !== undefined) {
+            parsers.set(
+                replaceClosing.bind(null, inputs.parseClosings),
+                ">*"
+            );
+        }
+        const parser = publicExports.createTextParser({
+            layerDefinition: inputs.layerDefinition,
+            parsers
+        });
+        return (parser instanceof Error)
+            ? parser
+            : replaceText.bind(null, parser);
+    };
+
+    // regExp flags explained on top /\
+    const escapeCharsRX = new RegExp([
+        "\\.", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
+    ].join("|\\"), "g");
+    const escapeRX = function LibraryParsing_escapeRX(text: string) {
+        return text.replace(escapeCharsRX, escapeRXReplacer);
+    };
+
+    const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match: string) {
+        return "\\" + match;
+    };
+
+    const RX_bracket = /[^\\]\(/;
+    const getTextFromRX = function LibraryParsing_getTextFromRX(
+        value: string | RegExp
+    ): string | any[] {
+        if (value instanceof RegExp) {
+            return RX_bracket.test(value.source)
+                ? ["RegExp capturing groups are not supported"]
+                : value.source;
+        } else if (typeof value === "string") {
+            return escapeRX(value);
+        } else {
+            return ["pattern must be string or RegExp"];
+        }
+    };
+
+    publicExports.parseTextLayers = function LibraryParsing_parseTextLayers(
+        layer: TextLayer,
+        inputs: string | { text: string },
+    ) {
         if (typeof inputs === "string") {
             inputs = { text: inputs }
         }
@@ -429,6 +527,9 @@ type TextParser = {
 
             //    expected
 
+            // if (inputs.layerContents === undefined) {
+            //     console.log(333, inputs)
+            // }
             layer.parseClosing(
                 RXResult, layerStack[layerDepth].data,
                 inputs, layerDepth,
@@ -448,61 +549,6 @@ type TextParser = {
             layerStack: layerStack.slice(1, layerDepth + 1),
             resultStack: resultStack.slice(1, layerDepth + 1)
         });
-    };
-
-
-
-    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(
-        inputs
-    ) {
-        const parsers = new Map();
-        if (inputs.parseOpenings !== undefined) {
-            parsers.set(
-                replaceOpening.bind(null, inputs.parseOpenings),
-                "<*"
-            );
-        }
-        if (inputs.parseClosings !== undefined) {
-            parsers.set(
-                replaceClosing.bind(null, inputs.parseClosings),
-                ">*"
-            );
-        }
-        const parser = publicExports.createTextParser({
-            layerDefinition: inputs.layerDefinition,
-            parsers
-        });
-        return (parser instanceof Error)
-            ? parser
-            : replaceTextLayered.bind(null, parser);
-    };
-
-    const replaceOpening = function LibraryParsing_replaceOpening(
-        parser: TextParserForOpenings,
-        RXResult: RegExpExecArray,
-        layerData: { name: string } & Dictionary,
-        inputs: { text: string, result: string[], position: number },
-        layerDepth: number
-    ) {
-        const returned = parser(
-            RXResult, layerData,
-            inputs, layerDepth,
-        );
-        if (returned instanceof Array && returned.length !== 0) {
-            inputs.result.push(
-                inputs.text.slice(inputs.position, RXResult.index),
-                ...<string[]>returned
-            );
-            inputs.position = RXResult.index + RXResult[0].length;
-            return;
-        } else if (typeof returned !== "string") {
-            return;
-        }
-
-        inputs.result.push(inputs.text.slice(
-            inputs.position, RXResult.index
-        ), returned);
-        inputs.position = RXResult.index + RXResult[0].length;
     };
 
     const replaceClosing = function LibraryParsing_replaceClosing(
@@ -542,9 +588,37 @@ type TextParser = {
         inputs.position = RXResult.index + RXResult[0].length;
     };
 
-    const replaceTextLayered = function LibraryParsing_replaceTextLayered(
-        parser: { (inputs: TextParserInputs): void },
-        inputs: TextParserInputs
+    const replaceOpening = function LibraryParsing_replaceOpening(
+        parser: TextParserForOpenings,
+        RXResult: RegExpExecArray,
+        layerData: { name: string } & Dictionary,
+        inputs: { text: string, result: string[], position: number },
+        layerDepth: number
+    ) {
+        const returned = parser(
+            RXResult, layerData,
+            inputs, layerDepth,
+        );
+        if (returned instanceof Array && returned.length !== 0) {
+            inputs.result.push(
+                inputs.text.slice(inputs.position, RXResult.index),
+                ...<string[]>returned
+            );
+            inputs.position = RXResult.index + RXResult[0].length;
+            return;
+        } else if (typeof returned !== "string") {
+            return;
+        }
+
+        inputs.result.push(inputs.text.slice(
+            inputs.position, RXResult.index
+        ), returned);
+        inputs.position = RXResult.index + RXResult[0].length;
+    };
+
+    const replaceText = function LibraryParsing_replaceTextLayered(
+        parser: TextParser,
+        inputs: string | { text: string } & Dictionary
     ) {
         if (typeof inputs === "string") {
             inputs = { text: inputs, result: [], position: 0 };
@@ -556,61 +630,7 @@ type TextParser = {
         return inputs.result;
     };
 
-
-
-    // regExp flags explained on top /\
-    const escapeCharsRX = new RegExp([
-        "\\.", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
-    ].join("|\\"), "g");
-    const escapeRX = function LibraryParsing_escapeRX(text: string) {
-        return text.replace(escapeCharsRX, escapeRXReplacer);
-    };
-
-    const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match: string) {
-        return "\\" + match;
-    };
-
-    publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition() {
-        return {
-            comment: {
-                patterns: [
-                    ["//", /\n|$/],
-                    ["/*", "*/"]
-                ],
-            },
-            text: {
-                patterns: [
-                    ["\"", "\""],
-                    ["'", "'"],
-                    ["`", "`"]
-                ],
-                contains: ["escape"],
-            },
-            escape: {
-                isROOTLayer: false,
-                patterns: [
-                    /\\./s
-                ],
-            },
-        };
-    };
-
-    const RX_bracket = /[^\\]\(/;
-    const getTextFromRX = function LibraryParsing_getTextFromRX(
-        value: string | RegExp
-    ): string | any[] {
-        if (value instanceof RegExp) {
-            return RX_bracket.test(value.source)
-                ? ["RegExp capturing groups are not supported"]
-                : value.source;
-        } else if (typeof value === "string") {
-            return escapeRX(value);
-        } else {
-            return ["pattern must be string or RegExp"];
-        }
-    };
-
-    publicExports.readLayerContent = function LibraryParsing_readLayerContent(inputs): string {
+    publicExports.readLayerContent = function LibraryParsing_readLayerContent(inputs) {
         if (typeof inputs[4] === undefined) {
             throw ["LibraryParsing_readLayerContent - inputs missing 5. argument (opening)"];
         }

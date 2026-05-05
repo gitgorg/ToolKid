@@ -209,7 +209,7 @@ type TKTestResultGroup = {
         try {
             const executionPromise = (<Dictionary>config).execute(scope);
             if (executionPromise instanceof Promise) {
-                const resultPromiseInputs = {
+                const resultPromiseInputs = <any>{
                     testResult,
                     startTime,
                     promise: executionPromise,
@@ -217,7 +217,7 @@ type TKTestResultGroup = {
                     source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                 };
                 const resultPromise = <TKTestResultPromise>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
-                    (<Dictionary>resultPromiseInputs).resolver = resolve;
+                    resultPromiseInputs.resolver = resolve;
                 });
                 resultPromise.subject = config.subject;
                 resultPromise.execution = config.execute;

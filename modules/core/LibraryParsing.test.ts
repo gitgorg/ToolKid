@@ -1,14 +1,33 @@
 (function LibraryParsing_test() {
     const {
-        createTextParser, createTextReplacer, getLayerDefinition, readLayerContent
+        createTextParser, createTextReplacer, readLayerContent
     } = <LibraryParsing_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryParsing.js"));
 
-    const { assert, assertEquality, /*assertFailure,*/ shouldPass, test } = ToolKid.debug.test;
-    const shouldPassObject = shouldPass(ToolKid.dataTypes.checks.isObject)
+    const { assert, assertEquality, /*assertFailure,*/ test } = ToolKid.debug.test;
 
 
 
-    const layersJS = <TextLayerDefinition>Object.assign(getLayerDefinition(), {
+    const layersJS = <TextLayerDefinition>{
+        comment: {
+            patterns: [
+                ["//", /\n|$/],
+                ["/*", "*/"]
+            ],
+        },
+        text: {
+            patterns: [
+                ["\"", "\""],
+                ["'", "'"],
+                ["`", "`"]
+            ],
+            contains: ["escape"],
+        },
+        escape: {
+            isROOTLayer: false,
+            patterns: [
+                /\\./s
+            ],
+        },
         bracket: {
             patterns: [
                 ["(", ")"],
@@ -29,7 +48,7 @@
             ],
             contains: ["ROOT"]
         },
-    });
+    };
 
     const file = '\
 (function (){\n\
@@ -438,23 +457,6 @@
 })();'
                     ],
                     toleranceDepth: 2,
-                }
-            });
-        }
-    });
-
-    test({
-        subject: getLayerDefinition,
-        execute: function checkLayerDefinition() {
-            const definition = getLayerDefinition();
-            assertEquality({
-                "definition": {
-                    value: definition,
-                    allowAdditions: true,
-                    toleranceDepth: 4,
-                    shouldBe: {
-                        text: shouldPassObject
-                    },
                 }
             });
         }

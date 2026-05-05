@@ -222,8 +222,8 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
 // v = to support all the new unicode stuff
 (function LibraryParsing_init() {
     const publicExports = module.exports = {};
-    const skipLayer = function LibraryParsing_skipLayer() { };
-    publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
+    publicExports.skipLayer = function LibraryParsing_skipLayer() { };
+    publicExports.createTextParserLayers = function LibraryParsing_setupTextParserLayers(inputs) {
         const analysed = a_analyseTextParserConfig(inputs);
         if (analysed instanceof Error) {
             return analysed;
@@ -258,12 +258,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         if (inputs.debug === true) {
             console.log("parser layers:", layers);
         }
-        return e_parseTextLayer.bind(null, layers.ROOT);
-    };
-    const createError = function LibraryParsing_createError(message, details) {
-        const error = new Error(message);
-        error.details = details;
-        return error;
+        return layers;
     };
     const a_analyseTextParserConfig = function LibraryParsing_analyseTextParserConfig(inputs) {
         const { layerDefinition } = inputs;
@@ -273,7 +268,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         let layerName = "";
         for (let [parser, names] of inputs.parsers.entries()) {
             if (parser === "SKIP") {
-                parser = skipLayer;
+                parser = publicExports.skipLayer;
             }
             else if (typeof parser !== "function" && parser !== "REMOVE") {
                 return createError("invalid parser", { names, parser });
@@ -289,12 +284,12 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
             for (layerName of names) {
                 if (layerName[0] === "<") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [parser, skipLayer];
+                    parserSet = layerParsers[layerName] || [parser, publicExports.skipLayer];
                     parserSet[0] = parser;
                 }
                 else if (layerName[0] === ">") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [skipLayer, parser];
+                    parserSet = layerParsers[layerName] || [publicExports.skipLayer, parser];
                     parserSet[1] = parser;
                 }
                 else {
@@ -443,7 +438,58 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         delete layer.contains;
         Object.freeze(layer.data);
     };
-    const e_parseTextLayer = function LibraryParsing_parseTextLayer(layer, inputs) {
+    const createError = function LibraryParsing_createError(message, details) {
+        const error = new Error(message);
+        error.details = details;
+        return error;
+    };
+    publicExports.createTextParser = function LibraryParsing_createTextParser(inputs) {
+        const layers = publicExports.createTextParserLayers(inputs);
+        return (layers instanceof Error)
+            ? layers
+            : publicExports.parseTextLayers.bind(null, layers.ROOT);
+    };
+    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
+        const parsers = new Map();
+        if (inputs.parseOpenings !== undefined) {
+            parsers.set(replaceOpening.bind(null, inputs.parseOpenings), "<*");
+        }
+        if (inputs.parseClosings !== undefined) {
+            parsers.set(replaceClosing.bind(null, inputs.parseClosings), ">*");
+        }
+        const parser = publicExports.createTextParser({
+            layerDefinition: inputs.layerDefinition,
+            parsers
+        });
+        return (parser instanceof Error)
+            ? parser
+            : replaceText.bind(null, parser);
+    };
+    // regExp flags explained on top /\
+    const escapeCharsRX = new RegExp([
+        "\\.", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
+    ].join("|\\"), "g");
+    const escapeRX = function LibraryParsing_escapeRX(text) {
+        return text.replace(escapeCharsRX, escapeRXReplacer);
+    };
+    const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match) {
+        return "\\" + match;
+    };
+    const RX_bracket = /[^\\]\(/;
+    const getTextFromRX = function LibraryParsing_getTextFromRX(value) {
+        if (value instanceof RegExp) {
+            return RX_bracket.test(value.source)
+                ? ["RegExp capturing groups are not supported"]
+                : value.source;
+        }
+        else if (typeof value === "string") {
+            return escapeRX(value);
+        }
+        else {
+            return ["pattern must be string or RegExp"];
+        }
+    };
+    publicExports.parseTextLayers = function LibraryParsing_parseTextLayers(layer, inputs) {
         if (typeof inputs === "string") {
             inputs = { text: inputs };
         }
@@ -495,6 +541,9 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                 continue;
             }
             //    expected
+            // if (inputs.layerContents === undefined) {
+            //     console.log(333, inputs)
+            // }
             layer.parseClosing(RXResult, layerStack[layerDepth].data, inputs, layerDepth, resultStack[layerDepth]);
             layerDepth -= 1;
             layer = layerStack[layerDepth];
@@ -508,35 +557,6 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
             layerStack: layerStack.slice(1, layerDepth + 1),
             resultStack: resultStack.slice(1, layerDepth + 1)
         });
-    };
-    publicExports.createTextReplacer = function LibraryParsing_createTextReplacer(inputs) {
-        const parsers = new Map();
-        if (inputs.parseOpenings !== undefined) {
-            parsers.set(replaceOpening.bind(null, inputs.parseOpenings), "<*");
-        }
-        if (inputs.parseClosings !== undefined) {
-            parsers.set(replaceClosing.bind(null, inputs.parseClosings), ">*");
-        }
-        const parser = publicExports.createTextParser({
-            layerDefinition: inputs.layerDefinition,
-            parsers
-        });
-        return (parser instanceof Error)
-            ? parser
-            : replaceTextLayered.bind(null, parser);
-    };
-    const replaceOpening = function LibraryParsing_replaceOpening(parser, RXResult, layerData, inputs, layerDepth) {
-        const returned = parser(RXResult, layerData, inputs, layerDepth);
-        if (returned instanceof Array && returned.length !== 0) {
-            inputs.result.push(inputs.text.slice(inputs.position, RXResult.index), ...returned);
-            inputs.position = RXResult.index + RXResult[0].length;
-            return;
-        }
-        else if (typeof returned !== "string") {
-            return;
-        }
-        inputs.result.push(inputs.text.slice(inputs.position, RXResult.index), returned);
-        inputs.position = RXResult.index + RXResult[0].length;
     };
     const replaceClosing = function LibraryParsing_replaceClosing(parser, RXResult, layerData, inputs, layerDepth, RXOpening) {
         const returned = parser(RXResult, layerData, inputs, layerDepth, RXOpening);
@@ -557,7 +577,20 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         inputs.result.push(inputs.text.slice(inputs.position, RXOpening.index), returned);
         inputs.position = RXResult.index + RXResult[0].length;
     };
-    const replaceTextLayered = function LibraryParsing_replaceTextLayered(parser, inputs) {
+    const replaceOpening = function LibraryParsing_replaceOpening(parser, RXResult, layerData, inputs, layerDepth) {
+        const returned = parser(RXResult, layerData, inputs, layerDepth);
+        if (returned instanceof Array && returned.length !== 0) {
+            inputs.result.push(inputs.text.slice(inputs.position, RXResult.index), ...returned);
+            inputs.position = RXResult.index + RXResult[0].length;
+            return;
+        }
+        else if (typeof returned !== "string") {
+            return;
+        }
+        inputs.result.push(inputs.text.slice(inputs.position, RXResult.index), returned);
+        inputs.position = RXResult.index + RXResult[0].length;
+    };
+    const replaceText = function LibraryParsing_replaceTextLayered(parser, inputs) {
         if (typeof inputs === "string") {
             inputs = { text: inputs, result: [], position: 0 };
         }
@@ -567,54 +600,6 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         parser(inputs);
         inputs.result.push(inputs.text.slice(inputs.position));
         return inputs.result;
-    };
-    // regExp flags explained on top /\
-    const escapeCharsRX = new RegExp([
-        "\\.", "*", "+", "?", "{", "}", "(", ")", "[", "]", "\\"
-    ].join("|\\"), "g");
-    const escapeRX = function LibraryParsing_escapeRX(text) {
-        return text.replace(escapeCharsRX, escapeRXReplacer);
-    };
-    const escapeRXReplacer = function LibraryParsing_escapeRXReplacer(match) {
-        return "\\" + match;
-    };
-    publicExports.getLayerDefinition = function LibraryParsing_getLayerDefinition() {
-        return {
-            comment: {
-                patterns: [
-                    ["//", /\n|$/],
-                    ["/*", "*/"]
-                ],
-            },
-            text: {
-                patterns: [
-                    ["\"", "\""],
-                    ["'", "'"],
-                    ["`", "`"]
-                ],
-                contains: ["escape"],
-            },
-            escape: {
-                isROOTLayer: false,
-                patterns: [
-                    /\\./s
-                ],
-            },
-        };
-    };
-    const RX_bracket = /[^\\]\(/;
-    const getTextFromRX = function LibraryParsing_getTextFromRX(value) {
-        if (value instanceof RegExp) {
-            return RX_bracket.test(value.source)
-                ? ["RegExp capturing groups are not supported"]
-                : value.source;
-        }
-        else if (typeof value === "string") {
-            return escapeRX(value);
-        }
-        else {
-            return ["pattern must be string or RegExp"];
-        }
     };
     publicExports.readLayerContent = function LibraryParsing_readLayerContent(inputs) {
         if (typeof inputs[4] === undefined) {
