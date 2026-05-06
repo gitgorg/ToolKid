@@ -126,8 +126,8 @@ type TextParser = {
             c_connectTextParserLayers.bind(null, layers, removedLayers, errors)
         );
         if (errors.length !== 0) {
-            const error = <Dictionary>new Error("unknown layers");
-            error.details = {
+            const error = new Error("unknown layers");
+            (<Dictionary>error).details = {
                 unknownLayerKeys: errors,
                 validLayerKeys: Object.keys(layers),
             };
@@ -453,7 +453,7 @@ type TextParser = {
             layerDefinition: inputs.layerDefinition,
             parsers
         });
-        return replaceTextLayered.bind(null, parser);
+        return replaceTextLayered.bind(null, <TextParser>parser);
     };
 
     const replaceOpening = function LibraryParsing_replaceOpening(

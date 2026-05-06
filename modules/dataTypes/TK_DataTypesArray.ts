@@ -2,7 +2,8 @@
 interface ToolKid_file { dataTypes: TK_DataTypes_file }
 interface TK_DataTypes_file { array: TK_DataTypesArray_file }
 interface TK_DataTypesArray_file {
-    iterateBatch<DataType, StopSignal>(inputs: {
+    // iterates array with breaks between batches
+    iterateNonBlocking<DataType, StopSignal>(inputs: {
         data: DataType[],
         parser: {
             (
@@ -20,7 +21,7 @@ interface TK_DataTypesArray_file {
 
 
 (function TK_DataTypesArray_init() {
-    type DataIterateBatch = {
+    type DataIterateNonBlocking = {
         batchSize: number,
         boundIterator: { (): void },
         callback: { (lastIndex: number): void },
@@ -34,8 +35,8 @@ interface TK_DataTypesArray_file {
 
     const publicExports = module.exports = <TK_DataTypesArray_file>{};
 
-    publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
-        const privateData = <DataIterateBatch><any>Object.assign({
+    publicExports.iterateNonBlocking = function TK_DataTypesArray_iterateNonBlocking(inputs) {
+        const privateData = <DataIterateNonBlocking><any>Object.assign({
             batchSize: 10,
             callback: function () { },
             maxBlockDuration: 100,
@@ -45,14 +46,14 @@ interface TK_DataTypesArray_file {
             dataPosition: 0,
         });
         if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
-            throw ["TK_DataTypesArray_iterateBatch - .startIndex should be a number:", inputs];
+            throw ["TK_DataTypesArray_iterateNonBlocking - .startIndex should be a number:", inputs];
         }
 
-        privateData.boundIterator = iterateBatchLoop.bind(null, privateData);
-        iterateBatchLoop(privateData);
+        privateData.boundIterator = iterateNonBlockingLoop.bind(null, privateData);
+        iterateNonBlockingLoop(privateData);
     };
 
-    const iterateBatchLoop = function db_TLSTools_iterateBatchLoop(inputs: DataIterateBatch) {
+    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(inputs: DataIterateNonBlocking) {
         const { data, parser, stopSignal } = inputs;
         const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
         for (let i = inputs.startIndex; i < indexEnd; i += 1) {

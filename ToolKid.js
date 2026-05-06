@@ -1526,7 +1526,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 "use strict";
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
-    publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
+    publicExports.iterateNonBlocking = function TK_DataTypesArray_iterateNonBlocking(inputs) {
         const privateData = Object.assign({
             batchSize: 10,
             callback: function () { },
@@ -1537,12 +1537,12 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
             dataPosition: 0,
         });
         if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
-            throw ["TK_DataTypesArray_iterateBatch - .startIndex should be a number:", inputs];
+            throw ["TK_DataTypesArray_iterateNonBlocking - .startIndex should be a number:", inputs];
         }
-        privateData.boundIterator = iterateBatchLoop.bind(null, privateData);
-        iterateBatchLoop(privateData);
+        privateData.boundIterator = iterateNonBlockingLoop.bind(null, privateData);
+        iterateNonBlockingLoop(privateData);
     };
-    const iterateBatchLoop = function db_TLSTools_iterateBatchLoop(inputs) {
+    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(inputs) {
         const { data, parser, stopSignal } = inputs;
         const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
         for (let i = inputs.startIndex; i < indexEnd; i += 1) {
@@ -1881,6 +1881,25 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
 })();
 
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
+
+"use strict";
+(function TK_DataTypesError_init() {
+    const publicExports = module.exports = {};
+    publicExports.createCustomError = function TK_DataTypesError_createCustomError(message, details) {
+        if (typeof message !== "string") {
+            throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
+        }
+        const error = new Error(message);
+        error.details = details;
+        return error;
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "dataTypes", subSection: "error", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DataTypesError.js", module.exports);
 
 "use strict";
 (function TK_DataTypesList_init() {
