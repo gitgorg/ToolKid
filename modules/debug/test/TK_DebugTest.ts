@@ -212,7 +212,7 @@ type TKTestResultGroup = {
                 const resultPromiseInputs = {
                     testResult,
                     startTime,
-                    promise: executionPromise,
+                    promise: <TKTestResultPromise>executionPromise,
                     resultGroup,
                     source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                 };
@@ -222,8 +222,8 @@ type TKTestResultGroup = {
                 resultPromise.subject = config.subject;
                 resultPromise.execution = config.execute;
                 executionPromise.then(
-                    testPromiseSuccess.bind(null, resultPromiseInputs),
-                    testPromiseFailure.bind(null, resultPromiseInputs)
+                    testPromiseSuccess.bind(null, <any>resultPromiseInputs),
+                    testPromiseFailure.bind(null, <any>resultPromiseInputs)
                 );
                 resultPromise.then(function Test_testExecute_handlePromise() {
                     const { results } = resultGroup;
