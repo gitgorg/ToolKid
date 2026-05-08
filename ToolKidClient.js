@@ -2889,29 +2889,55 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
 "use strict";
 (function TK_DebugPerformance_file() {
     const publicExports = module.exports = {};
-    publicExports.createClock = function TK_DebugPerformance_createClock(stateCount) {
-        const timeStamps = new Array(stateCount).fill(0);
-        const timeTotals = new Array(stateCount).fill(0);
-        const callCounts = new Array(stateCount).fill(0);
-        const readData = Object.freeze({
-            timeTotals,
-            callCounts,
-        });
-        return Object.freeze({
+    publicExports.createClock = function TK_DebugPerformance_createClock(...stateIDs) {
+        let base = {};
+        for (let i = 0; i < stateIDs.length; i += 1) {
+            base[stateIDs[i]] = 0;
+        }
+        const timeStamps = Object.assign({}, base);
+        const counts = Object.assign({}, base);
+        const timeTotals = Object.assign({}, base);
+        const clock = Object.freeze({
             changeCount: function TK_DebugPerformance_changeCount(stateID, amount) {
-                callCounts[stateID] += amount;
+                counts[stateID] += amount;
             },
             clear: function TK_DebugPerformance_clockClear() {
-                timeTotals.fill(0);
-                callCounts.fill(0);
-                timeStamps.fill(0);
+                let stateID;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    timeStamps[stateID] = 0;
+                    counts[stateID] = 0;
+                    timeTotals[stateID] = 0;
+                }
             },
             read: function TK_DebugPerformance_clockRead() {
-                return readData;
+                return {
+                    counts,
+                    timeTotals
+                };
+            },
+            readNice: function TK_DebugPerformance_clockReadNice() {
+                const result = new Array(stateIDs.length);
+                let stateID;
+                let count;
+                let stateData;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    count = counts[stateID];
+                    stateData = result[i] = { timeTotal: 0, stateID, count };
+                    if (count === 0) {
+                        continue;
+                    }
+                    stateData.timeTotal = Math.ceil(timeTotals[stateID] / 100) / 10;
+                    if (count !== 1) {
+                        stateData.timeAveragePerCall = Math.ceil(timeTotals[stateID] / count);
+                    }
+                }
+                return result.sort(clockSort);
             },
             start: function TK_DebugPerformance_clockStart(stateID) {
                 if (timeStamps[stateID] === 0) {
-                    callCounts[stateID] += 1;
+                    counts[stateID] += 1;
                     timeStamps[stateID] = Date.now();
                 }
             },
@@ -2922,6 +2948,10 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
                 }
             },
         });
+        return clock;
+    };
+    const clockSort = function TK_DebugPerformance_cockSort(a, b) {
+        return b.timeTotal - a.timeTotal;
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -3080,6 +3110,178 @@ fileCollection.set("TK_DebugPerformance.js", module.exports);
 })();
 
 fileCollection.set("TK_DebugTerminalLog.js", module.exports);
+
+"use strict";
+(function TK_DebugTerminal_test() {
+    const Debug = ToolKid.debug;
+    const Terminal = Debug.terminal;
+    const { disableLogs, getColorCode } = Terminal;
+    const { assertEquality, test } = Debug.test;
+    const colors = {};
+    test({
+        subject: getColorCode,
+        execute: function collectImportantColors() {
+            ["grey", "white", "cyan", "orange", "red"].forEach(function (name) {
+                colors[name] = getColorCode(name);
+                const testInputs = {};
+                testInputs["type of " + name] = {
+                    value: typeof colors[name],
+                    shouldBe: "string"
+                };
+                assertEquality(testInputs);
+            });
+        }
+    });
+    test({
+        subject: Terminal.colorStrings,
+        execute: function basic() {
+            assertEquality({
+                "mixed values": {
+                    value: Terminal.colorStrings({
+                        colorName: "orange", values: ["text", 10, null, "text2"]
+                    }),
+                    shouldBe: [
+                        colors.orange + "text" + colors.white,
+                        10,
+                        null,
+                        colors.orange + "text2" + colors.white
+                    ]
+                },
+                "combined strings": {
+                    value: Terminal.colorStrings({
+                        colorName: "red", values: ["A", "B", "C", {}, "D", "E"]
+                    }),
+                    shouldBe: [
+                        colors.red + "ABC" + colors.white,
+                        {},
+                        colors.red + "DE" + colors.white
+                    ],
+                    toleranceDepth: 2
+                }
+            });
+        }
+    });
+    const originalLogError = console.error;
+    const originalLogWarning = console.warn;
+    let errors = [];
+    let warnings = [];
+    console.error = function TK_DebugTerminalLog_errorReplacement(...inputs) {
+        errors.push(inputs);
+    };
+    console.warn = function TK_DebugTerminalLog_warnReplacement(...inputs) {
+        warnings.push(inputs);
+    };
+    test({
+        subject: disableLogs,
+        execute: function disablingLogs() {
+            warnings.length = 0;
+            disableLogs(2);
+            console.warn(1);
+            console.warn(2);
+            console.warn(3);
+            assertEquality({
+                "blocked warnings": {
+                    value: warnings,
+                    shouldBe: [[3]],
+                    toleranceDepth: 2,
+                }
+            });
+        },
+    }, {
+        subject: disableLogs,
+        execute: function reenablingLogs() {
+            warnings.length = 0;
+            disableLogs(100);
+            console.warn(1);
+            disableLogs(false);
+            console.warn(2);
+            console.warn(3);
+            assertEquality({
+                "reenabled warnings": {
+                    value: warnings,
+                    shouldBe: [[2], [3]],
+                    toleranceDepth: 2,
+                },
+            });
+        },
+        callback: function () {
+            warnings.length = 0;
+        }
+    });
+    test({
+        subject: Terminal.logError,
+        execute: function logError() {
+            Terminal.logError("string first", 1);
+            Terminal.logError(2, "number first");
+            assertEquality({
+                "errors": {
+                    value: errors,
+                    shouldBe: [
+                        [colors.red + ">>  string first" + colors.white, 1],
+                        [
+                            colors.red + ">>" + colors.white,
+                            2, colors.red + "number first" + colors.white
+                        ]
+                    ],
+                    toleranceDepth: 3
+                }
+            });
+        }
+    });
+    test({
+        subject: Terminal.logBasic,
+        execute: function logBasic() {
+            warnings.length = 0;
+            Terminal.logBasic("basic", 1, [true]);
+            assertEquality({
+                "warnings": {
+                    value: warnings,
+                    shouldBe: [
+                        [colors.grey + ">>  basic" + colors.white, 1, [true]]
+                    ],
+                    toleranceDepth: 3
+                }
+            });
+        }
+    });
+    test({
+        subject: Terminal.logImportant,
+        execute: function logImportant() {
+            warnings.length = 0;
+            Terminal.logImportant("important", 2, [true]);
+            assertEquality({
+                "warnings": {
+                    value: warnings,
+                    shouldBe: [
+                        [colors.cyan + ">>  important" + colors.white, 2, [true]]
+                    ],
+                    toleranceDepth: 3
+                }
+            });
+        }
+    });
+    test({
+        subject: Terminal.logWarning,
+        execute: function logWarning() {
+            warnings.length = 0;
+            Terminal.logWarning("warning", 3, [true]);
+            assertEquality({
+                "warnings": {
+                    value: warnings,
+                    shouldBe: [
+                        [colors.orange + ">>  warning" + colors.white, 3, [true]]
+                    ],
+                    toleranceDepth: 3
+                }
+            });
+        }
+    });
+    warnings.length = 0;
+    console.error = originalLogError;
+    console.warn = originalLogWarning;
+})();
+
+fileCollection.set("TK_DebugTerminalLog.test copy.js", module.exports);
 
 "use strict";
 (function TK_DOMAnimations_init() {

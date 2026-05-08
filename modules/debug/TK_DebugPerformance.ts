@@ -2,25 +2,34 @@ interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { performance: TK_DebugPerformance_file }
 type TK_DebugPerformance_file = {
     // takes number of states - returns method to switch states
-    createClock(
-        stateCount: number
-    ): PerformanceClock,
+    createClock<stateID extends string>(
+        ...stateIDs: stateID[]
+    ): PerformanceClock<stateID>,
 }
 
-type PerformanceClock = {
+type PerformanceClock<StateID extends string> = {
     changeCount(
-        stateID: number, amount: number
+        stateID: StateID,
+        amount: number
     ): void,
     clear(): void,
     read(): {
-        timeTotals: number[],
-        callCounts: number[],
+        counts: { [stateID: string]: number },
+        timeTotals: { [stateID: string]: number }
     },
+    readNice(): ({
+        count: 0 | 1,
+        timeTotal: number,
+    } | {
+        count: number,
+        timeTotal: number,
+        timeAveragePerCall: number,
+    })[],
     start(
-        stateID: number
+        stateID: StateID
     ): void,
     stop(
-        stateID: number
+        stateID: StateID
     ): void,
 }
 
@@ -29,31 +38,60 @@ type PerformanceClock = {
 (function TK_DebugPerformance_file() {
     const publicExports = module.exports = <TK_DebugPerformance_file>{};
 
-    publicExports.createClock = function TK_DebugPerformance_createClock(stateCount) {
-        const timeStamps = new Array(stateCount).fill(0);
-        const timeTotals = new Array(stateCount).fill(0);
-        const callCounts = new Array(stateCount).fill(0);
-        const readData = Object.freeze({
-            timeTotals,
-            callCounts,
-        });
-        return Object.freeze(<PerformanceClock>{
+    publicExports.createClock = function TK_DebugPerformance_createClock(
+        ...stateIDs
+    ) {
+        let base = {} as Dictionary;
+        for (let i = 0; i < stateIDs.length; i += 1) {
+            base[stateIDs[i]] = 0;
+        }
+        const timeStamps = Object.assign({}, base) as { [stateID: string]: number };
+        const counts = Object.assign({}, base) as { [stateID: string]: number };
+        const timeTotals = Object.assign({}, base) as { [stateID: string]: number };
+        const clock = Object.freeze(<PerformanceClock<string>>{
             changeCount: function TK_DebugPerformance_changeCount(
                 stateID, amount
             ) {
-                callCounts[stateID] += amount;
+                counts[stateID] += amount;
             },
             clear: function TK_DebugPerformance_clockClear() {
-                timeTotals.fill(0);
-                callCounts.fill(0);
-                timeStamps.fill(0);
+                let stateID;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    timeStamps[stateID] = 0;
+                    counts[stateID] = 0;
+                    timeTotals[stateID] = 0;
+                }
             },
             read: function TK_DebugPerformance_clockRead() {
-                return readData;
+                return {
+                    counts,
+                    timeTotals
+                };
+            },
+            readNice: function TK_DebugPerformance_clockReadNice() {
+                const result = new Array(stateIDs.length) as ReturnType<PerformanceClock<string>["readNice"]>;
+                let stateID: string;
+                let count: number;
+                let stateData: Dictionary;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    count = counts[stateID];
+                    stateData = result[i] = <any>{ timeTotal: 0, stateID, count };
+                    if (count === 0) {
+                        continue;
+                    }
+
+                    stateData.timeTotal = Math.ceil(timeTotals[stateID] / 100) / 10;
+                    if (count !== 1) {
+                        stateData.timeAveragePerCall = Math.ceil(timeTotals[stateID] / count);
+                    }
+                }
+                return result.sort(clockSort);
             },
             start: function TK_DebugPerformance_clockStart(stateID) {
                 if (timeStamps[stateID] === 0) {
-                    callCounts[stateID] += 1;
+                    counts[stateID] += 1;
                     timeStamps[stateID] = Date.now();
                 }
             },
@@ -64,6 +102,13 @@ type PerformanceClock = {
                 }
             },
         });
+        return clock;
+    };
+
+    const clockSort = function TK_DebugPerformance_cockSort(
+        a:Dictionary, b:Dictionary
+    ) {
+        return b.timeTotal - a.timeTotal
     };
 
     Object.freeze(publicExports);
