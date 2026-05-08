@@ -38,6 +38,10 @@ type PerformanceClock<StateID extends string> = {
 (function TK_DebugPerformance_file() {
     const publicExports = module.exports = <TK_DebugPerformance_file>{};
 
+    const timeTotalName = "timeTotal(s)";
+
+
+
     publicExports.createClock = function TK_DebugPerformance_createClock(
         ...stateIDs
     ) {
@@ -73,18 +77,20 @@ type PerformanceClock<StateID extends string> = {
                 const result = new Array(stateIDs.length) as ReturnType<PerformanceClock<string>["readNice"]>;
                 let stateID: string;
                 let count: number;
+                let timeTotal: number;
                 let stateData: Dictionary;
                 for (let i = 0; i < stateIDs.length; i += 1) {
                     stateID = stateIDs[i];
                     count = counts[stateID];
-                    stateData = result[i] = <any>{ timeTotal: 0, stateID, count };
+                    stateData = result[i] = <any>{ "timeTotal(s)": 0, count, stateID };
                     if (count === 0) {
                         continue;
                     }
 
-                    stateData.timeTotal = Math.ceil(timeTotals[stateID] / 100) / 10;
-                    if (count !== 1) {
-                        stateData.timeAveragePerCall = Math.ceil(timeTotals[stateID] / count);
+                    timeTotal = timeTotals[stateID];
+                    stateData[timeTotalName] = Math.ceil(timeTotal / 100) / 10;
+                    if (count !== 1 && timeTotal !== 0) {
+                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal / count);
                     }
                 }
                 return result.sort(clockSort);
@@ -106,9 +112,9 @@ type PerformanceClock<StateID extends string> = {
     };
 
     const clockSort = function TK_DebugPerformance_cockSort(
-        a:Dictionary, b:Dictionary
+        a: Dictionary, b: Dictionary
     ) {
-        return b.timeTotal - a.timeTotal
+        return b[timeTotalName] - a[timeTotalName];
     };
 
     Object.freeze(publicExports);
