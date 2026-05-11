@@ -219,9 +219,10 @@ type LibraryFiles_file = {
                 inputs.content,
                 { encoding: inputs.encoding }
             );
+            return; // ... tsc
         } catch (error) {
             console.error(["LibraryFiles_writeFile failed - path:", path, "content:", inputs.content, "encoding:", inputs.encoding, "error:", error]);
-            return error;
+            return <Error>error;
         }
     };
 

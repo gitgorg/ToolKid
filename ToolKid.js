@@ -335,6 +335,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         writeDirectory(directoryName(path));
         try {
             createFile(inputs.path, inputs.content, { encoding: inputs.encoding });
+            return; // ... tsc
         }
         catch (error) {
             console.error(["LibraryFiles_writeFile failed - path:", path, "content:", inputs.content, "encoding:", inputs.encoding, "error:", error]);
@@ -3460,7 +3461,9 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     };
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {
-            publicExports.loopFiles = ToolKid.getCoreModule("files").loopFiles;
+            const LibraryFiles = ToolKid.getCoreModule("files");
+            publicExports.loopFiles = LibraryFiles.loopFiles;
+            publicExports.read = LibraryFiles.readFile;
         }
         ToolKid.register({ section: "file", entries: publicExports });
     }

@@ -3327,7 +3327,9 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     };
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {
-            publicExports.loopFiles = ToolKid.getCoreModule("files").loopFiles;
+            const LibraryFiles = ToolKid.getCoreModule("files");
+            publicExports.loopFiles = LibraryFiles.loopFiles;
+            publicExports.read = LibraryFiles.readFile;
         }
         ToolKid.register({ section: "file", entries: publicExports });
     }

@@ -8,6 +8,7 @@ interface TK_file_file {
         path: string
     ): string,
     loopFiles: LibraryFiles_file["loopFiles"],
+    read: LibraryFiles_file["readFile"],
     register(
         path: string
     ): void,
@@ -90,7 +91,9 @@ interface TK_file_file {
 
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {
-            publicExports.loopFiles = ToolKid.getCoreModule("files").loopFiles;
+            const LibraryFiles = ToolKid.getCoreModule("files");
+            publicExports.loopFiles = LibraryFiles.loopFiles;
+            publicExports.read = LibraryFiles.readFile;
         }
         ToolKid.register({ section: "file", entries: publicExports });
     }
