@@ -1898,6 +1898,52 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
 "use strict";
+(function TK_DataTypesString_init() {
+    const publicExports = module.exports = {};
+    publicExports.decodeJSON = function TK_DataTypesString_decodeJSON(string) {
+        try {
+            return JSON.parse(string);
+        }
+        catch (error) {
+            return error;
+        }
+    };
+    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data) {
+        if (data instanceof Error) {
+            try {
+                const details = JSON.stringify(data.details);
+                return `{ "error": "${data.message}, ${details}"}`;
+            }
+            catch (error) {
+                console.warn("JSON encoding failed for: ", data, " error: ", error);
+                // TODO: return undefined instead
+                return error;
+            }
+        }
+        try {
+            const result = JSON.stringify(data);
+            if (result !== undefined) {
+                return result;
+            }
+            const error = new Error("JSON encoding failed - can't convert value");
+            error.details = data;
+            return error;
+        }
+        catch (error) {
+            console.warn("JSON encoding failed for: ", data, " error: ", error);
+            // TODO: return undefined instead
+            return error;
+        }
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "dataTypes", subSection: "string", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DataTypesString.js", module.exports);
+
+"use strict";
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
     const resultGroups = new Map([["default", {
@@ -2279,6 +2325,10 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
     const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndConfig) {
         const config = nameAndConfig[1];
         if (config.shouldBe === Error) {
+            if (typeof config.value !== "function") {
+                errors.push(...["~ " + nameAndConfig[0] + " ~ value needs to be a function in order to test for failure but is: ", config.value]);
+                return;
+            }
             let returned;
             try {
                 returned = config.value();

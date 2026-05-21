@@ -114,12 +114,18 @@ type TK_AssertConfig = {
     ) {
         const config = nameAndConfig[1];
         if (config.shouldBe === Error) {
+            if (typeof config.value !== "function") {
+                errors.push(...["~ " + nameAndConfig[0] + " ~ value needs to be a function in order to test for failure but is: ", config.value]);
+                return;
+            }
+
             let returned;
             try {
                 returned = config.value();
             } catch (error) {
                 return;
             }
+
             errors.push(...["~ " + nameAndConfig[0] + " ~ value did not fail - it returned:", returned]);
             return;
         }
