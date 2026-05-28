@@ -82,7 +82,7 @@ interface TK_file_file {
         } else {
             throw [
                 "TK_File_register - fileName allready in use: ", fileName,
-                " paths are: ", fileRegistry.get(fileName), path
+                " paths are: ", registeredPath, path
             ];
         }
     };

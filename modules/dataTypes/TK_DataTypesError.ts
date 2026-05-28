@@ -4,7 +4,7 @@ interface TK_DataTypes_file { error: TK_DataTypesError_file }
 type TK_DataTypesError_file = {
     createCustomError<Details>(
         message: string, details: Details
-    ): Error & { details: Details },
+    ): CustomError,
 }
 interface NodeRequire {
     (path: "TK_DataTypesError.js"): TK_DataTypesError_file
