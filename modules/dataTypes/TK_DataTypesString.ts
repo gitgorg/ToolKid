@@ -20,9 +20,13 @@ interface TK_DataTypesString_file {
 
     publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data) {
         if (data instanceof Error) {
+            if ((<CustomError>data).details === undefined) {
+                return `{"error": "${data.message}"}`;
+            }
+
             try {
                 const details = JSON.stringify((<CustomError>data).details);
-                return `{ "error": "${data.message}, ${details}"}`;
+                return `{"error": "${data.message}", "details": ${details}}`;
             } catch (error: any) {
                 console.warn("JSON encoding failed for: ", data, " error: ", error);
                 // TODO: return undefined instead
@@ -45,7 +49,6 @@ interface TK_DataTypesString_file {
             return error;
         }
     };
-
 
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
