@@ -94,11 +94,11 @@ type ToolKidConfig = {
         let moduleName = basename(bundleID).slice(7, -3);
         moduleName = moduleName[0].toLocaleLowerCase() + moduleName.slice(1);
         if (moduleName === "core") {
-            content.push('global.ToolKid = module.exports.createInstance();'
+            content.push('\nglobal.ToolKid = module.exports.createInstance();'
             );
         } else {
             content.push('\
-fileCollection.get("LibraryCore.js").registerCoreModule({\n\
+\nfileCollection.get("LibraryCore.js").registerCoreModule({\n\
     name: "', moduleName, '", module: module.exports\n\
 });'
             );

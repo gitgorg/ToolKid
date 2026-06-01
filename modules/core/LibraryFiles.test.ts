@@ -56,39 +56,36 @@ type LibraryFiles_test_file = {
                 loopFiles(Object.assign({}, inputs, { execute: register }));
                 return collected;
             };
+            let expectedFiles = [];
+            const fileBases = ["LibraryBuild", "LibraryCore", "LibraryFiles", "LibraryParsing", "LibraryRegularExpression"];
+            let fileBase = "";
+            for (let i = 0; i < fileBases.length; i += 1) {
+                fileBase = fileBases[i];
+                expectedFiles.push(resolve(fileDirectory, fileBase + ".js"));
+                expectedFiles.push(resolve(fileDirectory, fileBase + ".js.map"));
+                if (fileBase !== "LibraryCore") {
+                    expectedFiles.push(resolve(fileDirectory, fileBase + ".test.js"));
+                    expectedFiles.push(resolve(fileDirectory, fileBase + ".test.js.map"));
+                }
+            }
             assert({
                 "siblingFiles": {
                     value: collect({
                         path: fileDirectory
                     }),
-                    shouldBe: [
-                        resolve(fileDirectory, "LibraryBuild.js"),
-                        resolve(fileDirectory, "LibraryBuild.test.js"),
-                        resolve(fileDirectory, "LibraryCore.js"),
-                        resolve(fileDirectory, "LibraryFiles.js"),
-                        resolve(fileDirectory, "LibraryFiles.test.js"),
-                        resolve(fileDirectory, "LibraryParsing.js"),
-                        resolve(fileDirectory, "LibraryParsing.test.js"),
-                        resolve(fileDirectory, "LibraryRegularExpression.js"),
-                        resolve(fileDirectory, "LibraryRegularExpression.test.js"),
-                    ]
+                    shouldBe: expectedFiles
                 }
             });
+            expectedFiles = expectedFiles.filter(function(value) {
+                return value.indexOf("Parsing") === -1;
+            })
             assert({
                 "exclude parsing files": {
                     value: collect({
                         path: fileDirectory,
                         excludes: ["*Parsing*"]
                     }),
-                    shouldBe: [
-                        resolve(fileDirectory, "LibraryBuild.js"),
-                        resolve(fileDirectory, "LibraryBuild.test.js"),
-                        resolve(fileDirectory, "LibraryCore.js"),
-                        resolve(fileDirectory, "LibraryFiles.js"),
-                        resolve(fileDirectory, "LibraryFiles.test.js"),
-                        resolve(fileDirectory, "LibraryRegularExpression.js"),
-                        resolve(fileDirectory, "LibraryRegularExpression.test.js"),
-                    ]
+                    shouldBe: expectedFiles
                 }
             });
             assert({

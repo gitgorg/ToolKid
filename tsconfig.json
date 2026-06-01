@@ -10,7 +10,8 @@
         "noUnusedLocals": true,
         "strictNullChecks": true,
         "types": ["node"],
-        "target": "ES2021"
+        "target": "ES2021",
+        "sourceMap": true,
     },
     "exclude": [
         "node_modules"

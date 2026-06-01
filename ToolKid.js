@@ -134,6 +134,7 @@ console.log("\u001b[96m>>  activating ToolKid");
         return section;
     };
 })();
+//# sourceMappingURL=LibraryCore.js.map
 global.ToolKid = module.exports.createInstance();
 fileCollection.set("LibraryCore.js", module.exports);
 
@@ -210,6 +211,7 @@ fileCollection.set("LibraryCore.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
+//# sourceMappingURL=LibraryRegularExpression.js.map
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "regularExpression", module: module.exports
 });
@@ -344,6 +346,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
+//# sourceMappingURL=LibraryFiles.js.map
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "files", module: module.exports
 });
@@ -734,157 +737,11 @@ fileCollection.set("LibraryFiles.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
+//# sourceMappingURL=LibraryParsing.js.map
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "parsing", module: module.exports
 });
 fileCollection.set("LibraryParsing.js", module.exports);
-
-"use strict";
-(function TK_DOMAnimations_init() {
-    if (typeof Element === "undefined") {
-        return;
-    }
-    const publicExports = module.exports = {};
-    const addFrameHandler = function TK_DOMAnimations_addFrameHandler(funk) {
-        frameHandlers[frameHandlerCount] = funk;
-        frameHandlerCount += 1;
-        if (frameHandlerCount === 1) {
-            requestAnimationFrame(handleFrameStart);
-        }
-    };
-    let frameHandlerCount = 0;
-    let frameHandlers = new Array(100);
-    let frameHandlersAlteration = new Array(100);
-    let frameReaderCount = 0;
-    const frameReaders = new Array(100);
-    const handleFrameStart = function TK_DOMAnimations_handleFrameStart() {
-        // operations that force DOM reflow (rendering)
-        for (let i = 0; i < frameReaderCount; i += 1) {
-            frameReaders[i]();
-            frameReaders[i] = undefined;
-        }
-        frameReaderCount = 0;
-        if (frameHandlerCount === 0) {
-            return;
-        }
-        // other operations this frame - switching "active" frameHandlers
-        const length = frameHandlerCount;
-        const handlers = frameHandlers;
-        frameHandlers = frameHandlersAlteration;
-        frameHandlerCount = 0;
-        for (let i = 0; i < length; i += 1) {
-            handlers[i]();
-            handlers[i] = undefined;
-        }
-        frameHandlersAlteration = handlers;
-    };
-    publicExports.smove = function TK_DOMAnimations_smove(inputs) {
-        if (inputs.element._animationTarget === inputs.targetParent) {
-            return;
-        }
-        inputs.element._animationTarget = inputs.targetParent;
-        const placeholder = document.createElement("div");
-        placeholder.style.opacity = "0";
-        placeholder.style.pointerEvents = "none";
-        const siblings = inputs.targetParent.children;
-        inputs.targetParent.insertBefore(placeholder, siblings[inputs.targetIndex || siblings.length]);
-        frameReaders[frameReaderCount] = smoveRead.bind(null, inputs, placeholder);
-        frameReaderCount += 1;
-        if (frameReaderCount === 1) {
-            addFrameHandler(smoveSwap);
-        }
-    };
-    const smoveRead = function TK_DOMAnimations_smoveRead(internals, placeholder) {
-        animatedSwitch[animatedSwitchCount] = [
-            internals, placeholder,
-            internals.element.getBoundingClientRect(),
-            placeholder.getBoundingClientRect()
-        ];
-        animatedSwitchCount += 1;
-    };
-    let animatedSwitchCount = 0;
-    const animatedSwitch = new Array(100);
-    const smoveSwap = function TK_DOMAnimations_smoveSwap() {
-        let element, elementBCR, placeholder, placeholderBCR, inputs;
-        for (let i = 0; i < animatedSwitchCount; i += 1) {
-            inputs = animatedSwitch[i][0];
-            element = inputs.element;
-            elementBCR = animatedSwitch[i][2];
-            placeholder = animatedSwitch[i][1];
-            placeholderBCR = animatedSwitch[i][3];
-            const styleP = placeholder.style;
-            placeholder.className = element.className;
-            styleP.width = elementBCR.width + "px";
-            styleP.height = elementBCR.height + "px";
-            element.parentElement.insertBefore(placeholder, element);
-            const styleE = element.style;
-            const diffY = elementBCR.top - placeholderBCR.top;
-            const diffX = elementBCR.left - placeholderBCR.left;
-            styleE.margin =
-                diffY + "px "
-                    + (-diffX - elementBCR.width) + "px "
-                    + (-diffY - elementBCR.height) + "px "
-                    + diffX + "px";
-            const siblings = inputs.targetParent.children;
-            inputs.targetParent.insertBefore(element, siblings[inputs.targetIndex || siblings.length + 1]);
-            delete element._animationTarget;
-            animatedActive[i] = [inputs, placeholder, elementBCR];
-        }
-        animatedSwitch.length = 0;
-        animatedSwitchCount = 0;
-        addFrameHandler(smoveAnimate);
-    };
-    const animatedActive = [];
-    const smoveAnimate = function TK_DOMAnimations_smoveAnimate() {
-        let element, placeholder, data;
-        const length = animatedActive.length;
-        for (let i = 0; i < length; i += 1) {
-            data = animatedActive[i];
-            const inputs = data[0];
-            element = inputs.element;
-            placeholder = data[1];
-            const styleP = placeholder.style;
-            styleP.margin = (data[2].height / -2) + "px "
-                + (data[2].width / -2) + "px ";
-            placeholder.classList.add("--animated");
-            const styleE = element.style;
-            const duration = (inputs.duration || 1) + "s";
-            styleP.setProperty("--animationDuration", duration);
-            styleE.setProperty("--animationDuration", duration);
-            const delay = (inputs.delay || 0) + "s";
-            styleP.setProperty("--animationDelay", delay);
-            styleE.setProperty("--animationDelay", delay);
-            if (inputs.zIndex !== undefined) {
-                styleP.setProperty("--animationZ", inputs.zIndex);
-                styleE.setProperty("--animationZ", inputs.zIndex);
-            }
-            element.classList.add("--animated");
-            styleE.margin = "";
-            delete element._animationTarget;
-            setTimeout(smoveCleanUp.bind(null, element, placeholder), (inputs.duration || 1 + delay) * 1000);
-        }
-        animatedActive.length = 0;
-    };
-    const smoveCleanUp = function TK_DOMAnimations_smoveCleanUp(element, placeholder) {
-        element.classList.remove("--animated");
-        placeholder.remove();
-    };
-    const style = document.createElement("style");
-    style.textContent = `
-        .--animated {
-            transition-property: margin;
-            transition-duration: var(--animationDuration);
-            transition-delay: var(--animationDelay);
-            z-index: var(--animationZ);
-        }`;
-    document.head.appendChild(style);
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "DOM", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DOMAnimations.js", module.exports);
 
 "use strict";
 (function TK_CodeCDW_init() {
@@ -1005,7 +862,7 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
         ToolKid.register({ section: "code", subSection: "CDW", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_CodeCDW.js.map
 fileCollection.set("TK_CodeCDW.js", module.exports);
 
 "use strict";
@@ -1043,7 +900,7 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
         ToolKid.register({ section: "code", subSection: "CSS", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_CodeCSS.js.map
 fileCollection.set("TK_CodeCSS.js", module.exports);
 
 "use strict";
@@ -1163,7 +1020,7 @@ fileCollection.set("TK_CodeCSS.js", module.exports);
         ToolKid.register({ section: "code", subSection: "CSV", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_CodeCSV.js.map
 fileCollection.set("TK_CodeCSV.js", module.exports);
 
 "use strict";
@@ -1240,7 +1097,7 @@ fileCollection.set("TK_CodeCSV.js", module.exports);
         ToolKid.register({ section: "code", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_CodeParsing.js.map
 fileCollection.set("TK_CodeParsing.js", module.exports);
 
 "use strict";
@@ -1290,7 +1147,7 @@ fileCollection.set("TK_CodeParsing.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesObject.js.map
 fileCollection.set("TK_DataTypesObject.js", module.exports);
 
 "use strict";
@@ -1450,7 +1307,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         ToolKid.register({ section: "code", subSection: "HTML", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_CodeHTML.js.map
 fileCollection.set("TK_CodeHTML.js", module.exports);
 
 "use strict";
@@ -1539,7 +1396,7 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
         ToolKid.register({ section: "code", subSection: "JS", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_CodeJS.js.map
 fileCollection.set("TK_CodeJS.js", module.exports);
 
 "use strict";
@@ -1624,7 +1481,7 @@ fileCollection.set("TK_CodeJS.js", module.exports);
         ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_ConnectionHTTP.js.map
 fileCollection.set("TK_ConnectionHTTP.js", module.exports);
 
 "use strict";
@@ -1668,7 +1525,7 @@ fileCollection.set("TK_ConnectionHTTP.js", module.exports);
         ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_ConnectionHTTPFormats.js.map
 fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 
 "use strict";
@@ -1711,7 +1568,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "array", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesArray.js.map
 fileCollection.set("TK_DataTypesArray.js", module.exports);
 
 "use strict";
@@ -1827,7 +1684,7 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesChecks.js.map
 fileCollection.set("TK_DataTypesChecks.js", module.exports);
 
 "use strict";
@@ -2027,7 +1884,7 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesChecksEquality.js.map
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 
 "use strict";
@@ -2046,7 +1903,7 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "error", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesError.js.map
 fileCollection.set("TK_DataTypesError.js", module.exports);
 
 "use strict";
@@ -2072,7 +1929,7 @@ fileCollection.set("TK_DataTypesError.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "list", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesList.js.map
 fileCollection.set("TK_DataTypesList.js", module.exports);
 
 "use strict";
@@ -2115,7 +1972,7 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "number", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesNumber.js.map
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
 
 "use strict";
@@ -2175,7 +2032,7 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "promise", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesPromise.js.map
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
 "use strict";
@@ -2224,257 +2081,8 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "string", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DataTypesString.js.map
 fileCollection.set("TK_DataTypesString.js", module.exports);
-
-"use strict";
-(function TK_DebugCallstack_init() {
-    const publicExports = module.exports = {};
-    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
-        const firstFrameIndex = Math.max(1, inputs.position || 1);
-        return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
-    };
-    const regExpAfterLastSlash = /[^\/\\]+$/;
-    const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
-        const filePart = part.slice(part.search(regExpAfterLastSlash));
-        return filePart.split(":")[0];
-    };
-    ;
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DebugCallstack.js", module.exports);
-
-"use strict";
-(function TK_DebugPerformance_file() {
-    const publicExports = module.exports = {};
-    const timeTotalName = "timeTotal(s)";
-    publicExports.createClock = function TK_DebugPerformance_createClock(...stateIDs) {
-        let base = {};
-        for (let i = 0; i < stateIDs.length; i += 1) {
-            base[stateIDs[i]] = 0;
-        }
-        const timeStamps = Object.assign({}, base);
-        const counts = Object.assign({}, base);
-        const timeTotals = Object.assign({}, base);
-        const clock = Object.freeze({
-            changeCount: function TK_DebugPerformance_changeCount(stateID, amount) {
-                counts[stateID] += amount;
-            },
-            clear: function TK_DebugPerformance_clockClear() {
-                let stateID;
-                for (let i = 0; i < stateIDs.length; i += 1) {
-                    stateID = stateIDs[i];
-                    timeStamps[stateID] = 0;
-                    counts[stateID] = 0;
-                    timeTotals[stateID] = 0;
-                }
-            },
-            read: function TK_DebugPerformance_clockRead() {
-                return {
-                    counts,
-                    timeTotals
-                };
-            },
-            readNice: function TK_DebugPerformance_clockReadNice() {
-                const result = new Array(stateIDs.length);
-                let stateID;
-                let count;
-                let timeTotal;
-                let stateData;
-                for (let i = 0; i < stateIDs.length; i += 1) {
-                    stateID = stateIDs[i];
-                    count = counts[stateID];
-                    stateData = result[i] = { "timeTotal(s)": 0, count, stateID };
-                    if (count === 0) {
-                        continue;
-                    }
-                    timeTotal = timeTotals[stateID];
-                    stateData[timeTotalName] = Math.ceil(timeTotal / 100) / 10;
-                    if (count !== 1 && timeTotal !== 0) {
-                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal / count);
-                    }
-                }
-                return result.sort(clockSort);
-            },
-            start: function TK_DebugPerformance_clockStart(stateID) {
-                if (timeStamps[stateID] === 0) {
-                    counts[stateID] += 1;
-                    timeStamps[stateID] = Date.now();
-                }
-            },
-            stop: function TK_DebugPerformance_clockStop(stateID) {
-                if (timeStamps[stateID] !== 0) {
-                    timeTotals[stateID] += Date.now() - timeStamps[stateID];
-                    timeStamps[stateID] = 0;
-                }
-            },
-        });
-        return clock;
-    };
-    const clockSort = function TK_DebugPerformance_cockSort(a, b) {
-        return b[timeTotalName] - a[timeTotalName];
-    };
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "debug", subSection: "performance", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DebugPerformance.js", module.exports);
-
-"use strict";
-(function TK_DebugTerminalLog_init() {
-    const isClient = typeof document === "object";
-    const publicExports = module.exports = {};
-    const colorSignals = {
-        blue: "\u001b[94m",
-        cyan: "\u001b[96m",
-        green: "\u001b[32m",
-        grey: "\u001b[90m",
-        magenta: "\u001b[95m",
-        orange: "\u001b[33m",
-        red: "\u001b[31m",
-        white: "\u001b[97m"
-    };
-    const typeColors = {
-        error: "red",
-        warning: "orange",
-        important: "cyan",
-        basic: "grey",
-        none: "white"
-    };
-    const formatedValues = new Array(10);
-    let formatedText;
-    let colorCode;
-    publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
-        colorCode = publicExports.getColorCode(inputs.colorName);
-        formatedText = undefined;
-        let resultIndex = 0;
-        const values = inputs.values;
-        const length = values.length;
-        let value;
-        for (let i = 0; i < length; i += 1) {
-            value = values[i];
-            if (typeof value === "string") {
-                if (typeof formatedText === "string") {
-                    formatedText += value;
-                }
-                else {
-                    formatedText = (isClient === false || i === 0)
-                        ? colorCode + value // server can color multiple strings
-                        : value; // client can only color first string
-                }
-            }
-            else {
-                if (formatedText !== undefined) {
-                    formatedValues[resultIndex] = colorStringsFinish(formatedText);
-                    formatedText = undefined;
-                    resultIndex += 1;
-                }
-                formatedValues[resultIndex] = value;
-                resultIndex += 1;
-            }
-        }
-        if (formatedText !== undefined) {
-            formatedValues[resultIndex] = colorStringsFinish(formatedText);
-            resultIndex += 1;
-        }
-        return (isClient && resultIndex > 1)
-            ? [formatedValues[0], formatedValues.slice(1, resultIndex)]
-            : formatedValues.slice(0, resultIndex);
-    };
-    const colorStringsFinish = function TK_DebugTerminalLog_colorStringsFinish(unfinishedString) {
-        if (isClient) {
-            return unfinishedString;
-        }
-        else {
-            return unfinishedString + colorSignals.white;
-        }
-    };
-    let disableCount = 0;
-    let originalConsoleLog;
-    let originalConsoleEror;
-    publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
-        console.log(...publicExports.colorStrings({
-            colorName: typeColors.basic,
-            values: ["TK_DebugTerminalLog_disableLogs - " + amount]
-        }));
-        if (amount === false) {
-            if (disableCount !== 0) {
-                disableCount = 0;
-                console.warn = originalConsoleLog;
-                console.error = originalConsoleEror;
-            }
-            return;
-        }
-        if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
-            throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
-        }
-        if (disableCount === 0) {
-            originalConsoleLog = console.warn;
-            originalConsoleEror = console.error;
-            console.warn = disableLogsTick;
-            console.error = disableLogsTick;
-        }
-        disableCount += amount;
-    };
-    const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
-        disableCount -= 1;
-        if (disableCount === 0) {
-            console.warn = originalConsoleLog;
-            console.error = originalConsoleEror;
-        }
-    };
-    publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
-        const code = colorSignals[name];
-        if (code === undefined) {
-            throw [
-                "TK_DebugTerminalLog_getColorCode - unknown color:", name,
-                " only the following colors are known:", Object.keys(colorSignals[typeColors.none])
-            ];
-        }
-        return code;
-    };
-    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
-        return (typeof inputs[0] === "string")
-            ? ">>  " : ">>";
-    };
-    publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
-        console.error(...publicExports.colorStrings({
-            colorName: typeColors.error,
-            values: [getPrefix(inputs), ...inputs]
-        }));
-    };
-    const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
-        if (inputs.length === 0) {
-            console.log();
-            return;
-        }
-        console.warn(...publicExports.colorStrings({
-            colorName: typeColors[type],
-            values: [getPrefix(inputs), ...inputs]
-        }));
-    };
-    publicExports.logWarning = logWithLevel.bind(null, "warning");
-    publicExports.logImportant = logWithLevel.bind(null, "important");
-    publicExports.logBasic = logWithLevel.bind(null, "basic");
-    if (typeof process !== "undefined") {
-        process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
-            publicExports.logError("UNHANDLED PROMISE REJECTION");
-            publicExports.logError(reason);
-        });
-    }
-    Object.freeze(publicExports);
-    if (typeof ToolKid !== "undefined") {
-        ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
-    }
-})();
-
-fileCollection.set("TK_DebugTerminalLog.js", module.exports);
 
 "use strict";
 (function TK_DebugTest_init() {
@@ -2651,7 +2259,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTest.js.map
 fileCollection.set("TK_DebugTest.js", module.exports);
 
 "use strict";
@@ -2804,7 +2412,7 @@ fileCollection.set("TK_DebugTest.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTestAssertFailure.js.map
 fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 
 "use strict";
@@ -2908,7 +2516,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTestAssertion.js.map
 fileCollection.set("TK_DebugTestAssertion.js", module.exports);
 
 "use strict";
@@ -3015,7 +2623,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTestCondition.js.map
 fileCollection.set("TK_DebugTestCondition.js", module.exports);
 
 "use strict";
@@ -3151,7 +2759,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTestFull.js.map
 fileCollection.set("TK_DebugTestFull.js", module.exports);
 
 "use strict";
@@ -3230,7 +2838,7 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTestShouldPass.js.map
 fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 
 "use strict";
@@ -3445,8 +3053,404 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-
+//# sourceMappingURL=TK_DebugTestSummary.js.map
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
+
+"use strict";
+(function TK_DebugCallstack_init() {
+    const publicExports = module.exports = {};
+    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
+        const firstFrameIndex = Math.max(1, inputs.position || 1);
+        return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
+    };
+    const regExpAfterLastSlash = /[^\/\\]+$/;
+    const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
+        const filePart = part.slice(part.search(regExpAfterLastSlash));
+        return filePart.split(":")[0];
+    };
+    ;
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
+    }
+})();
+//# sourceMappingURL=TK_DebugCallstack.js.map
+fileCollection.set("TK_DebugCallstack.js", module.exports);
+
+"use strict";
+(function TK_DebugPerformance_file() {
+    const publicExports = module.exports = {};
+    const timeTotalName = "timeTotal(s)";
+    publicExports.createClock = function TK_DebugPerformance_createClock(...stateIDs) {
+        let base = {};
+        for (let i = 0; i < stateIDs.length; i += 1) {
+            base[stateIDs[i]] = 0;
+        }
+        const timeStamps = Object.assign({}, base);
+        const counts = Object.assign({}, base);
+        const timeTotals = Object.assign({}, base);
+        const clock = Object.freeze({
+            changeCount: function TK_DebugPerformance_changeCount(stateID, amount) {
+                counts[stateID] += amount;
+            },
+            clear: function TK_DebugPerformance_clockClear() {
+                let stateID;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    timeStamps[stateID] = 0;
+                    counts[stateID] = 0;
+                    timeTotals[stateID] = 0;
+                }
+            },
+            read: function TK_DebugPerformance_clockRead() {
+                return {
+                    counts,
+                    timeTotals
+                };
+            },
+            readNice: function TK_DebugPerformance_clockReadNice() {
+                const result = new Array(stateIDs.length);
+                let stateID;
+                let count;
+                let timeTotal;
+                let stateData;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    count = counts[stateID];
+                    stateData = result[i] = { "timeTotal(s)": 0, count, stateID };
+                    if (count === 0) {
+                        continue;
+                    }
+                    timeTotal = timeTotals[stateID];
+                    stateData[timeTotalName] = Math.ceil(timeTotal / 100) / 10;
+                    if (count !== 1 && timeTotal !== 0) {
+                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal / count);
+                    }
+                }
+                return result.sort(clockSort);
+            },
+            start: function TK_DebugPerformance_clockStart(stateID) {
+                if (timeStamps[stateID] === 0) {
+                    counts[stateID] += 1;
+                    timeStamps[stateID] = Date.now();
+                }
+            },
+            stop: function TK_DebugPerformance_clockStop(stateID) {
+                if (timeStamps[stateID] !== 0) {
+                    timeTotals[stateID] += Date.now() - timeStamps[stateID];
+                    timeStamps[stateID] = 0;
+                }
+            },
+        });
+        return clock;
+    };
+    const clockSort = function TK_DebugPerformance_cockSort(a, b) {
+        return b[timeTotalName] - a[timeTotalName];
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "debug", subSection: "performance", entries: publicExports });
+    }
+})();
+//# sourceMappingURL=TK_DebugPerformance.js.map
+fileCollection.set("TK_DebugPerformance.js", module.exports);
+
+"use strict";
+(function TK_DebugTerminalLog_init() {
+    const isClient = typeof document === "object";
+    const publicExports = module.exports = {};
+    const colorSignals = {
+        blue: "\u001b[94m",
+        cyan: "\u001b[96m",
+        green: "\u001b[32m",
+        grey: "\u001b[90m",
+        magenta: "\u001b[95m",
+        orange: "\u001b[33m",
+        red: "\u001b[31m",
+        white: "\u001b[97m"
+    };
+    const typeColors = {
+        error: "red",
+        warning: "orange",
+        important: "cyan",
+        basic: "grey",
+        none: "white"
+    };
+    const formatedValues = new Array(10);
+    let formatedText;
+    let colorCode;
+    publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
+        colorCode = publicExports.getColorCode(inputs.colorName);
+        formatedText = undefined;
+        let resultIndex = 0;
+        const values = inputs.values;
+        const length = values.length;
+        let value;
+        for (let i = 0; i < length; i += 1) {
+            value = values[i];
+            if (typeof value === "string") {
+                if (typeof formatedText === "string") {
+                    formatedText += value;
+                }
+                else {
+                    formatedText = (isClient === false || i === 0)
+                        ? colorCode + value // server can color multiple strings
+                        : value; // client can only color first string
+                }
+            }
+            else {
+                if (formatedText !== undefined) {
+                    formatedValues[resultIndex] = colorStringsFinish(formatedText);
+                    formatedText = undefined;
+                    resultIndex += 1;
+                }
+                formatedValues[resultIndex] = value;
+                resultIndex += 1;
+            }
+        }
+        if (formatedText !== undefined) {
+            formatedValues[resultIndex] = colorStringsFinish(formatedText);
+            resultIndex += 1;
+        }
+        return (isClient && resultIndex > 1)
+            ? [formatedValues[0], formatedValues.slice(1, resultIndex)]
+            : formatedValues.slice(0, resultIndex);
+    };
+    const colorStringsFinish = function TK_DebugTerminalLog_colorStringsFinish(unfinishedString) {
+        if (isClient) {
+            return unfinishedString;
+        }
+        else {
+            return unfinishedString + colorSignals.white;
+        }
+    };
+    let disableCount = 0;
+    let originalConsoleLog;
+    let originalConsoleEror;
+    publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
+        console.log(...publicExports.colorStrings({
+            colorName: typeColors.basic,
+            values: ["TK_DebugTerminalLog_disableLogs - " + amount]
+        }));
+        if (amount === false) {
+            if (disableCount !== 0) {
+                disableCount = 0;
+                console.warn = originalConsoleLog;
+                console.error = originalConsoleEror;
+            }
+            return;
+        }
+        if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+            throw ["TK_DebugTerminalLogs_disableLogs - amount hast to be an integer between 1 and 100"];
+        }
+        if (disableCount === 0) {
+            originalConsoleLog = console.warn;
+            originalConsoleEror = console.error;
+            console.warn = disableLogsTick;
+            console.error = disableLogsTick;
+        }
+        disableCount += amount;
+    };
+    const disableLogsTick = function TK_DebugTerminalLog_disableLogsTick() {
+        disableCount -= 1;
+        if (disableCount === 0) {
+            console.warn = originalConsoleLog;
+            console.error = originalConsoleEror;
+        }
+    };
+    publicExports.getColorCode = function TK_DebugTerminalLog_getColorCode(name) {
+        const code = colorSignals[name];
+        if (code === undefined) {
+            throw [
+                "TK_DebugTerminalLog_getColorCode - unknown color:", name,
+                " only the following colors are known:", Object.keys(colorSignals[typeColors.none])
+            ];
+        }
+        return code;
+    };
+    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
+        return (typeof inputs[0] === "string")
+            ? ">>  " : ">>";
+    };
+    publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
+        console.error(...publicExports.colorStrings({
+            colorName: typeColors.error,
+            values: [getPrefix(inputs), ...inputs]
+        }));
+    };
+    const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
+        console.warn(...publicExports.colorStrings({
+            colorName: typeColors[type],
+            values: [getPrefix(inputs), ...inputs]
+        }));
+    };
+    publicExports.logWarning = logWithLevel.bind(null, "warning");
+    publicExports.logImportant = logWithLevel.bind(null, "important");
+    publicExports.logBasic = logWithLevel.bind(null, "basic");
+    if (typeof process !== "undefined") {
+        process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
+            publicExports.logError("UNHANDLED PROMISE REJECTION");
+            publicExports.logError(reason);
+        });
+    }
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
+    }
+})();
+//# sourceMappingURL=TK_DebugTerminalLog.js.map
+fileCollection.set("TK_DebugTerminalLog.js", module.exports);
+
+"use strict";
+(function TK_DOMAnimations_init() {
+    if (typeof Element === "undefined") {
+        return;
+    }
+    const publicExports = module.exports = {};
+    const addFrameHandler = function TK_DOMAnimations_addFrameHandler(funk) {
+        frameHandlers[frameHandlerCount] = funk;
+        frameHandlerCount += 1;
+        if (frameHandlerCount === 1) {
+            requestAnimationFrame(handleFrameStart);
+        }
+    };
+    let frameHandlerCount = 0;
+    let frameHandlers = new Array(100);
+    let frameHandlersAlteration = new Array(100);
+    let frameReaderCount = 0;
+    const frameReaders = new Array(100);
+    const handleFrameStart = function TK_DOMAnimations_handleFrameStart() {
+        // operations that force DOM reflow (rendering)
+        for (let i = 0; i < frameReaderCount; i += 1) {
+            frameReaders[i]();
+            frameReaders[i] = undefined;
+        }
+        frameReaderCount = 0;
+        if (frameHandlerCount === 0) {
+            return;
+        }
+        // other operations this frame - switching "active" frameHandlers
+        const length = frameHandlerCount;
+        const handlers = frameHandlers;
+        frameHandlers = frameHandlersAlteration;
+        frameHandlerCount = 0;
+        for (let i = 0; i < length; i += 1) {
+            handlers[i]();
+            handlers[i] = undefined;
+        }
+        frameHandlersAlteration = handlers;
+    };
+    publicExports.smove = function TK_DOMAnimations_smove(inputs) {
+        if (inputs.element._animationTarget === inputs.targetParent) {
+            return;
+        }
+        inputs.element._animationTarget = inputs.targetParent;
+        const placeholder = document.createElement("div");
+        placeholder.style.opacity = "0";
+        placeholder.style.pointerEvents = "none";
+        const siblings = inputs.targetParent.children;
+        inputs.targetParent.insertBefore(placeholder, siblings[inputs.targetIndex || siblings.length]);
+        frameReaders[frameReaderCount] = smoveRead.bind(null, inputs, placeholder);
+        frameReaderCount += 1;
+        if (frameReaderCount === 1) {
+            addFrameHandler(smoveSwap);
+        }
+    };
+    const smoveRead = function TK_DOMAnimations_smoveRead(internals, placeholder) {
+        animatedSwitch[animatedSwitchCount] = [
+            internals, placeholder,
+            internals.element.getBoundingClientRect(),
+            placeholder.getBoundingClientRect()
+        ];
+        animatedSwitchCount += 1;
+    };
+    let animatedSwitchCount = 0;
+    const animatedSwitch = new Array(100);
+    const smoveSwap = function TK_DOMAnimations_smoveSwap() {
+        let element, elementBCR, placeholder, placeholderBCR, inputs;
+        for (let i = 0; i < animatedSwitchCount; i += 1) {
+            inputs = animatedSwitch[i][0];
+            element = inputs.element;
+            elementBCR = animatedSwitch[i][2];
+            placeholder = animatedSwitch[i][1];
+            placeholderBCR = animatedSwitch[i][3];
+            const styleP = placeholder.style;
+            placeholder.className = element.className;
+            styleP.width = elementBCR.width + "px";
+            styleP.height = elementBCR.height + "px";
+            element.parentElement.insertBefore(placeholder, element);
+            const styleE = element.style;
+            const diffY = elementBCR.top - placeholderBCR.top;
+            const diffX = elementBCR.left - placeholderBCR.left;
+            styleE.margin =
+                diffY + "px "
+                    + (-diffX - elementBCR.width) + "px "
+                    + (-diffY - elementBCR.height) + "px "
+                    + diffX + "px";
+            const siblings = inputs.targetParent.children;
+            inputs.targetParent.insertBefore(element, siblings[inputs.targetIndex || siblings.length + 1]);
+            delete element._animationTarget;
+            animatedActive[i] = [inputs, placeholder, elementBCR];
+        }
+        animatedSwitch.length = 0;
+        animatedSwitchCount = 0;
+        addFrameHandler(smoveAnimate);
+    };
+    const animatedActive = [];
+    const smoveAnimate = function TK_DOMAnimations_smoveAnimate() {
+        let element, placeholder, data;
+        const length = animatedActive.length;
+        for (let i = 0; i < length; i += 1) {
+            data = animatedActive[i];
+            const inputs = data[0];
+            element = inputs.element;
+            placeholder = data[1];
+            const styleP = placeholder.style;
+            styleP.margin = (data[2].height / -2) + "px "
+                + (data[2].width / -2) + "px ";
+            placeholder.classList.add("--animated");
+            const styleE = element.style;
+            const duration = (inputs.duration || 1) + "s";
+            styleP.setProperty("--animationDuration", duration);
+            styleE.setProperty("--animationDuration", duration);
+            const delay = (inputs.delay || 0) + "s";
+            styleP.setProperty("--animationDelay", delay);
+            styleE.setProperty("--animationDelay", delay);
+            if (inputs.zIndex !== undefined) {
+                styleP.setProperty("--animationZ", inputs.zIndex);
+                styleE.setProperty("--animationZ", inputs.zIndex);
+            }
+            element.classList.add("--animated");
+            styleE.margin = "";
+            delete element._animationTarget;
+            setTimeout(smoveCleanUp.bind(null, element, placeholder), (inputs.duration || 1 + delay) * 1000);
+        }
+        animatedActive.length = 0;
+    };
+    const smoveCleanUp = function TK_DOMAnimations_smoveCleanUp(element, placeholder) {
+        element.classList.remove("--animated");
+        placeholder.remove();
+    };
+    const style = document.createElement("style");
+    style.textContent = `
+        .--animated {
+            transition-property: margin;
+            transition-duration: var(--animationDuration);
+            transition-delay: var(--animationDelay);
+            z-index: var(--animationZ);
+        }`;
+    document.head.appendChild(style);
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "DOM", entries: publicExports });
+    }
+})();
+//# sourceMappingURL=TK_DOMAnimations.js.map
+fileCollection.set("TK_DOMAnimations.js", module.exports);
 
 "use strict";
 (function TK_File_init() {
@@ -3522,7 +3526,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
     }
     Object.freeze(publicExports);
 })();
-
+//# sourceMappingURL=TK_File.js.map
 fileCollection.set("TK_File.js", module.exports);
 
 "use strict";
@@ -3574,7 +3578,7 @@ fileCollection.set("TK_File.js", module.exports);
         });
     }
 })();
-
+//# sourceMappingURL=TK_NodeJSFile.js.map
 fileCollection.set("TK_NodeJSFile.js", module.exports);
 
 
