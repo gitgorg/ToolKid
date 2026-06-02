@@ -88,9 +88,9 @@ type PerformanceClock<StateID extends string> = {
                     }
 
                     timeTotal = timeTotals[stateID];
-                    stateData[timeTotalName] = Math.ceil(timeTotal / 100) / 10;
+                    stateData[timeTotalName] = timeTotal / 1000;
                     if (count !== 1 && timeTotal !== 0) {
-                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal / count);
+                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal * 1000 / count) / 1000;
                     }
                 }
                 return result.sort(clockSort);

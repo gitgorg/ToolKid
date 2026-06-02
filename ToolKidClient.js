@@ -2497,6 +2497,15 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const colors = {
         positive: "\u001b[32m", default: "\u001b[97m", negative: "\u001b[31m"
     };
+    const addUnderscores = function TK_DebugTestFull_addUnderscores(number) {
+        const text = String(number);
+        const steps = Math.ceil(text.length / 3);
+        let result = text.slice(-3);
+        for (let i = 1; i < steps; i += 1) {
+            result = text.slice(-3 * (i + 1), -3 * i) + "_" + result;
+        }
+        return result;
+    };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
         return colors[color] + text + colors.default;
     };
@@ -2547,7 +2556,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             + "  /  "
             + colorText("positive", summary.testCount + " test groups")
             + "  /  "
-            + colorText("positive", "sync " + inputs.timeInitial + " ms");
+            + colorText("positive", "sync " + addUnderscores(inputs.timeInitial) + " ms");
     };
     const summarizeFazit = function TK_DebugTestFull_summarizeFazit(inputs) {
         const { summary } = inputs;
@@ -2556,7 +2565,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             suspects: summary.missingSuspects.size
         };
         return summarizeFazitSync(inputs) +
-            colorText("positive", " + async " + inputs.timeFinal + " ms")
+            colorText("positive", " + async " + addUnderscores(inputs.timeFinal) + " ms")
             + "  /  "
             + colorText((counts.suspects === 0) ? "positive" : "negative", counts.suspects + " untested suspects");
     };
@@ -2570,10 +2579,10 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const omissionSignal = function TK_DebugTestFull_omissionSignal(omitted) {
         return "[ ... " + omitted.length + " ... ]";
     };
-    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
+    publicExports.setupTests = function TK_DebugTestFull_setupTests(title) {
         const TKTest = ToolKid.debug.test;
-        if (typeof inputs.title === "string") {
-            TKTest.switchResultGroup(inputs.title);
+        if (typeof title === "string") {
+            TKTest.switchResultGroup(title);
         }
         const name = TKTest.getResultGroup().name;
         console.log(colorText("positive", "\n>>  testing " + name));
@@ -2594,8 +2603,17 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         });
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
-        publicExports.setupTests(inputs);
-        let timeStart = Date.now();
+        publicExports.setupTests(inputs.title);
+        if (typeof inputs.setup !== "function") {
+            testFullRun(inputs, Date.now());
+            return;
+        }
+        const promise = inputs.setup();
+        if (promise instanceof Promise) {
+            promise.then(testFullRun.bind(null, inputs, Date.now()), testFullFail);
+        }
+    };
+    const testFullRun = function TK_DebugTestFull_testFullRun(inputs, timeStart) {
         ToolKid.file.loopFiles({
             includes: ["*.test.js"],
             ...inputs,
@@ -2618,6 +2636,9 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             // TODO: display info about pending tests
             console.log(colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)");
         }
+    };
+    const testFullFail = function TK_DebugTestFull_testFullFail(reason) {
+        ToolKid.debug.terminal.logError("TK_DebugTestFull_testFull failed:", reason);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -2987,9 +3008,9 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
                         continue;
                     }
                     timeTotal = timeTotals[stateID];
-                    stateData[timeTotalName] = Math.ceil(timeTotal / 100) / 10;
+                    stateData[timeTotalName] = timeTotal / 1000;
                     if (count !== 1 && timeTotal !== 0) {
-                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal / count);
+                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal * 1000 / count) / 1000;
                     }
                 }
                 return result.sort(clockSort);

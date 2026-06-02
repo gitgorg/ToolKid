@@ -2,11 +2,12 @@
 interface ToolKid_file { debug: TK_Debug_file }
 interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
-    setupTests(inputs: {
+    setupTests(
         title?: string
-    }): void,
+    ): void,
     testFull(inputs: {
-        title?: string
+        title?: string,
+        setup?: { (): Promise<any> } | any,
         suspects?: any | any[],
     } & Omit<Parameters<TK_file_file["loopFiles"]>[0], "execute">): void,
 }
@@ -22,6 +23,18 @@ interface TK_DebugTest_file {
     };
 
 
+
+    const addUnderscores = function TK_DebugTestFull_addUnderscores(
+        number: number
+    ): string {
+        const text = String(number);
+        const steps = Math.ceil(text.length / 3);
+        let result = text.slice(-3);
+        for (let i = 1; i < steps; i += 1) {
+            result = text.slice(-3 * (i + 1), -3 * i) + "_" + result;
+        }
+        return result
+    };
 
     const colorText = function TK_DebugTestFull_colorString(
         color: "positive" | "negative",
@@ -103,7 +116,7 @@ interface TK_DebugTest_file {
             )
             + "  /  "
             + colorText("positive",
-                "sync " + inputs.timeInitial + " ms"
+                "sync " + addUnderscores(inputs.timeInitial) + " ms"
             );
     };
 
@@ -119,7 +132,7 @@ interface TK_DebugTest_file {
         };
         return summarizeFazitSync(inputs) +
             colorText("positive",
-                " + async " + inputs.timeFinal + " ms"
+                " + async " + addUnderscores(inputs.timeFinal) + " ms"
             )
             + "  /  "
             + colorText((counts.suspects === 0) ? "positive" : "negative",
@@ -144,10 +157,10 @@ interface TK_DebugTest_file {
         return "[ ... " + omitted.length + " ... ]";
     };
 
-    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
+    publicExports.setupTests = function TK_DebugTestFull_setupTests(title) {
         const TKTest = ToolKid.debug.test;
-        if (typeof inputs.title === "string") {
-            TKTest.switchResultGroup(inputs.title);
+        if (typeof title === "string") {
+            TKTest.switchResultGroup(title);
         }
         const name = TKTest.getResultGroup().name;
         console.log(colorText("positive",
@@ -162,7 +175,7 @@ interface TK_DebugTest_file {
         if (typeof list === "function") {
             const name = list.name;
             list = list.toString();
-            if (name !== undefined && list.slice(0,10) === "function (") {
+            if (name !== undefined && list.slice(0, 10) === "function (") {
                 list = "function " + name + list.slice(9);
             }
         }
@@ -174,8 +187,22 @@ interface TK_DebugTest_file {
     };
 
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
-        publicExports.setupTests(inputs);
-        let timeStart = Date.now();
+        publicExports.setupTests(inputs.title);
+        if (typeof inputs.setup !== "function") {
+            testFullRun(inputs, Date.now());
+            return;
+        }
+
+        const promise = inputs.setup();
+        if (promise instanceof Promise) {
+            promise.then(testFullRun.bind(null, inputs, Date.now()), testFullFail)
+        }
+    };
+
+    const testFullRun = function TK_DebugTestFull_testFullRun(
+        inputs: Parameters<TK_DebugTest_file["testFull"]>[0],
+        timeStart: number
+    ) {
         ToolKid.file.loopFiles({
             includes: ["*.test.js"],
             ...inputs,
@@ -200,6 +227,10 @@ interface TK_DebugTest_file {
                 colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)"
             );
         }
+    };
+
+    const testFullFail = function TK_DebugTestFull_testFullFail(reason: any) {
+        ToolKid.debug.terminal.logError("TK_DebugTestFull_testFull failed:", reason)
     };
 
 
