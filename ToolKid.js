@@ -3524,18 +3524,21 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     publicExports.register = function TK_File_register(path) {
         const fileName = publicExports.getName(path);
         const registeredPath = fileRegistry.get(fileName);
-        if (registeredPath === path) {
+        if (registeredPath === path) { // allready known
             return;
         }
-        else if (registeredPath === undefined) {
+        else if (registeredPath === undefined) { // not yet known
             fileRegistry.set(fileName, path);
+            return;
         }
-        else {
-            throw [
-                "TK_File_register - fileName allready in use: ", fileName,
-                " paths are: ", registeredPath, path
-            ];
-        }
+        // diverging path informations
+        const error = new Error("TK_File_register - fileName allready in use");
+        error.details = {
+            knownPath: registeredPath,
+            newPath: path,
+        };
+        fileRegistry.set(fileName, path);
+        return error;
     };
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {

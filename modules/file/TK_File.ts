@@ -11,7 +11,7 @@ interface TK_file_file {
     read: LibraryFiles_file["readFile"],
     register(
         path: string
-    ): void,
+    ): void | CustomError,
     registerDependencies(
         fileName: string, ...dependencies: string[]
     ): void,
@@ -75,16 +75,23 @@ interface TK_file_file {
     publicExports.register = function TK_File_register(path) {
         const fileName = publicExports.getName(path);
         const registeredPath = fileRegistry.get(fileName);
-        if (registeredPath === path) {
+        if (registeredPath === path) { // allready known
             return;
-        } else if (registeredPath === undefined) {
-            fileRegistry.set(fileName, path);
-        } else {
-            throw [
-                "TK_File_register - fileName allready in use: ", fileName,
-                " paths are: ", registeredPath, path
-            ];
         }
+
+        if (registeredPath === undefined) { // not yet known
+            fileRegistry.set(fileName, path);
+            return;
+        }
+
+        // diverging path informations
+        const error = new Error("TK_File_register - fileName allready in use") as CustomError;
+        error.details = {
+            knownPath: registeredPath,
+            newPath: path,
+        };
+        fileRegistry.set(fileName, path);
+        return error;
     };
 
 
