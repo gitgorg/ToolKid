@@ -219,18 +219,19 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
 
 "use strict";
 (function LibraryFiles_init() {
-    const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
+    const { existsSync: checkExistance, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
     const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
     let { createSimpleRX, createStringChecker } = {};
     const publicExports = module.exports = function LibraryFiles_setup(core) {
         ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
     };
+    publicExports.checkExistance = checkExistance;
     const collectPaths = function LibraryFiles_collectPaths(expressions) {
         if (!(expressions instanceof Array)) {
             return [];
         }
         const result = [];
-        expressions.map(collectPathsFilter.bind(null, result));
+        expressions.forEach(collectPathsFilter.bind(null, result));
         return result;
     };
     const collectPathsFilter = function LibraryFiles_collectPathsFilter(validated, expression) {
@@ -268,7 +269,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     const loopFilesFrom = function LibraryFiles_loopFilesFrom(privateData, path) {
         path = resolvePath(path);
-        if (!isUsedPath(path)) {
+        if (!checkExistance(path)) {
             throw ["LibraryFiles_loopFiles - no such path exists:", path];
         }
         if (isDirectory(path)) {
@@ -297,7 +298,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         }
         let path = resolvePath(inputs.path);
         if (inputs.checkExistance !== false) {
-            if (!isUsedPath(path)) {
+            if (!checkExistance(path)) {
                 return { content: undefined };
             }
             else if (isDirectory(path)) {
@@ -318,11 +319,11 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     publicExports.resolvePath = resolvePath;
     const writeDirectory = function LibraryFiles_writeDirectory(path) {
-        if (isUsedPath(path)) {
+        if (checkExistance(path)) {
             return;
         }
         const rootPath = directoryName(path);
-        if (!isUsedPath(rootPath)) {
+        if (!checkExistance(rootPath)) {
             writeDirectory(rootPath);
         }
         try {
@@ -3527,7 +3528,7 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
         if (registeredPath === path) { // allready known
             return;
         }
-        else if (registeredPath === undefined) { // not yet known
+        if (registeredPath === undefined) { // not yet known
             fileRegistry.set(fileName, path);
             return;
         }

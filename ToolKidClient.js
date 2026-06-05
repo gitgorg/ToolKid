@@ -3392,7 +3392,7 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
         if (registeredPath === path) { // allready known
             return;
         }
-        else if (registeredPath === undefined) { // not yet known
+        if (registeredPath === undefined) { // not yet known
             fileRegistry.set(fileName, path);
             return;
         }
