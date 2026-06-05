@@ -3,6 +3,9 @@ interface LibraryCore_file {
 }
 
 type LibraryFiles_file = {
+    checkExistance(
+        path: string
+    ): boolean,
     createPathChecker(inputs: {
         includes?: (string | RegExp)[],
         excludes?: (string | RegExp)[],
@@ -56,7 +59,7 @@ type LibraryFiles_file = {
 
 
     const {
-        existsSync: isUsedPath,
+        existsSync: checkExistance,
         mkdirSync: createDirectory,
         lstatSync: readPathStats,
         readdirSync: readDirectory,
@@ -76,6 +79,8 @@ type LibraryFiles_file = {
         ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
     };
 
+    publicExports.checkExistance = checkExistance;
+
     const collectPaths = function LibraryFiles_collectPaths(
         expressions: (string | RegExp)[] | undefined
     ): RegExp[] {
@@ -84,7 +89,7 @@ type LibraryFiles_file = {
         }
 
         const result = <RegExp[]>[];
-        expressions.map(collectPathsFilter.bind(null, result));
+        expressions.forEach(collectPathsFilter.bind(null, result));
         return result;
     };
 
@@ -132,7 +137,7 @@ type LibraryFiles_file = {
         path: string
     ) {
         path = resolvePath(path);
-        if (!isUsedPath(path)) {
+        if (!checkExistance(path)) {
             throw ["LibraryFiles_loopFiles - no such path exists:", path];
         }
 
@@ -171,7 +176,7 @@ type LibraryFiles_file = {
         }
         let path = resolvePath(inputs.path);
         if (inputs.checkExistance !== false) {
-            if (!isUsedPath(path)) {
+            if (!checkExistance(path)) {
                 return { content: undefined };
             } else if (isDirectory(path)) {
                 throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
@@ -195,12 +200,12 @@ type LibraryFiles_file = {
     publicExports.resolvePath = resolvePath;
 
     const writeDirectory = function LibraryFiles_writeDirectory(path: string) {
-        if (isUsedPath(path)) {
+        if (checkExistance(path)) {
             return;
         }
 
         const rootPath = directoryName(path);
-        if (!isUsedPath(rootPath)) {
+        if (!checkExistance(rootPath)) {
             writeDirectory(rootPath);
         }
         try {
