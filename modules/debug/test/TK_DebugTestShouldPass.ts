@@ -105,9 +105,9 @@ type ValueAsserter = {
         want: "none" | "any",
         to: "pass" | "fail"
     }) {
-        const asserter: ValueAsserter = (inputs.want === "none")
-            ? wantsNone.bind(null, inputs)
-            : wantsAny.bind(null, inputs);
+        const asserter = (inputs.want === "none")
+            ? <ValueAsserter>wantsNone.bind(null, inputs)
+            : <ValueAsserter>wantsAny.bind(null, inputs);
 
         asserter.valueChecks = inputs.checks;
         asserter.wants = inputs.want;
