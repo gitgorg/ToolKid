@@ -134,7 +134,7 @@ console.log("\u001b[96m>>  activating ToolKid");
         return section;
     };
 })();
-//# sourceMappingURL=LibraryCore.js.map
+
 global.ToolKid = module.exports.createInstance();
 fileCollection.set("LibraryCore.js", module.exports);
 
@@ -211,7 +211,7 @@ fileCollection.set("LibraryCore.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
-//# sourceMappingURL=LibraryRegularExpression.js.map
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "regularExpression", module: module.exports
 });
@@ -602,7 +602,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
-//# sourceMappingURL=LibraryParsing.js.map
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "parsing", module: module.exports
 });
@@ -727,7 +727,7 @@ fileCollection.set("LibraryParsing.js", module.exports);
         ToolKid.register({ section: "code", subSection: "CDW", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_CodeCDW.js.map
+
 fileCollection.set("TK_CodeCDW.js", module.exports);
 
 "use strict";
@@ -765,7 +765,7 @@ fileCollection.set("TK_CodeCDW.js", module.exports);
         ToolKid.register({ section: "code", subSection: "CSS", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_CodeCSS.js.map
+
 fileCollection.set("TK_CodeCSS.js", module.exports);
 
 "use strict";
@@ -885,7 +885,7 @@ fileCollection.set("TK_CodeCSS.js", module.exports);
         ToolKid.register({ section: "code", subSection: "CSV", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_CodeCSV.js.map
+
 fileCollection.set("TK_CodeCSV.js", module.exports);
 
 "use strict";
@@ -962,7 +962,7 @@ fileCollection.set("TK_CodeCSV.js", module.exports);
         ToolKid.register({ section: "code", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_CodeParsing.js.map
+
 fileCollection.set("TK_CodeParsing.js", module.exports);
 
 "use strict";
@@ -1012,7 +1012,7 @@ fileCollection.set("TK_CodeParsing.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "object", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesObject.js.map
+
 fileCollection.set("TK_DataTypesObject.js", module.exports);
 
 "use strict";
@@ -1172,7 +1172,7 @@ fileCollection.set("TK_DataTypesObject.js", module.exports);
         ToolKid.register({ section: "code", subSection: "HTML", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_CodeHTML.js.map
+
 fileCollection.set("TK_CodeHTML.js", module.exports);
 
 "use strict";
@@ -1261,7 +1261,7 @@ fileCollection.set("TK_CodeHTML.js", module.exports);
         ToolKid.register({ section: "code", subSection: "JS", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_CodeJS.js.map
+
 fileCollection.set("TK_CodeJS.js", module.exports);
 
 "use strict";
@@ -1346,7 +1346,7 @@ fileCollection.set("TK_CodeJS.js", module.exports);
         ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_ConnectionHTTP.js.map
+
 fileCollection.set("TK_ConnectionHTTP.js", module.exports);
 
 "use strict";
@@ -1390,7 +1390,7 @@ fileCollection.set("TK_ConnectionHTTP.js", module.exports);
         ToolKid.register({ section: "connection", subSection: "HTTP", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_ConnectionHTTPFormats.js.map
+
 fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 
 "use strict";
@@ -1433,7 +1433,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "array", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesArray.js.map
+
 fileCollection.set("TK_DataTypesArray.js", module.exports);
 
 "use strict";
@@ -1549,7 +1549,7 @@ fileCollection.set("TK_DataTypesArray.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesChecks.js.map
+
 fileCollection.set("TK_DataTypesChecks.js", module.exports);
 
 "use strict";
@@ -1749,7 +1749,7 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "checks", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesChecksEquality.js.map
+
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 
 "use strict";
@@ -1768,7 +1768,7 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "error", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesError.js.map
+
 fileCollection.set("TK_DataTypesError.js", module.exports);
 
 "use strict";
@@ -1794,7 +1794,7 @@ fileCollection.set("TK_DataTypesError.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "list", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesList.js.map
+
 fileCollection.set("TK_DataTypesList.js", module.exports);
 
 "use strict";
@@ -1837,7 +1837,7 @@ fileCollection.set("TK_DataTypesList.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "number", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesNumber.js.map
+
 fileCollection.set("TK_DataTypesNumber.js", module.exports);
 
 "use strict";
@@ -1897,7 +1897,7 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "promise", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesPromise.js.map
+
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
 "use strict";
@@ -1946,7 +1946,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         ToolKid.register({ section: "dataTypes", subSection: "string", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DataTypesString.js.map
+
 fileCollection.set("TK_DataTypesString.js", module.exports);
 
 "use strict";
@@ -2124,7 +2124,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTest.js.map
+
 fileCollection.set("TK_DebugTest.js", module.exports);
 
 "use strict";
@@ -2277,7 +2277,7 @@ fileCollection.set("TK_DebugTest.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTestAssertFailure.js.map
+
 fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 
 "use strict";
@@ -2381,7 +2381,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTestAssertion.js.map
+
 fileCollection.set("TK_DebugTestAssertion.js", module.exports);
 
 "use strict";
@@ -2488,7 +2488,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTestCondition.js.map
+
 fileCollection.set("TK_DebugTestCondition.js", module.exports);
 
 "use strict";
@@ -2645,7 +2645,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTestFull.js.map
+
 fileCollection.set("TK_DebugTestFull.js", module.exports);
 
 "use strict";
@@ -2724,7 +2724,7 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTestShouldPass.js.map
+
 fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
 
 "use strict";
@@ -2939,7 +2939,7 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "test", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTestSummary.js.map
+
 fileCollection.set("TK_DebugTestSummary.js", module.exports);
 
 "use strict";
@@ -2960,7 +2960,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "callstack", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugCallstack.js.map
+
 fileCollection.set("TK_DebugCallstack.js", module.exports);
 
 "use strict";
@@ -3038,7 +3038,7 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "performance", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugPerformance.js.map
+
 fileCollection.set("TK_DebugPerformance.js", module.exports);
 
 "use strict";
@@ -3188,7 +3188,7 @@ fileCollection.set("TK_DebugPerformance.js", module.exports);
         ToolKid.register({ section: "debug", subSection: "terminal", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DebugTerminalLog.js.map
+
 fileCollection.set("TK_DebugTerminalLog.js", module.exports);
 
 "use strict";
@@ -3335,7 +3335,7 @@ fileCollection.set("TK_DebugTerminalLog.js", module.exports);
         ToolKid.register({ section: "DOM", entries: publicExports });
     }
 })();
-//# sourceMappingURL=TK_DOMAnimations.js.map
+
 fileCollection.set("TK_DOMAnimations.js", module.exports);
 
 "use strict";
@@ -3415,7 +3415,7 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     }
     Object.freeze(publicExports);
 })();
-//# sourceMappingURL=TK_File.js.map
+
 fileCollection.set("TK_File.js", module.exports);
 
 

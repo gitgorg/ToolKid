@@ -62,10 +62,10 @@ type LibraryFiles_test_file = {
             for (let i = 0; i < fileBases.length; i += 1) {
                 fileBase = fileBases[i];
                 expectedFiles.push(resolve(fileDirectory, fileBase + ".js"));
-                expectedFiles.push(resolve(fileDirectory, fileBase + ".js.map"));
+                // expectedFiles.push(resolve(fileDirectory, fileBase + ".js.map"));
                 if (fileBase !== "LibraryCore") {
                     expectedFiles.push(resolve(fileDirectory, fileBase + ".test.js"));
-                    expectedFiles.push(resolve(fileDirectory, fileBase + ".test.js.map"));
+                    // expectedFiles.push(resolve(fileDirectory, fileBase + ".test.js.map"));
                 }
             }
             assert({
