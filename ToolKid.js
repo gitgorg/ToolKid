@@ -1533,7 +1533,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
     publicExports.iterateNonBlocking = function TK_DataTypesArray_iterateNonBlocking(inputs) {
-        const privateData = Object.assign({
+        const internals = Object.assign({
             batchSize: 10,
             callback: function () { },
             maxBlockDuration: 100,
@@ -1542,27 +1542,26 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
         }, inputs, {
             dataPosition: 0,
         });
-        if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
+        if (typeof internals.startIndex !== "number" || Number.isNaN(internals.startIndex)) {
             throw ["TK_DataTypesArray_iterateNonBlocking - .startIndex should be a number:", inputs];
         }
-        privateData.boundIterator = iterateNonBlockingLoop.bind(null, privateData);
-        iterateNonBlockingLoop(privateData);
+        iterateNonBlockingLoop(internals);
     };
-    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(inputs) {
-        const { data, parser, stopSignal } = inputs;
-        const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
-        for (let i = inputs.startIndex; i < indexEnd; i += 1) {
+    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(internals) {
+        const { data, parser, stopSignal } = internals;
+        const indexEnd = Math.min(internals.startIndex + internals.batchSize, data.length);
+        for (let i = internals.startIndex; i < indexEnd; i += 1) {
             if (parser(data[i], i) === stopSignal) {
-                inputs.callback(i);
+                internals.callback(i);
                 return;
             }
         }
         if (indexEnd === data.length) {
-            inputs.callback(indexEnd - 1);
+            internals.callback(indexEnd - 1);
             return;
         }
-        inputs.startIndex = indexEnd;
-        setTimeout(inputs.boundIterator, 0);
+        internals.startIndex = indexEnd;
+        setTimeout(iterateNonBlockingLoop.bind(null, internals), 0);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
