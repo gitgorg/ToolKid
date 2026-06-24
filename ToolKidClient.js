@@ -1754,11 +1754,14 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 "use strict";
 (function TK_DataTypesError_init() {
     const publicExports = module.exports = {};
-    publicExports.createCustomError = function TK_DataTypesError_createCustomError(message, details) {
+    publicExports.createCustomError = function TK_DataTypesError_createCustomError(message, details, originOffset = 0) {
         if (typeof message !== "string") {
             throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
         }
         const error = new Error(message);
+        error.origin = (typeof originOffset === "string")
+            ? originOffset
+            : error.stack.split("\n")[2 + originOffset];
         error.details = details;
         return error;
     };
@@ -1959,6 +1962,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
     const createResultBase = function TK_DebugTest_createResultBase(config) {
         return {
             subject: config.subject,
+            errorSource: config.errorSource,
             name: typeof config.execute === "function"
                 ? config.execute.name
                 : "assert",
@@ -1968,7 +1972,9 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
     const fillErrorResult = function TK_DebugTest_fillErrorResult(testResult, error, failureHandler, callstackPosition = 7) {
         testResult.time = 0;
         testResult.errorMessage = error || "Unspecified Error";
-        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
+        testResult.errorSource = (typeof testResult.errorSource === "string")
+            ? ToolKid.debug.callstack.extractFileName(testResult.errorSource)
+            : ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
         if (failureHandler !== undefined) {
             failureHandler(testResult);
         }
@@ -2055,12 +2061,12 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
         try {
             const executionPromise = config.execute(scope);
             if (executionPromise instanceof Promise) {
+                testResult.errorSource = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
                 const resultPromiseInputs = {
                     testResult,
                     startTime,
                     promise: executionPromise,
                     resultGroup,
-                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                 };
                 const resultPromise = new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
                     resultPromiseInputs.resolver = resolve;
@@ -2114,7 +2120,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
     };
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
         const { testResult } = bound;
-        testResult.errorSource = bound.source;
+        testResult.errorSource = testResult.errorSource;
         fillErrorResult(testResult, reason, bound.resultGroup.failureHandler);
         bound.resolver(testResult);
     };
@@ -2944,7 +2950,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
 "use strict";
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
-    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
+    publicExports.readFrames = function TK_DebugCallstack_readFrames(inputs = {}) {
         const firstFrameIndex = Math.max(1, inputs.position || 1);
         return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
     };

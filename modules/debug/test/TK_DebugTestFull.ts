@@ -73,7 +73,7 @@ interface TK_DebugTest_file {
         console.warn("\n" +
             colorText("negative",
                 ">>  " + summaryName
-                + "  >  " + result.errorSource
+                + "  >  " + result.origin
                 + "  >  " + subjectName
                 + "  >  \"" + result.name + "\"\n"
             ),

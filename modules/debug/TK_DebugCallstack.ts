@@ -17,7 +17,7 @@ interface TK_DebugCallstack_file {
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = <TK_DebugCallstack_file>{};
 
-    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
+    publicExports.readFrames = function TK_DebugCallstack_readFrames(inputs = {}) {
         const firstFrameIndex = Math.max(1, inputs.position || 1);
         return (<Dictionary>new Error()).stack.split("\n").slice(
             firstFrameIndex,

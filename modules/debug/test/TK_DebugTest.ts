@@ -20,6 +20,7 @@ interface TK_DebugTest_file {
 
 type TKTestConfig = {
     subject: GenericFunction | string,
+    origin?: string,
     callback?(inputs: {
         scope: Dictionary,
         testResult: TKTestResult
@@ -40,7 +41,7 @@ type TKTestResult = {
     name: string,
     time: number,
     errorMessage?: any,
-    errorSource?: string,
+    origin?: string,
 }
 type TKTestResultPromise = Promise<TKTestResult> & {
     subject: TKTestConfig['subject'],
@@ -72,6 +73,7 @@ type TKTestResultGroup = {
     ) {
         return <TKTestResult>{
             subject: config.subject,
+            origin: config.origin,
             name: typeof config.execute === "function"
                 ? config.execute.name
                 : "assert",
@@ -83,11 +85,13 @@ type TKTestResultGroup = {
         testResult: TKTestResult,
         error: any,
         failureHandler?: { (result: TKTestResult): void },
-        callstackPosition=7
+        callstackPosition = 7
     ) {
         testResult.time = 0;
         testResult.errorMessage = error || "Unspecified Error";
-        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
+        testResult.origin = (typeof testResult.origin === "string")
+            ? ToolKid.debug.callstack.extractFileName(testResult.origin)
+            : ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
         if (failureHandler !== undefined) {
             failureHandler(testResult);
         }
@@ -209,12 +213,12 @@ type TKTestResultGroup = {
         try {
             const executionPromise = (<Dictionary>config).execute(scope);
             if (executionPromise instanceof Promise) {
+                testResult.origin = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
                 const resultPromiseInputs = {
                     testResult,
                     startTime,
                     promise: <TKTestResultPromise>executionPromise,
                     resultGroup,
-                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
                 };
                 const resultPromise = <TKTestResultPromise>new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
                     (<Dictionary>resultPromiseInputs).resolver = resolve;
@@ -296,11 +300,9 @@ type TKTestResultGroup = {
             startTime: number,
             resolver: GenericFunction,
             resultGroup: TKTestResultGroup,
-            source: string,
         }, reason: any
     ) {
         const { testResult } = bound;
-        testResult.errorSource = bound.source;
         fillErrorResult(
             testResult, reason,
             bound.resultGroup.failureHandler
