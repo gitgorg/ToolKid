@@ -2098,7 +2098,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
     const createResultBase = function TK_DebugTest_createResultBase(config) {
         return {
             subject: config.subject,
-            errorSource: config.errorSource,
+            origin: config.origin,
             name: typeof config.execute === "function"
                 ? config.execute.name
                 : "assert",
@@ -2108,8 +2108,8 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
     const fillErrorResult = function TK_DebugTest_fillErrorResult(testResult, error, failureHandler, callstackPosition = 7) {
         testResult.time = 0;
         testResult.errorMessage = error || "Unspecified Error";
-        testResult.errorSource = (typeof testResult.errorSource === "string")
-            ? ToolKid.debug.callstack.extractFileName(testResult.errorSource)
+        testResult.origin = (typeof testResult.origin === "string")
+            ? ToolKid.debug.callstack.extractFileName(testResult.origin)
             : ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
         if (failureHandler !== undefined) {
             failureHandler(testResult);
@@ -2197,7 +2197,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
         try {
             const executionPromise = config.execute(scope);
             if (executionPromise instanceof Promise) {
-                testResult.errorSource = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
+                testResult.origin = ToolKid.debug.callstack.readFrames({ position: 6 })[0];
                 const resultPromiseInputs = {
                     testResult,
                     startTime,
@@ -2256,7 +2256,6 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
     };
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
         const { testResult } = bound;
-        testResult.errorSource = testResult.errorSource;
         fillErrorResult(testResult, reason, bound.resultGroup.failureHandler);
         bound.resolver(testResult);
     };
@@ -2671,7 +2670,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             : result.subject.name || result.subject;
         console.warn("\n" +
             colorText("negative", ">>  " + summaryName
-                + "  >  " + result.errorSource
+                + "  >  " + result.origin
                 + "  >  " + subjectName
                 + "  >  \"" + result.name + "\"\n"), ...shortenData(logFailureNice(result.errorMessage)));
     };
