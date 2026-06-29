@@ -247,7 +247,7 @@ type TKTestResultGroup = {
         return testFinish(config, testResult, resultGroup, scope);
     };
 
-    const testFinish = function (
+    const testFinish = function TK_DebugTest_testFinish(
         config: TKTestConfig,
         testResult: TKTestResult,
         resultGroup: TKTestResultGroup,
@@ -263,7 +263,18 @@ type TKTestResultGroup = {
                 try {
                     const inputs = config.assert();
                     try {
-                        ToolKid.debug.test.assert(inputs);
+                        const promise = ToolKid.debug.test.assert(inputs);
+                        if (promise !== undefined) {
+                            testResult.origin = ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+                            (<Promise<any>>promise).catch(function (reason: any) {
+                                fillErrorResult(
+                                    testResult, reason,
+                                    resultGroup.failureHandler
+                                );
+                            });
+                            return testResult;
+                        }
+
                     } catch (error) {
                         fillErrorResult(
                             testResult, error,

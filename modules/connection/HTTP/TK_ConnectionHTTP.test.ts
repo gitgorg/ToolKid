@@ -1,6 +1,6 @@
 (function TK_ConnectionHTTPtest() {
     const { request } = ToolKid.connection.HTTP;
-    const { assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const { assert, assertFailure, test } = ToolKid.debug.test;
 
 
 
@@ -45,7 +45,7 @@
                     throw ["request should have failed but responded fine with:", response];
                 },
                 errorHandler: function (error) {
-                    assertEquality({
+                    assert({
                         "response is error": {
                             value: error instanceof Error,
                             shouldBe: true

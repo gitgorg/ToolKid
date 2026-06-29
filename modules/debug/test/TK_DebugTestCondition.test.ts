@@ -1,16 +1,16 @@
 (function TK_DebugTest_test() {
-    const { assertFailure, assertEquality, createCondition, condition, shouldPass, test } = ToolKid.debug.test;
+    const { assertFailure, assert, createCondition, condition, shouldPass, test } = ToolKid.debug.test;
 
 
-    const isFunction = function (value: any) {
-        return typeof value === "function";
-    };
-    const isNumber = function (value: any) {
-        return typeof value === "number" && !Number.isNaN(value);
-    }
-    const isPromise = function (value: any) {
-        return value instanceof Promise;
-    };
+    const shouldBeFunction = shouldPass(
+        value => typeof value === "function"
+    );
+    const shouldBeNumber = shouldPass(
+        value => typeof value === "number" && !Number.isNaN(value)
+    );
+    const shouldBeString = shouldPass(
+        value => typeof value === "string" && value.length !== 0
+    );
 
 
 
@@ -19,41 +19,43 @@
         subject: referenceCondition.resolve,
         execute: async function createAndResolve() {
             const promise = createCondition();
-            assertEquality({
-                "should be Promise": {
-                    value: promise,
-                    shouldBe: shouldPass(isPromise)
+            let copy = Object.assign({}, promise);
+            assert({
+                CONFIG: { toleranceDepth: 3 },
+                isPromise: {
+                    value: promise instanceof Promise,
+                    shouldBe: true,
                 },
-                "promise.done": {
-                    value: promise.done,
-                    shouldBe: false
+                "properties initial": {
+                    value: copy,
+                    shouldBe: {
+                        done: false,
+                        timePassed: 0,
+                        resolve: shouldBeFunction,
+                        reject: shouldBeFunction,
+                        origin: shouldBeString,
+                    }
                 },
-                "promise.timePassed": {
-                    value: promise.timePassed,
-                    shouldBe: 0
-                },
-                "promise.resolve": {
-                    value: promise.resolve,
-                    shouldBe: shouldPass(isFunction)
-                },
-                "promise.fail": {
-                    value: promise.reject,
-                    shouldBe: shouldPass(isFunction)
-                }
+
             });
+
             promise.resolve(200);
-            assertEquality({
-                "promise.done": {
-                    value: promise.done,
-                    shouldBe: true
+            copy = Object.assign({}, promise);
+            assert({
+                CONFIG: { toleranceDepth: 3 },
+                "properties after resolve": {
+                    value: copy,
+                    shouldBe: {
+                        done: true,
+                        timePassed: ToolKid.debug.test.shouldPassAny(0,1),
+                        resolve: shouldBeFunction,
+                        reject: shouldBeFunction,
+                        origin: shouldBeString,
+                    }
                 },
-                // "promise.timePassed": {
-                //     value: promise.timePassed,
-                //     shouldBe: 0
-                // },
-                "resolved to": {
+                value: {
                     value: await promise,
-                    shouldBe: 200
+                    shouldBe: 200,
                 }
             });
         }
@@ -67,7 +69,7 @@
                 execute: promise,
                 shouldThrow: 400
             });
-            assertEquality({
+            assert({
                 "promise.done": {
                     value: promise.done,
                     shouldBe: true
@@ -90,10 +92,10 @@
                 registerWithName: "debug.test.condition1",
             });
             setTimeout(promise.resolve, 100);
-            assertEquality({
+            assert({
                 "successfull registered condition": {
                     value: await condition("debug.test.condition1"),
-                    shouldBe: shouldPass(isNumber),
+                    shouldBe: shouldBeNumber,
                 }
             });
 
@@ -117,10 +119,10 @@
                 shouldThrow: "testCondition3 failure"
             });
 
-            assertEquality({
+            assert({
                 "remember previous valid condition": {
                     value: await condition("debug.test.condition1"),
-                    shouldBe: shouldPass(isNumber)
+                    shouldBe: shouldBeNumber
                 }
             });
         }

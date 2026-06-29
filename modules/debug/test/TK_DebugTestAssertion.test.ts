@@ -1,6 +1,6 @@
 (function TK_DebugTest_test() {
     const Debug = ToolKid.debug;
-    const { assertFailure, assert, assertEquality, test } = Debug.test;
+    const { assertFailure, assert, assertEquality, createCondition, test } = Debug.test;
 
 
 
@@ -32,6 +32,51 @@
                     }
                 }
             });
+        }
+    }, {
+        subject: assert,
+        execute: async function simpleStandalonePromises() {
+            await assert(
+                "assert 3 arguments", Promise.resolve(11), 11
+            );
+
+            await assert({
+                "assert simple config": [Promise.resolve(22), 22]
+            });
+
+            await assert({
+                "assert regular config": { value: Promise.resolve(33), shouldBe: 33 }
+            });
+        }
+    }, {
+        subject: assert,
+        assert: function complexTestPromise() {
+            return {
+                "regular": [10, 10],
+                "test.assert simple": [Promise.resolve(20), 20],
+                "test.assert complex": { value: Promise.resolve(30), shouldBe: 30 },
+            }
+        }
+    }, {
+        subject: assert,
+        execute: async function simplePromiseFailures() {
+            let condition = createCondition();
+            assert(
+                "assert 3 arguments", Promise.reject(1), 1
+            ).then(condition.reject, condition.resolve);
+            await condition;
+
+            condition = createCondition();
+            (<Promise<any>>assert({
+                "assert 3 arguments": [Promise.reject(2), 2]
+            })).then(condition.reject, condition.resolve);
+            await condition;
+
+            condition = createCondition();
+            (<Promise<any>>assert({
+                "assert 3 arguments": { value: Promise.reject(3), shouldBe: 3 }
+            })).then(condition.reject, condition.resolve);
+            await condition;
         }
     });
 

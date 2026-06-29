@@ -2089,7 +2089,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
         testResult.time = Date.now() - startTime;
         return testFinish(config, testResult, resultGroup, scope);
     };
-    const testFinish = function (config, testResult, resultGroup, scope) {
+    const testFinish = function TK_DebugTest_testFinish(config, testResult, resultGroup, scope) {
         if (testResult.errorMessage === undefined && config.assert !== undefined) {
             if (typeof config.assert !== "function") {
                 fillErrorResult(testResult, ["TK_DebugTest_testAssert - the testConfig.assert property has to be a function which returns the inputs for the test.assert function:", config], resultGroup.failureHandler, 8);
@@ -2098,7 +2098,14 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
                 try {
                     const inputs = config.assert();
                     try {
-                        ToolKid.debug.test.assert(inputs);
+                        const promise = ToolKid.debug.test.assert(inputs);
+                        if (promise !== undefined) {
+                            testResult.origin = ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+                            promise.catch(function (reason) {
+                                fillErrorResult(testResult, reason, resultGroup.failureHandler);
+                            });
+                            return testResult;
+                        }
                     }
                     catch (error) {
                         fillErrorResult(testResult, error, resultGroup.failureHandler, 8);
@@ -2287,56 +2294,100 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 "use strict";
 (function TK_DebugTestAssertion_init() {
     const defaultConfig = {};
+    const empty = function TK_DebugTestAssertion_empty() { };
+    const promiseInternals = {
+        errors: [],
+        reject: empty,
+        resolve: empty,
+        count: 0,
+    };
     const publicExports = module.exports = {};
     publicExports.assert = function TK_DebugTestAssertion_assert(...inputs) {
+        const promises = [];
         const errors = [];
-        if (inputs.length === 3) {
-            assertEqualityPerName(errors, [inputs[0], { value: inputs[1], shouldBe: inputs[2] }]);
+        if (arguments.length === 3) {
+            assertOne(promises, errors, inputs[0], { value: inputs[1], shouldBe: inputs[2] });
             if (errors.length !== 0) {
                 throw errors;
             }
+            else if (promises.length !== 0) {
+                return promises[0].promise;
+            }
             return;
         }
-        if (inputs.length !== 1) {
-            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
+        if (arguments.length !== 1) {
+            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", arguments.length, "inputs:", arguments];
         }
-        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors, inputs[0].CONFIG || defaultConfig));
+        const entries = Object.entries(inputs[0]);
+        const { length } = entries;
+        const config = inputs[0].CONFIG || defaultConfig;
+        for (let i = 0; i < length; i += 1) {
+            assertComplex(promises, errors, config, entries[i]);
+        }
         if (errors.length !== 0) {
             throw errors;
         }
+        else if (promises.length !== 0) {
+            return promises[0].promise;
+        }
     };
-    const assertComplex = function TK_DebugTestAssertion_assertComplex(errors, baseConfig, nameAndConfig) {
-        const [, config] = nameAndConfig;
-        if (isShortConfig(config)) {
-            assertEqualityPerName(errors, [
-                nameAndConfig[0], {
-                    ...baseConfig,
-                    value: config[0],
-                    shouldBe: config[1]
-                }
-            ]);
+    const assertComparison = function TK_DebugTestAssertion_assertComparison(errors, label, config) {
+        const returned = ToolKid.dataTypes.checks.areEqual(config);
+        if (returned === true) {
+            return;
+        }
+        let errorMessage;
+        if (config.passOnDepthExceed === true) {
+            const cleaned = returned.filter(isNotTooDeep);
+            if (cleaned.length === 0) {
+                return;
+            }
+            errorMessage = ["~ " + label + " ~ value did not meet expectations:", ...cleaned];
         }
         else {
-            assertEqualityPerName(errors, [
-                nameAndConfig[0], {
-                    ...baseConfig,
-                    ...nameAndConfig[1]
-                }
-            ]);
+            errorMessage = ["~ " + label + " ~ value did not meet expectations:", ...returned];
+        }
+        if (typeof config.catchFailure === "function") {
+            config.catchFailure(errorMessage);
+        }
+        else {
+            errors.push(...errorMessage);
+        }
+    };
+    const assertComplex = function TK_DebugTestAssertion_assertComplex(promises, errors, baseConfig, nameAndConfig) {
+        const [, config] = nameAndConfig;
+        if (isShortConfig(config)) {
+            assertOne(promises, errors, nameAndConfig[0], {
+                ...baseConfig,
+                value: config[0],
+                shouldBe: config[1]
+            });
+        }
+        else {
+            assertOne(promises, errors, nameAndConfig[0], {
+                ...baseConfig,
+                ...nameAndConfig[1]
+            });
         }
     };
     publicExports.assertEquality = function TK_Debug_assertEquality(inputs) {
         const errors = [];
-        Object.entries(inputs).forEach(assertEqualityPerName.bind(null, errors));
+        const entries = Object.entries(inputs);
+        const { length } = entries;
+        let entry;
+        for (let i = 0; i < length; i += 1) {
+            entry = entries[i];
+            assertOne([], errors, entry[0], entry[1]);
+        }
         if (errors.length !== 0) {
             throw errors;
         }
     };
-    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndConfig) {
-        const config = nameAndConfig[1];
+    const assertOne = function TK_Debug_assertOne(promises, errors, label, config) {
         if (config.shouldBe === Error) {
+            // crash on execution expected
             if (typeof config.value !== "function") {
-                errors.push(...["~ " + nameAndConfig[0] + " ~ value needs to be a function in order to test for failure but is: ", config.value]);
+                errors.push(...["~ " + label + " ~ value needs to be a function in order to test for failure but is: ", config.value]);
                 return;
             }
             let returned;
@@ -2344,31 +2395,61 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
                 returned = config.value();
             }
             catch (error) {
-                return;
+                return; // crash happened - all good
             }
-            errors.push(...["~ " + nameAndConfig[0] + " ~ value did not fail - it returned:", returned]);
+            errors.push(...["~ " + label + " ~ value did not fail - it returned:", returned]);
             return;
         }
-        const returned = ToolKid.dataTypes.checks.areEqual(config);
-        if (returned === true) {
+        if (!(config.value instanceof Promise)) {
+            assertComparison(errors, label, config);
             return;
         }
-        let errorMessage;
-        if (config.passOnDepthExceed !== true) {
-            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
+        if (promises.length === 0) {
+            promises[0] = assertPromise(errors, label, config);
         }
         else {
-            const cleaned = returned.filter(isNotTooDeep);
-            if (cleaned.length === 0) {
-                return;
+            promises[0].add(label, config);
+        }
+    };
+    const assertPromise = function TK_DebugTestAssertion_assertPromise(errors, label, config) {
+        const internals = Object.assign({}, promiseInternals);
+        internals.errors = errors;
+        internals.resolve = resolve.bind(null, internals);
+        internals.reject = reject.bind(null, internals);
+        const promise = new Promise(function TK_DebugTestAssertion_assertPromiseCreate(resolve, reject) {
+            internals.resolve = resolve;
+            internals.reject = reject;
+        });
+        const add = function TK_DebugTestAssertion_assertPromiseAdd(label, config) {
+            internals.count += 1;
+            config.value.then(resolve.bind(null, internals, label, config), reject.bind(null, internals, label));
+        };
+        add(label, config);
+        return { promise, add };
+    };
+    const reject = function TK_DebugTestAssertion_reject(internals, label, reason) {
+        internals.errors.push("~ " + label + " ~ promise rejected:", reason);
+        if (internals.count === 1) {
+            internals.reject(internals.errors);
+        }
+        else {
+            internals.count -= 1;
+        }
+    };
+    const resolve = function TK_DebugTestAssertion_resolve(internals, label, config, data) {
+        config.value = data;
+        const { errors } = internals;
+        assertComparison(errors, label, config);
+        if (internals.count === 1) {
+            if (errors.length === 0) {
+                internals.resolve(data);
             }
-            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...cleaned];
-        }
-        if (typeof config.catchFailure === "function") {
-            config.catchFailure(errorMessage);
+            else {
+                internals.reject(errors);
+            }
         }
         else {
-            errors.push(...errorMessage);
+            internals.count -= 1;
         }
     };
     const isNotTooDeep = function TK_DebugTestAssertion_isNotToDeep(difference) {
@@ -2394,15 +2475,12 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
     const registeredConditions = new Map();
     const waitingConditions = new Map();
     publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
-        if (typeof inputs !== "string") {
-            return createCondition(inputs);
-        }
         const found = registeredConditions.get(inputs);
         if (found !== undefined) {
             return found;
         }
         let queue = waitingConditions.get(inputs);
-        const result = conditionCreate();
+        const result = conditionCreate(3);
         if (queue === undefined) {
             queue = [result];
             waitingConditions.set(inputs, queue);
@@ -2412,19 +2490,20 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
         }
         setTimeout(function () {
             if (registeredConditions.get(inputs) === undefined) {
-                result.reject("waiting for unknown condition: \"" + inputs + "\"");
+                result.reject('waiting for unknown condition: "' + inputs
+                    + '" ' + result.origin);
             }
         }, 5000);
         return result;
     };
-    const createCondition = publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
+    publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
         if (inputs === undefined) {
-            return conditionCreate();
+            return conditionCreate(3);
         }
         if (typeof inputs === "number") {
             inputs = { timeToResolve: inputs };
         }
-        const result = conditionCreate();
+        const result = conditionCreate(3);
         if (typeof inputs.timeToResolve === "number" || typeof inputs.timeToReject === "number") {
             watchPromiseDuration(inputs, result);
         }
@@ -2447,7 +2526,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
             condition[mode](value);
         }
     };
-    const conditionCreate = function TK_DebugTestCondition_conditionCreate() {
+    const conditionCreate = function TK_DebugTestCondition_conditionCreate(originDepth) {
         let resolve, reject;
         const result = new Promise(function createPromise_setup(resolveFunction, rejectFunction) {
             resolve = function TK_DebugTestCondition_PromiseResolve(value) {
@@ -2457,6 +2536,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
                     value = result.timePassed;
                 }
                 resolveFunction(value);
+                return result;
             };
             reject = function TK_DebugTestCondition_PromiseReject(reason) {
                 result.timePassed = Date.now() - startTime;
@@ -2465,10 +2545,12 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
                     reason = result.timePassed;
                 }
                 rejectFunction(reason);
+                return result;
             };
         });
         result.resolve = resolve;
         result.reject = reject;
+        result.origin = new Error().stack.split("\n")[originDepth];
         result.done = false;
         result.timePassed = 0;
         const startTime = Date.now();
