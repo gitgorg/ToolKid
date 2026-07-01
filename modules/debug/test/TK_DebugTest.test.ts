@@ -118,7 +118,7 @@
     });
 
     const failingPromise = createPromise();
-    promisedResult = <Promise<TKTestResult>>test({
+    promisedResult = <TKTestResultPromise>test({
         subject: test,
         execute: function failAsynchronous() {
             return failingPromise;
