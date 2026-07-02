@@ -15,6 +15,7 @@ interface NodeRequire {
 
 
 type CustomError = Error & {
+    ERROR: string,
     details: any,
     origin: string,
     stack: string,
@@ -33,9 +34,13 @@ type CustomError = Error & {
         }
 
         const error = <CustomError>new Error(message);
-        error.origin = (typeof originOffset === "string")
-            ? originOffset
-            : error.stack.split("\n")[2 + originOffset];
+        error.ERROR = message;
+        if (typeof originOffset === "string") {
+            error.origin = originOffset;
+        } else {
+            const line = error.stack.split("\n")[2 + originOffset];
+            error.origin = line.slice(line.indexOf("at ")+3,line.indexOf(" ("));
+        }
         error.details = details;
         return error;
     };

@@ -1895,9 +1895,14 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
             throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
         }
         const error = new Error(message);
-        error.origin = (typeof originOffset === "string")
-            ? originOffset
-            : error.stack.split("\n")[2 + originOffset];
+        error.ERROR = message;
+        if (typeof originOffset === "string") {
+            error.origin = originOffset;
+        }
+        else {
+            const line = error.stack.split("\n")[2 + originOffset];
+            error.origin = line.slice(line.indexOf("at ") + 3, line.indexOf(" ("));
+        }
         error.details = details;
         return error;
     };
@@ -2049,7 +2054,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             return error;
         }
     };
-    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data) {
+    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data, depth = 1) {
         if (data instanceof Error) {
             if (data.details === undefined) {
                 return `{"error": "${data.message}"}`;
@@ -2165,7 +2170,7 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
         if (typeof config !== "object" || config === null) {
             return testFinish(config, fillErrorResult(testResult, ["TK_DebugTest_test - config has to be an object but is:", config], resultGroup.failureHandler), resultGroup, {});
         }
-        if (!isValidSubject(config.subject)) {
+        else if (!isValidSubject(config.subject)) {
             return testFinish(config, fillErrorResult(testResult, ["TK_DebugTest_test - config.subject has to be a named function or a string but is:", config.subject], resultGroup.failureHandler), resultGroup, {});
         }
         return testExecute(config, testResult, resultGroup);
