@@ -2054,7 +2054,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             return error;
         }
     };
-    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data, depth = 1) {
+    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data) {
         if (data instanceof Error) {
             if (data.details === undefined) {
                 return `{"error": "${data.message}"}`;
