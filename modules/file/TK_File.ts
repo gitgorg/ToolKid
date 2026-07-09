@@ -32,10 +32,11 @@ interface TK_file_file {
     };
 
     publicExports.getExtension = function TK_File_getExtension(path) {
-        const parts = publicExports.getName(path).split(".");
-        return (parts.length === 1)
+        const fileName = publicExports.getName(path);
+        const position = fileName.lastIndexOf(".");
+        return (position === -1)
             ? ""
-            : parts[parts.length - 1].toLocaleLowerCase();
+            : fileName.slice(position + 1).toLocaleLowerCase();
     };
 
     publicExports.getName = function TK_File_getName(path) {
