@@ -4,12 +4,15 @@
 
 
 
-    const isFunction = function (value: any) {
+    const shouldBeFunction = shouldPass(function (value: any) {
         return typeof value === "function";
-    };
-    const isPromise = function (value: any) {
+    });
+    const shouldBePromise = shouldPass(function (value: any) {
         return value instanceof Promise;
-    };
+    });
+    const shouldBeString = shouldPass(function (value: any) {
+        return typeof value === "string" && value.length !== 0;
+    });
 
 
 
@@ -23,11 +26,12 @@
                 "result": {
                     value: result,
                     shouldBe: {
-                        promise: shouldPass(isPromise),
-                        resolve: shouldPass(isFunction),
-                        reject: shouldPass(isFunction),
+                        promise: shouldBePromise,
+                        resolve: shouldBeFunction,
+                        reject: shouldBeFunction,
                         state: "fulfilled",
-                        data: 100
+                        data: 100,
+                        origin: shouldBeString,
                     }
                 },
                 "awaited result.promise": {

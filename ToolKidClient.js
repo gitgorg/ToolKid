@@ -1875,9 +1875,27 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
         });
         return combined.promise;
     };
-    publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
+    publicExports.createPromise = function TK_DataTypesPromise_createPromise(originDepth = 3) {
+        let position = 0;
+        let origin = new Error().stack;
+        for (let i = 0; i < originDepth; i += 1) {
+            position = origin.indexOf("\n", position) + 1;
+            if (position === 0) {
+                break;
+            }
+        }
+        if (position === 0) {
+            origin = "unknown";
+        }
+        else {
+            const end = origin.indexOf("\n", position);
+            origin = (end === -1)
+                ? origin.slice(position)
+                : origin.slice(position, end);
+        }
         const result = {
-            state: "pending"
+            state: "pending",
+            origin,
         };
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(resolve, reject) {
             result.resolve = promiseDecide.bind(null, result, resolve, "fulfilled");

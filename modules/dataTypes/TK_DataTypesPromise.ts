@@ -4,7 +4,9 @@ interface TK_DataTypesPromise_file {
     combinePromises(
         ...promises: Promise<any>[]
     ): Promise<any[]>,
-    createPromise(): CustomPromise
+    createPromise(
+        originDepth?: number,
+    ): CustomPromise
 }
 
 type CustomPromise = {
@@ -12,7 +14,8 @@ type CustomPromise = {
     resolve(data?: any): void,
     reject(reason?: any): void,
     state: "pending" | "fulfilled" | "rejected",
-    data: any
+    data: any,
+    origin: string,
 }
 
 
@@ -51,9 +54,28 @@ type CustomPromise = {
         return combined.promise;
     };
 
-    publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
+    publicExports.createPromise = function TK_DataTypesPromise_createPromise(
+        originDepth = 3
+    ) {
+        let position = 0;
+        let origin: string = (new Error() as Dictionary).stack;
+        for (let i = 0; i < originDepth; i += 1) {
+            position = origin.indexOf("\n", position) + 1;
+            if (position === 0) {
+                break;
+            }
+        }
+        if (position === 0) {
+            origin = "unknown";
+        } else {
+            const end = origin.indexOf("\n", position);
+            origin = (end === -1)
+                ? origin.slice(position)
+                : origin.slice(position, end);
+        }
         const result = <CustomPromise>{
-            state: "pending"
+            state: "pending",
+            origin,
         };
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(
             resolve, reject
