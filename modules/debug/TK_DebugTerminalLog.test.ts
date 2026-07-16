@@ -28,7 +28,7 @@
             assertEquality({
                 "mixed values": {
                     value: Terminal.colorStrings({
-                        colorName: "orange", values: ["text", 10, null, "text2"]
+                        colorName: "orange", prefix: "text", values: [10, null, "text2"]
                     }),
                     shouldBe: [
                         colors.orange + "text" + colors.white,
@@ -42,9 +42,9 @@
                         colorName: "red", values: ["A", "B", "C", {}, "D", "E"]
                     }),
                     shouldBe: [
-                        colors.red + "ABC" + colors.white,
+                        colors.red + "A, B, C" + colors.white,
                         {},
-                        colors.red + "DE" + colors.white
+                        colors.red + "D, E" + colors.white
                     ],
                     toleranceDepth: 2
                 }
@@ -54,25 +54,34 @@
 
 
 
-    const originalLogError = console.error;
-    const originalLogWarning = console.warn;
-    let errors = <any[][]>[];
-    let warnings = <any[][]>[];
-    console.error = function TK_DebugTerminalLog_errorReplacement(...inputs) {
-        errors.push(inputs);
+    const registerMessage =function TK_DebugTerminalLog_registerMessage(
+        messages:any[][], ...inputs: any[]
+    ) {
+        messages.push(inputs);
     };
-    console.warn = function TK_DebugTerminalLog_warnReplacement(...inputs) {
-        warnings.push(inputs);
-    };
+
+    const logOriginal = console.log;
+    const logs = <any[][]>[];
+    const logReplacement = registerMessage.bind(null,logs);
+
+    const warnOriginal = console.warn;
+    const warnings = <any[][]>[];
+    const warnReplacement = registerMessage.bind(null,warnings);
+
+    const errorOriginal = console.error;
+    const errors = <any[][]>[];
+    const errorReplacement = registerMessage.bind(null,errors);
 
     test({
         subject: disableLogs,
         execute: function disablingLogs() {
             warnings.length = 0;
+            console.warn = warnReplacement;
             disableLogs(2);
             console.warn(1);
             console.warn(2);
             console.warn(3);
+            console.warn = warnOriginal;
             assertEquality({
                 "blocked warnings": {
                     value: warnings,
@@ -85,11 +94,13 @@
         subject: disableLogs,
         execute: function reenablingLogs() {
             warnings.length = 0;
+            console.warn = warnReplacement;
             disableLogs(100);
             console.warn(1);
             disableLogs(false);
             console.warn(2);
             console.warn(3);
+            console.warn = warnOriginal;
             assertEquality({
                 "reenabled warnings": {
                     value: warnings,
@@ -106,8 +117,10 @@
     test({
         subject: Terminal.logError,
         execute: function logError() {
+            console.error = errorReplacement;
             Terminal.logError("string first", 1);
             Terminal.logError(2, "number first");
+            console.error = errorOriginal;
             assertEquality({
                 "errors": {
                     value: errors,
@@ -121,17 +134,19 @@
                     toleranceDepth: 3
                 }
             });
-        }
+        },
     });
 
     test({
         subject: Terminal.logBasic,
         execute: function logBasic() {
             warnings.length = 0;
+            console.log = logReplacement;
             Terminal.logBasic("basic", 1, [true]);
+            console.log = logOriginal;
             assertEquality({
-                "warnings": {
-                    value: warnings,
+                "warnings basic": {
+                    value: logs,
                     shouldBe: [
                         [colors.grey + ">>  basic" + colors.white, 1, [true]]
                     ],
@@ -145,9 +160,11 @@
         subject: Terminal.logImportant,
         execute: function logImportant() {
             warnings.length = 0;
+            console.warn = warnReplacement;
             Terminal.logImportant("important", 2, [true]);
+            console.warn = warnOriginal;
             assertEquality({
-                "warnings": {
+                "warnings important": {
                     value: warnings,
                     shouldBe: [
                         [colors.cyan + ">>  important" + colors.white, 2, [true]]
@@ -162,7 +179,9 @@
         subject: Terminal.logWarning,
         execute: function logWarning() {
             warnings.length = 0;
+            console.warn = warnReplacement;
             Terminal.logWarning("warning", 3, [true]);
+            console.warn = warnOriginal;
             assertEquality({
                 "warnings": {
                     value: warnings,
@@ -177,7 +196,8 @@
 
 
 
+    errors.length = 0;
     warnings.length = 0;
-    console.error = originalLogError;
-    console.warn = originalLogWarning;
+    console.error = errorOriginal;
+    console.warn = warnOriginal;
 })();

@@ -54,8 +54,9 @@ interface TK_DebugTest_file {
             ? "value"
             : "." + difference.path.join(".");
         return [
-            "\n > " + path + "\nis:", shortenData(difference.value),
-            "\ninstead of:", shortenData(difference.shouldBe)];
+            "\n > " + path + "\nis:", [shortenData(difference.value)],
+            "\ninstead of:", [shortenData(difference.shouldBe)]
+        ];
     };
 
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(

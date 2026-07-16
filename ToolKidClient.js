@@ -2619,8 +2619,8 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             ? "value"
             : "." + difference.path.join(".");
         return [
-            "\n > " + path + "\nis:", shortenData(difference.value),
-            "\ninstead of:", shortenData(difference.shouldBe)
+            "\n > " + path + "\nis:", [shortenData(difference.value)],
+            "\ninstead of:", [shortenData(difference.shouldBe)]
         ];
     };
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(failure) {
@@ -3170,18 +3170,31 @@ fileCollection.set("TK_DebugPerformance.js", module.exports);
     publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
         colorCode = publicExports.getColorCode(inputs.colorName);
         formatedText = undefined;
-        let resultIndex = 0;
         const values = inputs.values;
+        let resultIndex = 0;
+        let i = 0;
+        if (typeof inputs.prefix === "string") {
+            let prefix = colorCode + inputs.prefix;
+            if (typeof values[0] === "string") {
+                prefix += values[0];
+                i = 1;
+            }
+            if (typeof values[i] !== "string" && isClient === false) {
+                prefix += colorSignals.white;
+            }
+            formatedValues[0] = prefix;
+            resultIndex = 1;
+        }
         const length = values.length;
         let value;
-        for (let i = 0; i < length; i += 1) {
+        for (; i < length; i += 1) {
             value = values[i];
             if (typeof value === "string") {
                 if (typeof formatedText === "string") {
-                    formatedText += value;
+                    formatedText += ", " + value;
                 }
                 else {
-                    formatedText = (isClient === false || i === 0)
+                    formatedText = (isClient === false)
                         ? colorCode + value // server can color multiple strings
                         : value; // client can only color first string
                 }
@@ -3218,6 +3231,7 @@ fileCollection.set("TK_DebugPerformance.js", module.exports);
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
         console.log(...publicExports.colorStrings({
             colorName: typeColors.basic,
+            prefix: getPrefix(">>  "),
             values: ["TK_DebugTerminalLog_disableLogs - " + amount]
         }));
         if (amount === false) {
@@ -3256,29 +3270,41 @@ fileCollection.set("TK_DebugPerformance.js", module.exports);
         }
         return code;
     };
-    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
-        return (typeof inputs[0] === "string")
+    const getPrefix = function TK_DebugTerminalLog_getPrefix(firstValue) {
+        return (typeof firstValue === "string")
             ? ">>  " : ">>";
     };
     publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
         console.error(...publicExports.colorStrings({
             colorName: typeColors.error,
-            values: [getPrefix(inputs), ...inputs]
+            prefix: getPrefix(inputs[0]),
+            values: inputs
         }));
     };
     const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
         if (inputs.length === 0) {
-            console.log();
+            console.warn();
             return;
         }
         console.warn(...publicExports.colorStrings({
             colorName: typeColors[type],
-            values: [getPrefix(inputs), ...inputs]
+            prefix: getPrefix(inputs[0]),
+            values: inputs
         }));
     };
     publicExports.logWarning = logWithLevel.bind(null, "warning");
     publicExports.logImportant = logWithLevel.bind(null, "important");
-    publicExports.logBasic = logWithLevel.bind(null, "basic");
+    publicExports.logBasic = function TK_DebugTerminalLog_logWithLevel(...inputs) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
+        console.log(...publicExports.colorStrings({
+            colorName: typeColors.basic,
+            prefix: getPrefix(inputs[0]),
+            values: inputs
+        }));
+    };
     if (typeof process !== "undefined") {
         process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
             publicExports.logError("UNHANDLED PROMISE REJECTION");
