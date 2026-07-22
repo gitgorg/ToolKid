@@ -7,6 +7,7 @@ console.log("\u001b[96m>>  activating ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
+        "core": "LibraryCore.js",
         "building": "LibraryBuild.js",
         "files": "LibraryFiles.js",
         "regularExpression": "LibraryRegularExpression.js",
@@ -16,7 +17,7 @@ console.log("\u001b[96m>>  activating ToolKid");
     const publicExports = module.exports = {};
     publicExports.createCustomError = function LibraryCore_createCustomError(message, details, originOffset = 0) {
         if (typeof message !== "string") {
-            throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
+            throw publicExports.createCustomError("message was not a string", { message });
         }
         const error = new Error(message);
         error.ERROR = message;
@@ -74,10 +75,7 @@ console.log("\u001b[96m>>  activating ToolKid");
         }
         const path = coreModuleNames[moduleName];
         if (path === undefined) {
-            throw [
-                "LibraryCore_getCoreModule - unknonw core module name:", moduleName,
-                "allowed extensions are:", Object.keys(coreModuleNames)
-            ];
+            throw publicExports.createCustomError("unknonw core module name", { moduleName, allowedExtensions: Object.keys(coreModuleNames) });
         }
         const module = coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
         if (typeof module === "function") {
@@ -95,9 +93,7 @@ console.log("\u001b[96m>>  activating ToolKid");
             }
         }
         else {
-            throw [
-                "LibraryCore_registerCoreModule - tried to overwrite " + name + ": current value = ", coreModules[name], " new value = ", inputs.module
-            ];
+            throw publicExports.createCustomError("tried to overwrite core module", Object.assign({ previousModule: coreModules[name] }, inputs));
         }
     };
     const register = function LibraryCore_register(library, inputs) {
@@ -120,15 +116,15 @@ console.log("\u001b[96m>>  activating ToolKid");
     };
     const registerEntryToSection = function LibraryCore_registerEntryToSection(inputs) {
         if (typeof inputs.name !== "string") {
-            throw ["LibraryCore_registerEntryToSection - invalid name: ", inputs.name, "inside: ", inputs];
+            throw publicExports.createCustomError("invalid library entry name", inputs);
         }
         const { entry } = inputs;
         if (entry === null || ["function", "object"].indexOf(typeof entry) === -1) {
-            throw ["LibraryCore_registerEntryToSection - invalid helper: ", entry, "inside: ", inputs];
+            throw publicExports.createCustomError("invalid library entry type", inputs);
         }
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", entry];
+            throw publicExports.createCustomError("tried to overwrite library entry", Object.assign({ previousEntry: section[name] }, inputs));
         }
         addAsReadOnlyEnumerable({
             container: section,

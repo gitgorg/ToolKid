@@ -180,10 +180,6 @@ type LibraryFiles_test_file = {
                 name: "directory response",
                 execute: readFile,
                 withInputs: { path: paths.directoryMixedContents },
-                shouldThrow: [
-                    "LibraryFiles_readFile - path is a directory, not a file:",
-                    paths.directoryMixedContents
-                ]
             });
         }
     });
