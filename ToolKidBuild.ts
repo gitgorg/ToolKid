@@ -64,15 +64,6 @@ type ToolKidConfig = {
         execute: require
     });
 
-    const runTests = function ToolKidBuild_runTests() {
-        setTimeout(ToolKid.debug.test.testFull.bind(null, {
-            title: "ToolKid",
-            path: [__dirname],
-            include: ["*.test.js"],
-            suspects: [ToolKid],
-        }), 100);
-    };
-
     const corePathCheck = createPathChecker({ includes: ["*/modules/core/*"] });
     const readBundleContent = function TooloKidBuild_readBundleContent(
         filePaths: Map<string, string>,
@@ -150,7 +141,12 @@ module.exports = ToolKid;',
             ].join("")
         });
         if (config.runTests !== false) {
-            runTests();
+            setTimeout(ToolKid.debug.test.testFull.bind(null, {
+                title: "ToolKid",
+                path: [__dirname],
+                include: ["*.test.js"],
+                suspects: [ToolKid],
+            }), 100);
         }
     };
 

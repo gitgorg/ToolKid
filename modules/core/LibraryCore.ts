@@ -1,14 +1,25 @@
 //core functionality for custom Library
 interface LibraryCore_file {
+    createCustomError<Details>(
+        message: string,
+        details: Details,
+        originOffset?: number | string,
+    ): CustomError,
     createInstance(): Library,
     freezeDeep<Type extends Dictionary>(
         object: Type
     ): Type,
+    getCoreModule(name: "core"): {
+        createCustomError: LibraryCore_file["createCustomError"],
+        freezDeep: LibraryCore_file["freezeDeep"],
+    },
     registerCoreModule(inputs: {
         name: string,
         module: Dictionary,
     }): void,
 }
+
+
 
 type Library = {
     getCoreModule: LibraryCore_file["getCoreModule"],
@@ -20,15 +31,25 @@ type Library = {
         }
     }): void
 }
+
 type Dictionary = {
     [key: string]: any
 }
+
 type GenericFunction = { (...parameters: any[]): any }
+
+type CustomError = Error & {
+    ERROR: string,
+    details: any,
+    origin: string,
+    stack: string,
+}
 
 
 
 (function LibraryCore_init() {
     const coreModuleNames = {
+        "core": "LibraryCore.js",
         "building": "LibraryBuild.js",
         "files": "LibraryFiles.js",
         "regularExpression": "LibraryRegularExpression.js",
@@ -38,6 +59,27 @@ type GenericFunction = { (...parameters: any[]): any }
     const publicExports = module.exports = <LibraryCore_file>{};
 
 
+
+    publicExports.createCustomError = function LibraryCore_createCustomError(
+        message, details, originOffset = 0
+    ) {
+        if (typeof message !== "string") {
+            throw publicExports.createCustomError(
+                "message was not a string", { message }
+            );
+        }
+
+        const error = <CustomError>new Error(message);
+        error.ERROR = message;
+        if (typeof originOffset === "string") {
+            error.origin = originOffset;
+        } else {
+            const line = error.stack.split("\n")[2 + originOffset];
+            error.origin = line.slice(line.indexOf("at ") + 3, line.indexOf(" ("));
+        }
+        error.details = details;
+        return error;
+    };
 
     publicExports.createInstance = function LibraryCore_createInstance() {
         const result = <Library>{};
@@ -49,7 +91,7 @@ type GenericFunction = { (...parameters: any[]): any }
         addAsReadOnly({
             container: result,
             key: "getCoreModule",
-            value: getCoreModule.bind(null,result)
+            value: getCoreModule.bind(null, result)
         });
         return result;
     };
@@ -80,20 +122,20 @@ type GenericFunction = { (...parameters: any[]): any }
         });
     };
 
-    publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
+    const freezeDeep = publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
         if (Object.isFrozen(object)) {
             return object;
         }
 
         Object.freeze(object);
         for (let key in object) {
-            publicExports.freezeDeep(object[key]);
+            freezeDeep(object[key]);
         }
         return object;
     };
 
     const getCoreModule = function LibraryCore_getCoreModule(
-        library:Library, moduleName:string
+        library: Library, moduleName: string
     ) {
         if (coreModules[moduleName] !== undefined) {
             return coreModules[moduleName];
@@ -101,10 +143,10 @@ type GenericFunction = { (...parameters: any[]): any }
 
         const path = coreModuleNames[<"building">moduleName];
         if (path === undefined) {
-            throw [
-                "LibraryCore_getCoreModule - unknonw core module name:", moduleName,
-                "allowed extensions are:", Object.keys(coreModuleNames)
-            ];
+            throw publicExports.createCustomError(
+                "unknonw core module name",
+                { moduleName, allowedExtensions: Object.keys(coreModuleNames) }
+            );
         }
 
         const module = coreModules[moduleName] = require(
@@ -115,7 +157,7 @@ type GenericFunction = { (...parameters: any[]): any }
         }
         return module;
     };
-    publicExports.getCoreModule = getCoreModule.bind(null, publicExports);
+    publicExports.getCoreModule = getCoreModule.bind(null, <any>publicExports);
 
     publicExports.registerCoreModule = function LibraryCore_registerCoreModule(inputs) {
         const { name, module } = inputs;
@@ -125,9 +167,10 @@ type GenericFunction = { (...parameters: any[]): any }
                 module(publicExports);
             }
         } else {
-            throw [
-                "LibraryCore_registerCoreModule - tried to overwrite " + name + ": current value = ", coreModules[name], " new value = ", inputs.module
-            ];
+            throw publicExports.createCustomError(
+                "tried to overwrite core module",
+                Object.assign({ previousModule: coreModules[name] }, inputs)
+            );
         }
     };
 
@@ -159,17 +202,20 @@ type GenericFunction = { (...parameters: any[]): any }
         entry: GenericFunction | Dictionary
     }) {
         if (typeof inputs.name !== "string") {
-            throw ["LibraryCore_registerEntryToSection - invalid name: ", inputs.name, "inside: ", inputs];
+            throw publicExports.createCustomError("invalid library entry name", inputs);
         }
 
         const { entry } = inputs;
         if (entry === null || ["function", "object"].indexOf(typeof entry) === -1) {
-            throw ["LibraryCore_registerEntryToSection - invalid helper: ", entry, "inside: ", inputs];
+            throw publicExports.createCustomError("invalid library entry type", inputs);
         }
 
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", entry];
+            throw publicExports.createCustomError(
+                "tried to overwrite library entry",
+                Object.assign({ previousEntry: section[name] }, inputs)
+            );
         }
 
         addAsReadOnlyEnumerable({
@@ -196,4 +242,16 @@ type GenericFunction = { (...parameters: any[]): any }
         });
         return section;
     };
+
+    publicExports.registerCoreModule({
+        name: "core",
+        module: {
+            createCustomError: publicExports.createCustomError,
+            freezeDeep,
+        }
+    });
+
+
+
+    Object.freeze(publicExports);
 })();

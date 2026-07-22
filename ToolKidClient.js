@@ -14,6 +14,22 @@ console.log("\u001b[96m>>  activating ToolKid");
     };
     const coreModules = {};
     const publicExports = module.exports = {};
+    publicExports.createCustomError = function LibraryCore_createCustomError(message, details, originOffset = 0) {
+        if (typeof message !== "string") {
+            throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
+        }
+        const error = new Error(message);
+        error.ERROR = message;
+        if (typeof originOffset === "string") {
+            error.origin = originOffset;
+        }
+        else {
+            const line = error.stack.split("\n")[2 + originOffset];
+            error.origin = line.slice(line.indexOf("at ") + 3, line.indexOf(" ("));
+        }
+        error.details = details;
+        return error;
+    };
     publicExports.createInstance = function LibraryCore_createInstance() {
         const result = {};
         addAsReadOnly({
@@ -42,13 +58,13 @@ console.log("\u001b[96m>>  activating ToolKid");
             writable: false
         });
     };
-    publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
+    const freezeDeep = publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
         if (Object.isFrozen(object)) {
             return object;
         }
         Object.freeze(object);
         for (let key in object) {
-            publicExports.freezeDeep(object[key]);
+            freezeDeep(object[key]);
         }
         return object;
     };
@@ -133,6 +149,14 @@ console.log("\u001b[96m>>  activating ToolKid");
         });
         return section;
     };
+    publicExports.registerCoreModule({
+        name: "core",
+        module: {
+            createCustomError: publicExports.createCustomError,
+            freezeDeep,
+        }
+    });
+    Object.freeze(publicExports);
 })();
 
 global.ToolKid = module.exports.createInstance();
@@ -1754,22 +1778,7 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 "use strict";
 (function TK_DataTypesError_init() {
     const publicExports = module.exports = {};
-    publicExports.createCustomError = function TK_DataTypesError_createCustomError(message, details, originOffset = 0) {
-        if (typeof message !== "string") {
-            throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
-        }
-        const error = new Error(message);
-        error.ERROR = message;
-        if (typeof originOffset === "string") {
-            error.origin = originOffset;
-        }
-        else {
-            const line = error.stack.split("\n")[2 + originOffset];
-            error.origin = line.slice(line.indexOf("at ") + 3, line.indexOf(" ("));
-        }
-        error.details = details;
-        return error;
-    };
+    publicExports.createCustomError = ToolKid.getCoreModule("core").createCustomError;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "dataTypes", subSection: "error", entries: publicExports });
@@ -1927,6 +1936,7 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
 "use strict";
 (function TK_DataTypesString_init() {
+    const { createCustomError } = ToolKid.getCoreModule("core");
     const publicExports = module.exports = {};
     publicExports.decodeJSON = function TK_DataTypesString_decodeJSON(string) {
         try {
@@ -1936,34 +1946,15 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             return error;
         }
     };
-    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(data) {
-        if (data instanceof Error) {
-            if (data.details === undefined) {
-                return `{"error": "${data.message}"}`;
-            }
-            try {
-                const details = JSON.stringify(data.details);
-                return `{"error": "${data.message}", "details": ${details}}`;
-            }
-            catch (error) {
-                console.warn("JSON encoding failed for: ", data, " error: ", error);
-                // TODO: return undefined instead
-                return error;
-            }
-        }
+    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(value) {
         try {
-            const result = JSON.stringify(data);
-            if (result !== undefined) {
-                return result;
-            }
-            const error = new Error("JSON encoding failed - can't convert value");
-            error.details = data;
-            return error;
+            const result = JSON.stringify(value);
+            return (result === undefined)
+                ? createCustomError("can't entcode empty value to JSON", value)
+                : result;
         }
         catch (error) {
-            console.warn("JSON encoding failed for: ", data, " error: ", error);
-            // TODO: return undefined instead
-            return error;
+            return createCustomError("JSON encoding failed", value);
         }
     };
     Object.freeze(publicExports);
