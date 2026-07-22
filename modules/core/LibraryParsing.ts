@@ -137,7 +137,7 @@ type TextParser = {
         Object.values(layers).forEach(
             d_cleanUpTextParserLayer
         );
-        return e_parseTextLayer.bind(null, layers.ROOT);
+        return <TextParser>e_parseTextLayer.bind(null, layers.ROOT);
     };
 
 

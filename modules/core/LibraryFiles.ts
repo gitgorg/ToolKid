@@ -75,8 +75,10 @@ type LibraryFiles_file = {
 
 
     let { createSimpleRX, createStringChecker } = <LibraryRegularExpression_file>{};
+    let createCustomError: LibraryCore_file["createCustomError"];
     const publicExports = module.exports = <LibraryFiles_file><any>function LibraryFiles_setup(core: LibraryCore_file) {
         ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
+        createCustomError = core.getCoreModule("core").createCustomError;
     };
 
     publicExports.checkExistance = checkExistance;
@@ -138,7 +140,7 @@ type LibraryFiles_file = {
     ) {
         path = resolvePath(path);
         if (!checkExistance(path)) {
-            throw ["LibraryFiles_loopFiles - no such path exists:", path];
+            throw createCustomError("path doesn't exist", path);
         }
 
         if (isDirectory(path)) {
@@ -179,7 +181,7 @@ type LibraryFiles_file = {
             if (!checkExistance(path)) {
                 return { content: undefined };
             } else if (isDirectory(path)) {
-                throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
+                throw createCustomError("path is a directory, not a file", path);
             }
         }
 
