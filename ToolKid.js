@@ -2080,9 +2080,9 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             return error;
         }
     };
-    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(value) {
+    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(value, replacer, space) {
         try {
-            const result = JSON.stringify(value);
+            const result = JSON.stringify(value, replacer, space);
             return (result === undefined)
                 ? createCustomError("can't entcode empty value to JSON", value)
                 : result;

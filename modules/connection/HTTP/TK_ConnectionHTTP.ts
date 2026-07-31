@@ -86,7 +86,7 @@ interface TK_ConnectionHTTP_file {
         if (typeof inputs.callback === "function") {
             try {
                 inputs.callback(response);
-            } catch (error) {
+            } catch (error: any) {
                 return requestFailed({
                     inputs,
                     type: "callback"
