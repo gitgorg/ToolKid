@@ -7,6 +7,9 @@ interface TK_file_file {
     getName(
         path: string
     ): string,
+    getName(
+        path: any
+    ): CustomError
     loopFiles: LibraryFiles_file["loopFiles"],
     read: LibraryFiles_file["readFile"],
     register(
@@ -24,6 +27,8 @@ interface TK_file_file {
     const fileRegistry = new Map() as Map<string, string>;
     const publicExports = module.exports = <TK_file_file>{};
 
+    const { createCustomError } = ToolKid.getCoreModule("core");
+
 
 
     const basePathRX = /^\.{0,1}\/{0,1}/;
@@ -40,6 +45,9 @@ interface TK_file_file {
     };
 
     publicExports.getName = function TK_File_getName(path) {
+        if (typeof path !== "string") {
+            return <any>createCustomError("path needs to be String but is:", path);
+        }
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };

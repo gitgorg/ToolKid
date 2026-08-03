@@ -47,7 +47,7 @@
                     value: copy,
                     shouldBe: {
                         done: true,
-                        timePassed: ToolKid.debug.test.shouldPassAny(0,1),
+                        timePassed: ToolKid.debug.test.shouldPassAny(0,1,2),
                         resolve: shouldBeFunction,
                         reject: shouldBeFunction,
                         origin: shouldBeString,

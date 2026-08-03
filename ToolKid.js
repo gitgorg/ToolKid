@@ -2894,12 +2894,23 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         return typeof value === "number" && value >= wanted - tolerance && value <= wanted + tolerance;
     };
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
-        if (checks.length === 0) {
+        const { length } = checks;
+        if (length === 0) {
             throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];
         }
-        const fails = checks.filter(function (entry) { return typeof entry !== "function"; });
-        if (fails.length !== 0) {
-            throw ["TK_DebugTestShouldPass_shouldPass - can only check with functions but got:", checks];
+        let entry = checks[0];
+        for (let i = 0; i < length; i += 1) {
+            entry = checks[i];
+            if (typeof entry === "string") {
+                checks[i] = ToolKid.dataTypes.checks[entry];
+            }
+            else if (typeof entry !== "function") {
+                throw ["TK_DebugTestShouldPass_shouldPass - invalid check found - needs function or known key:", {
+                        invalidCheck: entry,
+                        knownKeys: Object.keys(ToolKid.dataTypes.checks),
+                        checks,
+                    }];
+            }
         }
         return ValueAsserter({
             checks,
