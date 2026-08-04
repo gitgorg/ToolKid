@@ -1,7 +1,8 @@
 (function TK_File_test() {
     const { assert, assertFailure, test } = ToolKid.debug.test;
-
     const { getExtension, getName } = ToolKid.file;
+
+    const shouldBeError = ToolKid.debug.test.shouldPass("isError");
 
     test({
         subject: getExtension,
@@ -33,14 +34,8 @@
                 "mixed slashes": [getName("a\\b//c.d"), "c.d"],
                 "folder": [getName("a/b/c"), "c"],
                 "folder difficult": [getName("a\\.b\\c"), "c"],
-            });
-            assertFailure({
-                name: "missing inputs",
-                execute: getName,
-            }, {
-                name: "invalid inputs",
-                execute: getName,
-                withInputs: true,
+                "missing inputs": [(<any>getName)(), shouldBeError],
+                "invalid inputs": [(<any>getName)(true), shouldBeError],
             });
         }
     });

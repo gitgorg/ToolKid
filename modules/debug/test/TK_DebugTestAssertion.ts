@@ -50,8 +50,9 @@ type TK_AssertConfig = {
             ...details: any[]
         ]): void
     },
+    logValue?: true,
     toleranceDepth?: number,
-    passOnDepthExceed?: true,
+    toleranceDepthExceedFails?: false,
 }
 
 
@@ -98,10 +99,15 @@ type TK_AssertConfig = {
             throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", arguments.length, "inputs:", arguments];
         }
 
+        let i = 1;
+        let config = inputs[0].CONFIG;
+        if (config === undefined) {
+            config = defaultConfig;
+            i = 0;
+        };
         const entries = Object.entries(inputs[0]);
         const { length } = entries;
-        const config = inputs[0].CONFIG || defaultConfig;
-        for (let i = 0; i < length; i += 1) {
+        for (; i < length; i += 1) {
             assertComplex(promises, errors, config, entries[i]);
         }
         if (errors.length !== 0) {
@@ -122,7 +128,7 @@ type TK_AssertConfig = {
         }
 
         let errorMessage: any[];
-        if (config.passOnDepthExceed === true) {
+        if (config.toleranceDepthExceedFails === false) {
             const cleaned = returned.filter(isNotTooDeep);
             if (cleaned.length === 0) {
                 return;
@@ -184,6 +190,9 @@ type TK_AssertConfig = {
         label: string,
         config: Dictionary
     ) {
+        if (config.logValue === true) {
+            ToolKid.debug.terminal.logImportant(label, config.value);
+        }
         if (config.shouldBe === Error) {
             // crash on execution expected
             if (typeof config.value !== "function") {

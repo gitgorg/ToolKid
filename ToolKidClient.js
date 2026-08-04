@@ -2321,10 +2321,16 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         if (arguments.length !== 1) {
             throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", arguments.length, "inputs:", arguments];
         }
+        let i = 1;
+        let config = inputs[0].CONFIG;
+        if (config === undefined) {
+            config = defaultConfig;
+            i = 0;
+        }
+        ;
         const entries = Object.entries(inputs[0]);
         const { length } = entries;
-        const config = inputs[0].CONFIG || defaultConfig;
-        for (let i = 0; i < length; i += 1) {
+        for (; i < length; i += 1) {
             assertComplex(promises, errors, config, entries[i]);
         }
         if (errors.length !== 0) {
@@ -2340,7 +2346,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
             return;
         }
         let errorMessage;
-        if (config.passOnDepthExceed === true) {
+        if (config.toleranceDepthExceedFails === false) {
             const cleaned = returned.filter(isNotTooDeep);
             if (cleaned.length === 0) {
                 return;
@@ -2387,6 +2393,9 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         }
     };
     const assertOne = function TK_Debug_assertOne(promises, errors, label, config) {
+        if (config.logValue === true) {
+            ToolKid.debug.terminal.logImportant(label, config.value);
+        }
         if (config.shouldBe === Error) {
             // crash on execution expected
             if (typeof config.value !== "function") {
@@ -3469,6 +3478,7 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
     const fileRegistry = new Map();
     const publicExports = module.exports = {};
+    const { createCustomError } = ToolKid.getCoreModule("core");
     const basePathRX = /^\.{0,1}\/{0,1}/;
     const createPathRX = function (path) {
         return new RegExp("^" + path.replace(basePathRX, ""));
@@ -3481,6 +3491,9 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
             : fileName.slice(position + 1).toLocaleLowerCase();
     };
     publicExports.getName = function TK_File_getName(path) {
+        if (typeof path !== "string") {
+            return createCustomError("path needs to be String but is:", path);
+        }
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };
