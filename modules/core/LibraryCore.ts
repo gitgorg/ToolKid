@@ -1,7 +1,7 @@
 //core functionality for custom Library
 interface LibraryCore_file {
     createCustomError<Details>(
-        message: string,
+        message: string | Error,
         details: Details,
         originOffset?: number | string,
     ): CustomError,
@@ -63,7 +63,9 @@ type CustomError = Error & {
     publicExports.createCustomError = function LibraryCore_createCustomError(
         message, details, originOffset = 0
     ) {
-        if (typeof message !== "string") {
+        if (message instanceof Error) {
+            message = message.message;
+        } else if (typeof message !== "string") {
             throw publicExports.createCustomError(
                 "message was not a string", { message }
             );

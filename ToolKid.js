@@ -16,7 +16,10 @@ console.log("\u001b[96m>>  activating ToolKid");
     const coreModules = {};
     const publicExports = module.exports = {};
     publicExports.createCustomError = function LibraryCore_createCustomError(message, details, originOffset = 0) {
-        if (typeof message !== "string") {
+        if (message instanceof Error) {
+            message = message.message;
+        }
+        else if (typeof message !== "string") {
             throw publicExports.createCustomError("message was not a string", { message });
         }
         const error = new Error(message);
