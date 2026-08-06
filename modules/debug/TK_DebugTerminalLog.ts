@@ -26,6 +26,10 @@ interface TK_DebugTerminalLog_file {
     logWarning(
         ...inputs: any[]
     ): void,
+    logError(inputs: {
+        error: Error,
+        logStack: false,
+    }): void,
     logError(
         ...inputs: any[]
     ): void,
@@ -181,11 +185,37 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
     };
 
     publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
+        if (
+            inputs.length === 1
+        ) {
+            const data = inputs[0];
+            if (
+                typeof data === "object"
+                && data.error instanceof Error
+                && data.logStack === false
+            ) {
+                return logErrorObject(data);
+            }
+        }
+
         console.error(
             ...publicExports.colorStrings({
                 colorName: <"red">typeColors.error,
                 prefix: getPrefix(inputs[0]),
                 values: inputs
+            })
+        );
+    };
+
+    const logErrorObject = function TK_DebugTerminalLog_logErrorObject(inputs: Dictionary) {
+        const data = <Dictionary>Object.assign({}, inputs.error);
+        delete data.message;
+        delete data.ERROR;
+        console.error(
+            ...publicExports.colorStrings({
+                colorName: <"red">typeColors.error,
+                prefix: getPrefix(""),
+                values: [inputs.error.message, data]
             })
         );
     };
