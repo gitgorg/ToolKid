@@ -27,8 +27,8 @@ interface TK_DataTypesString_file {
     publicExports.decodeJSON = function TK_DataTypesString_decodeJSON(string) {
         try {
             return JSON.parse(string);
-        } catch (error) {
-            return error;
+        } catch (detail) {
+            return createCustomError("JSON decoding failed", { value: string, detail });;
         }
     };
 
@@ -40,8 +40,8 @@ interface TK_DataTypesString_file {
             return (result === undefined)
                 ? createCustomError("can't entcode empty value to JSON", value)
                 : result;
-        } catch (error) {
-            return createCustomError("JSON encoding failed", value);
+        } catch (detail) {
+            return createCustomError("JSON encoding failed", { value, detail });
         }
     };
 

@@ -1941,8 +1941,9 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         try {
             return JSON.parse(string);
         }
-        catch (error) {
-            return error;
+        catch (detail) {
+            return createCustomError("JSON decoding failed", { value: string, detail });
+            ;
         }
     };
     publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(value, replacer, space) {
@@ -1952,8 +1953,8 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
                 ? createCustomError("can't entcode empty value to JSON", value)
                 : result;
         }
-        catch (error) {
-            return createCustomError("JSON encoding failed", value);
+        catch (detail) {
+            return createCustomError("JSON encoding failed", { value, detail });
         }
     };
     Object.freeze(publicExports);
