@@ -98,11 +98,11 @@ type LibraryRegularExpression_file = {
         const hasIncludes = isArray(inputs.includes);
         const hasExcludes = isArray(inputs.excludes);
         if (hasIncludes && hasExcludes) {
-            return checkStringConditions.bind(null, inputs);
+            return checkStringConditions.bind(null, <any>inputs);
         } else if (hasIncludes) {
-            return checkStringInclusion.bind(null, inputs.includes);
+            return checkStringInclusion.bind(null, <RegExp[]>inputs.includes);
         } else if (hasExcludes) {
-            return checkStringExclusion.bind(null, inputs.excludes);
+            return checkStringExclusion.bind(null, <RegExp[]>inputs.excludes);
         } else {
             return function LibraryRegularExpression_checkNothing() { return true };
         }

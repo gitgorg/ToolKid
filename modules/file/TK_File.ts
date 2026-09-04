@@ -7,10 +7,14 @@ interface TK_file_file {
     getName(
         path: string
     ): string,
+    getName(
+        path: any
+    ): CustomError
     loopFiles: LibraryFiles_file["loopFiles"],
+    read: LibraryFiles_file["readFile"],
     register(
         path: string
-    ): void,
+    ): void | CustomError,
     registerDependencies(
         fileName: string, ...dependencies: string[]
     ): void,
@@ -23,6 +27,8 @@ interface TK_file_file {
     const fileRegistry = new Map() as Map<string, string>;
     const publicExports = module.exports = <TK_file_file>{};
 
+    const { createCustomError } = ToolKid.getCoreModule("core");
+
 
 
     const basePathRX = /^\.{0,1}\/{0,1}/;
@@ -31,13 +37,17 @@ interface TK_file_file {
     };
 
     publicExports.getExtension = function TK_File_getExtension(path) {
-        const parts = publicExports.getName(path).split(".");
-        return (parts.length === 1)
+        const fileName = publicExports.getName(path);
+        const position = fileName.lastIndexOf(".");
+        return (position === -1)
             ? ""
-            : parts[parts.length - 1].toLocaleLowerCase();
+            : fileName.slice(position + 1).toLocaleLowerCase();
     };
 
     publicExports.getName = function TK_File_getName(path) {
+        if (typeof path !== "string") {
+            return <any>createCustomError("path needs to be String but is:", path);
+        }
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };
@@ -74,23 +84,32 @@ interface TK_file_file {
     publicExports.register = function TK_File_register(path) {
         const fileName = publicExports.getName(path);
         const registeredPath = fileRegistry.get(fileName);
-        if (registeredPath === path) {
+        if (registeredPath === path) { // allready known
             return;
-        } else if (registeredPath === undefined) {
-            fileRegistry.set(fileName, path);
-        } else {
-            throw [
-                "TK_File_register - fileName allready in use: ", fileName,
-                " paths are: ", fileRegistry.get(fileName), path
-            ];
         }
+
+        if (registeredPath === undefined) { // not yet known
+            fileRegistry.set(fileName, path);
+            return;
+        }
+
+        // diverging path informations
+        const error = new Error("TK_File_register - fileName allready in use") as CustomError;
+        error.details = {
+            knownPath: registeredPath,
+            newPath: path,
+        };
+        fileRegistry.set(fileName, path);
+        return error;
     };
 
 
 
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {
-            publicExports.loopFiles = ToolKid.getCoreModule("files").loopFiles;
+            const LibraryFiles = ToolKid.getCoreModule("files");
+            publicExports.loopFiles = LibraryFiles.loopFiles;
+            publicExports.read = LibraryFiles.readFile;
         }
         ToolKid.register({ section: "file", entries: publicExports });
     }

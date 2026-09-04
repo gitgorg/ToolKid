@@ -7,6 +7,7 @@ console.log("\u001b[96m>>  activating ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {
+        "core": "LibraryCore.js",
         "building": "LibraryBuild.js",
         "files": "LibraryFiles.js",
         "regularExpression": "LibraryRegularExpression.js",
@@ -14,6 +15,25 @@ console.log("\u001b[96m>>  activating ToolKid");
     };
     const coreModules = {};
     const publicExports = module.exports = {};
+    publicExports.createCustomError = function LibraryCore_createCustomError(message, details, originOffset = 0) {
+        if (message instanceof Error) {
+            message = message.message;
+        }
+        else if (typeof message !== "string") {
+            throw publicExports.createCustomError("message was not a string", { message });
+        }
+        const error = new Error(message);
+        error.ERROR = message;
+        if (typeof originOffset === "string") {
+            error.origin = originOffset;
+        }
+        else {
+            const line = error.stack.split("\n")[2 + originOffset];
+            error.origin = line.slice(line.indexOf("at ") + 3, line.indexOf(" ("));
+        }
+        error.details = details;
+        return error;
+    };
     publicExports.createInstance = function LibraryCore_createInstance() {
         const result = {};
         addAsReadOnly({
@@ -42,13 +62,13 @@ console.log("\u001b[96m>>  activating ToolKid");
             writable: false
         });
     };
-    publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
+    const freezeDeep = publicExports.freezeDeep = function TK_LiraryCore_freezeDeep(object) {
         if (Object.isFrozen(object)) {
             return object;
         }
         Object.freeze(object);
         for (let key in object) {
-            publicExports.freezeDeep(object[key]);
+            freezeDeep(object[key]);
         }
         return object;
     };
@@ -58,10 +78,7 @@ console.log("\u001b[96m>>  activating ToolKid");
         }
         const path = coreModuleNames[moduleName];
         if (path === undefined) {
-            throw [
-                "LibraryCore_getCoreModule - unknonw core module name:", moduleName,
-                "allowed extensions are:", Object.keys(coreModuleNames)
-            ];
+            throw publicExports.createCustomError("unknonw core module name", { moduleName, allowedExtensions: Object.keys(coreModuleNames) });
         }
         const module = coreModules[moduleName] = require(require("path").resolve(__dirname, "./" + path));
         if (typeof module === "function") {
@@ -79,9 +96,7 @@ console.log("\u001b[96m>>  activating ToolKid");
             }
         }
         else {
-            throw [
-                "LibraryCore_registerCoreModule - tried to overwrite " + name + ": current value = ", coreModules[name], " new value = ", inputs.module
-            ];
+            throw publicExports.createCustomError("tried to overwrite core module", Object.assign({ previousModule: coreModules[name] }, inputs));
         }
     };
     const register = function LibraryCore_register(library, inputs) {
@@ -104,15 +119,15 @@ console.log("\u001b[96m>>  activating ToolKid");
     };
     const registerEntryToSection = function LibraryCore_registerEntryToSection(inputs) {
         if (typeof inputs.name !== "string") {
-            throw ["LibraryCore_registerEntryToSection - invalid name: ", inputs.name, "inside: ", inputs];
+            throw publicExports.createCustomError("invalid library entry name", inputs);
         }
         const { entry } = inputs;
         if (entry === null || ["function", "object"].indexOf(typeof entry) === -1) {
-            throw ["LibraryCore_registerEntryToSection - invalid helper: ", entry, "inside: ", inputs];
+            throw publicExports.createCustomError("invalid library entry type", inputs);
         }
         const { section, name } = inputs;
         if (section[name] !== undefined) {
-            throw ["overwriting library methods is forbidden. tried to overwrite ." + name + ": ", section[name], " with: ", entry];
+            throw publicExports.createCustomError("tried to overwrite library entry", Object.assign({ previousEntry: section[name] }, inputs));
         }
         addAsReadOnlyEnumerable({
             container: section,
@@ -133,7 +148,16 @@ console.log("\u001b[96m>>  activating ToolKid");
         });
         return section;
     };
+    publicExports.registerCoreModule({
+        name: "core",
+        module: {
+            createCustomError: publicExports.createCustomError,
+            freezeDeep,
+        }
+    });
+    Object.freeze(publicExports);
 })();
+
 global.ToolKid = module.exports.createInstance();
 fileCollection.set("LibraryCore.js", module.exports);
 
@@ -210,6 +234,7 @@ fileCollection.set("LibraryCore.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "regularExpression", module: module.exports
 });
@@ -217,18 +242,21 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
 
 "use strict";
 (function LibraryFiles_init() {
-    const { existsSync: isUsedPath, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
+    const { existsSync: checkExistance, mkdirSync: createDirectory, lstatSync: readPathStats, readdirSync: readDirectory, readFileSync: readFile, writeFileSync: createFile, } = require("fs");
     const { dirname: directoryName, normalize: normalizePath, resolve: resolvePath, } = require("path");
     let { createSimpleRX, createStringChecker } = {};
+    let createCustomError;
     const publicExports = module.exports = function LibraryFiles_setup(core) {
         ({ createSimpleRX, createStringChecker } = core.getCoreModule("regularExpression"));
+        createCustomError = core.getCoreModule("core").createCustomError;
     };
+    publicExports.checkExistance = checkExistance;
     const collectPaths = function LibraryFiles_collectPaths(expressions) {
         if (!(expressions instanceof Array)) {
             return [];
         }
         const result = [];
-        expressions.map(collectPathsFilter.bind(null, result));
+        expressions.forEach(collectPathsFilter.bind(null, result));
         return result;
     };
     const collectPathsFilter = function LibraryFiles_collectPathsFilter(validated, expression) {
@@ -266,8 +294,8 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     const loopFilesFrom = function LibraryFiles_loopFilesFrom(privateData, path) {
         path = resolvePath(path);
-        if (!isUsedPath(path)) {
-            throw ["LibraryFiles_loopFiles - no such path exists:", path];
+        if (!checkExistance(path)) {
+            throw createCustomError("path doesn't exist", path);
         }
         if (isDirectory(path)) {
             loopFilesFromDirectory(privateData, path);
@@ -295,11 +323,11 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         }
         let path = resolvePath(inputs.path);
         if (inputs.checkExistance !== false) {
-            if (!isUsedPath(path)) {
+            if (!checkExistance(path)) {
                 return { content: undefined };
             }
             else if (isDirectory(path)) {
-                throw ["LibraryFiles_readFile - path is a directory, not a file:", path];
+                throw createCustomError("path is a directory, not a file", path);
             }
         }
         let { encoding } = inputs;
@@ -316,11 +344,11 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     publicExports.resolvePath = resolvePath;
     const writeDirectory = function LibraryFiles_writeDirectory(path) {
-        if (isUsedPath(path)) {
+        if (checkExistance(path)) {
             return;
         }
         const rootPath = directoryName(path);
-        if (!isUsedPath(rootPath)) {
+        if (!checkExistance(rootPath)) {
             writeDirectory(rootPath);
         }
         try {
@@ -335,6 +363,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         writeDirectory(directoryName(path));
         try {
             createFile(inputs.path, inputs.content, { encoding: inputs.encoding });
+            return; // ... tsc
         }
         catch (error) {
             console.error(["LibraryFiles_writeFile failed - path:", path, "content:", inputs.content, "encoding:", inputs.encoding, "error:", error]);
@@ -343,6 +372,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "files", module: module.exports
 });
@@ -820,6 +850,7 @@ fileCollection.set("LibraryFiles.js", module.exports);
     };
     Object.freeze(publicExports);
 })();
+
 fileCollection.get("LibraryCore.js").registerCoreModule({
     name: "parsing", module: module.exports
 });
@@ -1627,7 +1658,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
     publicExports.iterateNonBlocking = function TK_DataTypesArray_iterateNonBlocking(inputs) {
-        const privateData = Object.assign({
+        const internals = Object.assign({
             batchSize: 10,
             callback: function () { },
             maxBlockDuration: 100,
@@ -1636,27 +1667,26 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
         }, inputs, {
             dataPosition: 0,
         });
-        if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
+        if (typeof internals.startIndex !== "number" || Number.isNaN(internals.startIndex)) {
             throw ["TK_DataTypesArray_iterateNonBlocking - .startIndex should be a number:", inputs];
         }
-        privateData.boundIterator = iterateNonBlockingLoop.bind(null, privateData);
-        iterateNonBlockingLoop(privateData);
+        iterateNonBlockingLoop(internals);
     };
-    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(inputs) {
-        const { data, parser, stopSignal } = inputs;
-        const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
-        for (let i = inputs.startIndex; i < indexEnd; i += 1) {
+    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(internals) {
+        const { data, parser, stopSignal } = internals;
+        const indexEnd = Math.min(internals.startIndex + internals.batchSize, data.length);
+        for (let i = internals.startIndex; i < indexEnd; i += 1) {
             if (parser(data[i], i) === stopSignal) {
-                inputs.callback(i);
+                internals.callback(i);
                 return;
             }
         }
         if (indexEnd === data.length) {
-            inputs.callback(indexEnd - 1);
+            internals.callback(indexEnd - 1);
             return;
         }
-        inputs.startIndex = indexEnd;
-        setTimeout(inputs.boundIterator, 0);
+        internals.startIndex = indexEnd;
+        setTimeout(iterateNonBlockingLoop.bind(null, internals), 0);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -1985,14 +2015,7 @@ fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
 "use strict";
 (function TK_DataTypesError_init() {
     const publicExports = module.exports = {};
-    publicExports.createCustomError = function TK_DataTypesError_createCustomError(message, details) {
-        if (typeof message !== "string") {
-            throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
-        }
-        const error = new Error(message);
-        error.details = details;
-        return error;
-    };
+    publicExports.createCustomError = ToolKid.getCoreModule("core").createCustomError;
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
         ToolKid.register({ section: "dataTypes", subSection: "error", entries: publicExports });
@@ -2098,9 +2121,27 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
         });
         return combined.promise;
     };
-    publicExports.createPromise = function TK_DataTypesPromise_createPromise() {
+    publicExports.createPromise = function TK_DataTypesPromise_createPromise(originDepth = 3) {
+        let position = 0;
+        let origin = new Error().stack;
+        for (let i = 0; i < originDepth; i += 1) {
+            position = origin.indexOf("\n", position) + 1;
+            if (position === 0) {
+                break;
+            }
+        }
+        if (position === 0) {
+            origin = "unknown";
+        }
+        else {
+            const end = origin.indexOf("\n", position);
+            origin = (end === -1)
+                ? origin.slice(position)
+                : origin.slice(position, end);
+        }
         const result = {
-            state: "pending"
+            state: "pending",
+            origin,
         };
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(resolve, reject) {
             result.resolve = promiseDecide.bind(null, result, resolve, "fulfilled");
@@ -2131,6 +2172,38 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
 fileCollection.set("TK_DataTypesPromise.js", module.exports);
 
 "use strict";
+(function TK_DataTypesString_init() {
+    const { createCustomError } = ToolKid.getCoreModule("core");
+    const publicExports = module.exports = {};
+    publicExports.decodeJSON = function TK_DataTypesString_decodeJSON(string) {
+        try {
+            return JSON.parse(string);
+        }
+        catch (detail) {
+            return createCustomError("JSON decoding failed", { value: string, detail });
+            ;
+        }
+    };
+    publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(value, replacer, space) {
+        try {
+            const result = JSON.stringify(value, replacer, space);
+            return (result === undefined)
+                ? createCustomError("can't entcode empty value to JSON", value)
+                : result;
+        }
+        catch (detail) {
+            return createCustomError("JSON encoding failed", { value, detail });
+        }
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "dataTypes", subSection: "string", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DataTypesString.js", module.exports);
+
+"use strict";
 (function TK_DebugTest_init() {
     const publicExports = module.exports = {};
     const resultGroups = new Map([["default", {
@@ -2138,19 +2211,11 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
                 results: []
             }]]);
     let currentResultGroup = resultGroups.get("default");
-    const createResultBase = function TK_DebugTest_createResultBase(config) {
-        return {
-            subject: config.subject,
-            name: typeof config.execute === "function"
-                ? config.execute.name
-                : "assert",
-            time: 0
-        };
-    };
     const fillErrorResult = function TK_DebugTest_fillErrorResult(testResult, error, failureHandler, callstackPosition = 7) {
-        testResult.time = 0;
         testResult.errorMessage = error || "Unspecified Error";
-        testResult.errorSource = testResult.errorSource || ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
+        testResult.origin = (typeof testResult.origin === "string")
+            ? ToolKid.debug.callstack.extractFileName(testResult.origin)
+            : ToolKid.debug.callstack.readFrames({ position: callstackPosition })[0];
         if (failureHandler !== undefined) {
             failureHandler(testResult);
         }
@@ -2205,7 +2270,14 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
         return testResults;
     };
     const testSingle = function TK_DebugTest_testSingle(resultGroup, config) {
-        const testResult = createResultBase(config);
+        const testResult = {
+            subject: config.subject,
+            origin: config.origin,
+            name: typeof config.execute === "function"
+                ? config.execute.name
+                : "assert",
+            time: Date.now(),
+        };
         if (typeof config !== "object" || config === null) {
             return testFinish(config, fillErrorResult(testResult, ["TK_DebugTest_test - config has to be an object but is:", config], resultGroup.failureHandler), resultGroup, {});
         }
@@ -2220,83 +2292,86 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
             if (config.assert === undefined) {
                 throw ["TK_DebugTest_test - no valid .execute or .assert defined", config];
             }
-            return testFinish(config, testResult, resultGroup, {});
+            else {
+                return testFinish(config, testResult, resultGroup, {});
+            }
         }
-        // if (typeof config.execute !== "function") {
-        //     if (config.assert === undefined) {
-        //         return testFinish(fillErrorResult(testResult,
-        //             ["TK_DebugTest_test - no valid .execute or .assert defined", config],
-        //             resultGroup.failureHandler
-        //         ), config, {});
-        //     } else {
-        //         return testFinish(config, testResult, resultGroup, {});
-        //     }
-        // }
-        const startTime = Date.now();
         const scope = {};
         try {
-            const executionPromise = config.execute(scope);
-            if (executionPromise instanceof Promise) {
-                const resultPromiseInputs = {
-                    testResult,
-                    startTime,
-                    promise: executionPromise,
-                    resultGroup,
-                    source: ToolKid.debug.callstack.readFrames({ position: 6 })[0],
-                };
-                const resultPromise = new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
-                    resultPromiseInputs.resolver = resolve;
-                });
-                resultPromise.subject = config.subject;
-                resultPromise.execution = config.execute;
-                executionPromise.then(testPromiseSuccess.bind(null, resultPromiseInputs), testPromiseFailure.bind(null, resultPromiseInputs));
-                resultPromise.then(function Test_testExecute_handlePromise() {
-                    const { results } = resultGroup;
-                    const index = results.indexOf(resultPromise);
-                    testResult.time = Date.now() - startTime;
-                    results[index] = testFinish(config, testResult, resultGroup, scope);
-                });
-                return resultPromise;
+            const promise = config.execute(scope);
+            if (promise instanceof Promise) {
+                return createPromisedResult(config, testResult, resultGroup, scope, promise, testPromiseSuccess);
             }
         }
         catch (error) {
             fillErrorResult(testResult, error, resultGroup.failureHandler);
         }
-        testResult.time = Date.now() - startTime;
         return testFinish(config, testResult, resultGroup, scope);
     };
-    const testFinish = function (config, testResult, resultGroup, scope) {
-        if (testResult.errorMessage === undefined && config.assert !== undefined) {
-            if (typeof config.assert !== "function") {
-                fillErrorResult(testResult, ["TK_DebugTest_testAssert - the testConfig.assert property has to be a function which returns the inputs for the test.assert function:", config], resultGroup.failureHandler, 8);
+    const createPromisedResult = function (config, testResult, resultGroup, scope, promise, resolver) {
+        testResult.origin = ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+        const promiseInternals = {
+            testResult,
+            promise,
+            resultGroup,
+        };
+        const resultPromise = promiseInternals.resultPromise = new Promise(function TK_DebugTest_testWatchPromiseCreate(resolve, reject) {
+            promiseInternals.resolver = resolve;
+        });
+        resultPromise.subject = config.subject;
+        resultPromise.execution = config.execute;
+        promise.then(resolver.bind(null, promiseInternals), testPromiseFailure.bind(null, promiseInternals));
+        resultPromise.then(function Test_testExecute_handlePromise() {
+            const { results } = resultGroup;
+            const index = results.indexOf(resultPromise);
+            results[index] = testFinish(config, testResult, resultGroup, scope);
+        });
+        scope.promise = promiseInternals;
+        return resultPromise;
+    };
+    const testFinish = function TK_DebugTest_testFinish(config, testResult, resultGroup, scope, originDepth = 8) {
+        if (config.assert === undefined || testResult.errorMessage !== undefined) {
+            return testCallback(config, testResult, scope);
+        }
+        else if (typeof config.assert !== "function") {
+            fillErrorResult(testResult, ["TK_DebugTest_testAssert - the testConfig.assert property has to be a function which returns the inputs for the test.assert function:", config], resultGroup.failureHandler, originDepth);
+            return testCallback(config, testResult, scope);
+        }
+        try {
+            const inputs = config.assert();
+            try {
+                const promise = ToolKid.debug.test.assert(inputs);
+                if (promise !== undefined) {
+                    testResult.origin = ToolKid.debug.callstack.readFrames({ position: 7 })[0];
+                    promise.catch(testHandlePromiseRejection.bind(null, testResult, resultGroup)).finally(testCallback.bind(null, config, testResult, scope));
+                    //TODO: return promise instead
+                    return testResult;
+                }
             }
-            else {
-                try {
-                    const inputs = config.assert();
-                    try {
-                        ToolKid.debug.test.assert(inputs);
-                    }
-                    catch (error) {
-                        fillErrorResult(testResult, error, resultGroup.failureHandler, 8);
-                    }
-                }
-                catch (error) {
-                    fillErrorResult(testResult, ["TK_DebugTest_testAssert - evaluating assert inputs failed:", error], resultGroup.failureHandler, 8);
-                }
+            catch (error) {
+                fillErrorResult(testResult, error, resultGroup.failureHandler, originDepth);
             }
         }
+        catch (error) {
+            fillErrorResult(testResult, ["TK_DebugTest_testAssert - evaluating assert inputs failed:", error], resultGroup.failureHandler, originDepth);
+        }
+        return testCallback(config, testResult, scope);
+    };
+    const testHandlePromiseRejection = function TK_DebutTest_testHandlePromiseRejection(testResult, resultGroup, reason) {
+        fillErrorResult(testResult, reason, resultGroup.failureHandler);
+    };
+    const testCallback = function TK_DebugTest_testCallback(config, testResult, scope) {
+        testResult.time = Date.now() - testResult.time;
         if (typeof config.callback === "function") {
             config.callback({ scope, testResult });
         }
         return Object.freeze(testResult);
     };
     const testPromiseSuccess = function TK_DebugTest_testPromiseSuccess(bound) {
-        bound.testResult.time = Date.now() - bound.startTime;
         bound.resolver(bound.testResult);
     };
     const testPromiseFailure = function TK_DebugTest_testPromiseFailure(bound, reason) {
         const { testResult } = bound;
-        testResult.errorSource = bound.source;
         fillErrorResult(testResult, reason, bound.resultGroup.failureHandler);
         bound.resolver(testResult);
     };
@@ -2464,84 +2539,171 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
 "use strict";
 (function TK_DebugTestAssertion_init() {
     const defaultConfig = {};
+    const empty = function TK_DebugTestAssertion_empty() { };
+    const promiseInternals = {
+        errors: [],
+        reject: empty,
+        resolve: empty,
+        count: 0,
+    };
     const publicExports = module.exports = {};
     publicExports.assert = function TK_DebugTestAssertion_assert(...inputs) {
+        const promises = [];
         const errors = [];
-        if (inputs.length === 3) {
-            assertEqualityPerName(errors, [inputs[0], { value: inputs[1], shouldBe: inputs[2] }]);
+        if (arguments.length === 3) {
+            assertOne(promises, errors, inputs[0], { value: inputs[1], shouldBe: inputs[2] });
             if (errors.length !== 0) {
                 throw errors;
             }
+            else if (promises.length !== 0) {
+                return promises[0].promise;
+            }
             return;
         }
-        if (inputs.length !== 1) {
-            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", inputs.length, "inputs:", inputs];
+        if (arguments.length !== 1) {
+            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", arguments.length, "inputs:", arguments];
         }
-        Object.entries(inputs[0]).forEach(assertComplex.bind(null, errors, inputs[0].CONFIG || defaultConfig));
+        let i = 1;
+        let config = inputs[0].CONFIG;
+        if (config === undefined) {
+            config = defaultConfig;
+            i = 0;
+        }
+        ;
+        const entries = Object.entries(inputs[0]);
+        const { length } = entries;
+        for (; i < length; i += 1) {
+            assertComplex(promises, errors, config, entries[i]);
+        }
         if (errors.length !== 0) {
             throw errors;
         }
-    };
-    const assertComplex = function TK_DebugTestAssertion_assertComplex(errors, baseConfig, nameAndConfig) {
-        const [, config] = nameAndConfig;
-        if (isShortConfig(config)) {
-            assertEqualityPerName(errors, [
-                nameAndConfig[0], {
-                    ...baseConfig,
-                    value: config[0],
-                    shouldBe: config[1]
-                }
-            ]);
-        }
-        else {
-            assertEqualityPerName(errors, [
-                nameAndConfig[0], {
-                    ...baseConfig,
-                    ...nameAndConfig[1]
-                }
-            ]);
+        else if (promises.length !== 0) {
+            return promises[0].promise;
         }
     };
-    publicExports.assertEquality = function TK_Debug_assertEquality(inputs) {
-        const errors = [];
-        Object.entries(inputs).forEach(assertEqualityPerName.bind(null, errors));
-        if (errors.length !== 0) {
-            throw errors;
-        }
-    };
-    const assertEqualityPerName = function TK_Debug_assertEqualityPerName(errors, nameAndConfig) {
-        const config = nameAndConfig[1];
-        if (config.shouldBe === Error) {
-            let returned;
-            try {
-                returned = config.value();
-            }
-            catch (error) {
-                return;
-            }
-            errors.push(...["~ " + nameAndConfig[0] + " ~ value did not fail - it returned:", returned]);
-            return;
+    const assertComparison = function TK_DebugTestAssertion_assertComparison(errors, label, config) {
+        if (config.logValue === true) {
+            ToolKid.debug.terminal.logImportant(label, config.value);
         }
         const returned = ToolKid.dataTypes.checks.areEqual(config);
         if (returned === true) {
             return;
         }
         let errorMessage;
-        if (config.passOnDepthExceed !== true) {
-            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...returned];
-        }
-        else {
+        if (config.toleranceDepthExceedFails === false) {
             const cleaned = returned.filter(isNotTooDeep);
             if (cleaned.length === 0) {
                 return;
             }
-            errorMessage = ["~ " + nameAndConfig[0] + " ~ value did not meet expectations:", ...cleaned];
+            errorMessage = ["~ " + label + " ~ value did not meet expectations:", ...cleaned];
+        }
+        else {
+            errorMessage = ["~ " + label + " ~ value did not meet expectations:", ...returned];
         }
         if (typeof config.catchFailure === "function") {
             config.catchFailure(errorMessage);
         }
         else {
             errors.push(...errorMessage);
+        }
+    };
+    const assertComplex = function TK_DebugTestAssertion_assertComplex(promises, errors, baseConfig, nameAndConfig) {
+        const [, config] = nameAndConfig;
+        if (isShortConfig(config)) {
+            assertOne(promises, errors, nameAndConfig[0], {
+                ...baseConfig,
+                value: config[0],
+                shouldBe: config[1]
+            });
+        }
+        else {
+            assertOne(promises, errors, nameAndConfig[0], {
+                ...baseConfig,
+                ...nameAndConfig[1]
+            });
+        }
+    };
+    publicExports.assertEquality = function TK_Debug_assertEquality(inputs) {
+        const errors = [];
+        const entries = Object.entries(inputs);
+        const { length } = entries;
+        let entry;
+        for (let i = 0; i < length; i += 1) {
+            entry = entries[i];
+            assertOne([], errors, entry[0], entry[1]);
+        }
+        if (errors.length !== 0) {
+            throw errors;
+        }
+    };
+    const assertOne = function TK_Debug_assertOne(promises, errors, label, config) {
+        if (config.shouldBe === Error) {
+            // crash on execution expected
+            if (typeof config.value !== "function") {
+                errors.push(...["~ " + label + " ~ value needs to be a function in order to test for failure but is: ", config.value]);
+                return;
+            }
+            let returned;
+            try {
+                returned = config.value();
+            }
+            catch (error) {
+                return; // crash happened - all good
+            }
+            errors.push(...["~ " + label + " ~ value did not fail - it returned:", returned]);
+            return;
+        }
+        if (!(config.value instanceof Promise)) {
+            assertComparison(errors, label, config);
+            return;
+        }
+        if (promises.length === 0) {
+            promises[0] = assertPromise(errors, label, config);
+        }
+        else {
+            promises[0].add(label, config);
+        }
+    };
+    const assertPromise = function TK_DebugTestAssertion_assertPromise(errors, label, config) {
+        const internals = Object.assign({}, promiseInternals);
+        internals.errors = errors;
+        internals.resolve = resolve.bind(null, internals);
+        internals.reject = reject.bind(null, internals);
+        const promise = new Promise(function TK_DebugTestAssertion_assertPromiseCreate(resolve, reject) {
+            internals.resolve = resolve;
+            internals.reject = reject;
+        });
+        const add = function TK_DebugTestAssertion_assertPromiseAdd(label, config) {
+            internals.count += 1;
+            config.value.then(resolve.bind(null, internals, label, config), reject.bind(null, internals, label));
+        };
+        add(label, config);
+        return { promise, add };
+    };
+    const reject = function TK_DebugTestAssertion_reject(internals, label, reason) {
+        internals.errors.push("~ " + label + " ~ promise rejected:", reason);
+        if (internals.count === 1) {
+            internals.reject(internals.errors);
+        }
+        else {
+            internals.count -= 1;
+        }
+    };
+    const resolve = function TK_DebugTestAssertion_resolve(internals, label, config, data) {
+        config.value = data;
+        const { errors } = internals;
+        assertComparison(errors, label, config);
+        if (internals.count === 1) {
+            if (errors.length === 0) {
+                internals.resolve(data);
+            }
+            else {
+                internals.reject(errors);
+            }
+        }
+        else {
+            internals.count -= 1;
         }
     };
     const isNotTooDeep = function TK_DebugTestAssertion_isNotToDeep(difference) {
@@ -2567,15 +2729,12 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
     const registeredConditions = new Map();
     const waitingConditions = new Map();
     publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
-        if (typeof inputs !== "string") {
-            return createCondition(inputs);
-        }
         const found = registeredConditions.get(inputs);
         if (found !== undefined) {
             return found;
         }
         let queue = waitingConditions.get(inputs);
-        const result = conditionCreate();
+        const result = conditionCreate(3);
         if (queue === undefined) {
             queue = [result];
             waitingConditions.set(inputs, queue);
@@ -2585,19 +2744,20 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
         }
         setTimeout(function () {
             if (registeredConditions.get(inputs) === undefined) {
-                result.reject("waiting for unknown condition: \"" + inputs + "\"");
+                result.reject('waiting for unknown condition: "' + inputs
+                    + '" ' + result.origin);
             }
         }, 5000);
         return result;
     };
-    const createCondition = publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
+    publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
         if (inputs === undefined) {
-            return conditionCreate();
+            return conditionCreate(3);
         }
         if (typeof inputs === "number") {
             inputs = { timeToResolve: inputs };
         }
-        const result = conditionCreate();
+        const result = conditionCreate(3);
         if (typeof inputs.timeToResolve === "number" || typeof inputs.timeToReject === "number") {
             watchPromiseDuration(inputs, result);
         }
@@ -2620,7 +2780,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
             condition[mode](value);
         }
     };
-    const conditionCreate = function TK_DebugTestCondition_conditionCreate() {
+    const conditionCreate = function TK_DebugTestCondition_conditionCreate(originDepth) {
         let resolve, reject;
         const result = new Promise(function createPromise_setup(resolveFunction, rejectFunction) {
             resolve = function TK_DebugTestCondition_PromiseResolve(value) {
@@ -2630,6 +2790,7 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
                     value = result.timePassed;
                 }
                 resolveFunction(value);
+                return result;
             };
             reject = function TK_DebugTestCondition_PromiseReject(reason) {
                 result.timePassed = Date.now() - startTime;
@@ -2638,10 +2799,12 @@ fileCollection.set("TK_DebugTestAssertion.js", module.exports);
                     reason = result.timePassed;
                 }
                 rejectFunction(reason);
+                return result;
             };
         });
         result.resolve = resolve;
         result.reject = reject;
+        result.origin = new Error().stack.split("\n")[originDepth];
         result.done = false;
         result.timePassed = 0;
         const startTime = Date.now();
@@ -2674,6 +2837,15 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const colors = {
         positive: "\u001b[32m", default: "\u001b[97m", negative: "\u001b[31m"
     };
+    const addUnderscores = function TK_DebugTestFull_addUnderscores(number) {
+        const text = String(number);
+        const steps = Math.ceil(text.length / 3);
+        let result = text.slice(-3);
+        for (let i = 1; i < steps; i += 1) {
+            result = text.slice(-3 * (i + 1), -3 * i) + "_" + result;
+        }
+        return result;
+    };
     const colorText = function TK_DebugTestFull_colorString(color, text) {
         return colors[color] + text + colors.default;
     };
@@ -2685,8 +2857,8 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             ? "value"
             : "." + difference.path.join(".");
         return [
-            "\n > " + path + "\nis:", shortenData(difference.value),
-            "\ninstead of:", shortenData(difference.shouldBe)
+            "\n > " + path + "\nis:", [shortenData(difference.value)],
+            "\ninstead of:", [shortenData(difference.shouldBe)]
         ];
     };
     const isDifferenceFailure = function TK_DebugTestFull_isDifferenceFailure(failure) {
@@ -2698,7 +2870,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             : result.subject.name || result.subject;
         console.warn("\n" +
             colorText("negative", ">>  " + summaryName
-                + "  >  " + result.errorSource
+                + "  >  " + result.origin
                 + "  >  " + subjectName
                 + "  >  \"" + result.name + "\"\n"), ...shortenData(logFailureNice(result.errorMessage)));
     };
@@ -2724,7 +2896,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             + "  /  "
             + colorText("positive", summary.testCount + " test groups")
             + "  /  "
-            + colorText("positive", "sync " + inputs.timeInitial + " ms");
+            + colorText("positive", "sync " + addUnderscores(inputs.timeInitial) + " ms");
     };
     const summarizeFazit = function TK_DebugTestFull_summarizeFazit(inputs) {
         const { summary } = inputs;
@@ -2733,7 +2905,7 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             suspects: summary.missingSuspects.size
         };
         return summarizeFazitSync(inputs) +
-            colorText("positive", " + async " + inputs.timeFinal + " ms")
+            colorText("positive", " + async " + addUnderscores(inputs.timeFinal) + " ms")
             + "  /  "
             + colorText((counts.suspects === 0) ? "positive" : "negative", counts.suspects + " untested suspects");
     };
@@ -2747,10 +2919,10 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
     const omissionSignal = function TK_DebugTestFull_omissionSignal(omitted) {
         return "[ ... " + omitted.length + " ... ]";
     };
-    publicExports.setupTests = function TK_DebugTestFull_setupTests(inputs) {
+    publicExports.setupTests = function TK_DebugTestFull_setupTests(title) {
         const TKTest = ToolKid.debug.test;
-        if (typeof inputs.title === "string") {
-            TKTest.switchResultGroup(inputs.title);
+        if (typeof title === "string") {
+            TKTest.switchResultGroup(title);
         }
         const name = TKTest.getResultGroup().name;
         console.log(colorText("positive", "\n>>  testing " + name));
@@ -2771,8 +2943,17 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
         });
     };
     publicExports.testFull = function TK_DebugTestFull_testFull(inputs) {
-        publicExports.setupTests(inputs);
-        let timeStart = Date.now();
+        publicExports.setupTests(inputs.title);
+        if (typeof inputs.setup !== "function") {
+            testFullRun(inputs, Date.now());
+            return;
+        }
+        const promise = inputs.setup();
+        if (promise instanceof Promise) {
+            promise.then(testFullRun.bind(null, inputs, Date.now()), testFullFail);
+        }
+    };
+    const testFullRun = function TK_DebugTestFull_testFullRun(inputs, timeStart) {
         ToolKid.file.loopFiles({
             includes: ["*.test.js"],
             ...inputs,
@@ -2795,6 +2976,9 @@ fileCollection.set("TK_DebugTestCondition.js", module.exports);
             // TODO: display info about pending tests
             console.log(colors.default + ">>  awaiting " + summary.name + " test results (at least " + summary.pending.size + " more)");
         }
+    };
+    const testFullFail = function TK_DebugTestFull_testFullFail(reason) {
+        ToolKid.debug.terminal.logError("TK_DebugTestFull_testFull failed:", reason);
     };
     Object.freeze(publicExports);
     if (typeof ToolKid !== "undefined") {
@@ -2823,12 +3007,23 @@ fileCollection.set("TK_DebugTestFull.js", module.exports);
         return typeof value === "number" && value >= wanted - tolerance && value <= wanted + tolerance;
     };
     publicExports.shouldPass = function TK_DebugTestShouldPass_shouldPass(...checks) {
-        if (checks.length === 0) {
+        const { length } = checks;
+        if (length === 0) {
             throw ["TK_DebugTestShouldPass_shouldPass - needs at least one check function"];
         }
-        const fails = checks.filter(function (entry) { return typeof entry !== "function"; });
-        if (fails.length !== 0) {
-            throw ["TK_DebugTestShouldPass_shouldPass - can only check with functions but got:", checks];
+        let entry = checks[0];
+        for (let i = 0; i < length; i += 1) {
+            entry = checks[i];
+            if (typeof entry === "string") {
+                checks[i] = ToolKid.dataTypes.checks[entry];
+            }
+            else if (typeof entry !== "function") {
+                throw ["TK_DebugTestShouldPass_shouldPass - invalid check found - needs function or known key:", {
+                        invalidCheck: entry,
+                        knownKeys: Object.keys(ToolKid.dataTypes.checks),
+                        checks,
+                    }];
+            }
         }
         return ValueAsserter({
             checks,
@@ -3101,7 +3296,7 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
 "use strict";
 (function TK_DebugCallstack_init() {
     const publicExports = module.exports = {};
-    publicExports.readFrames = function TK_DebugCallstack_readCallstack(inputs = {}) {
+    publicExports.readFrames = function TK_DebugCallstack_readFrames(inputs = {}) {
         const firstFrameIndex = Math.max(1, inputs.position || 1);
         return new Error().stack.split("\n").slice(firstFrameIndex, firstFrameIndex + (inputs.amount || 1)).map(extractFileName);
     };
@@ -3118,6 +3313,84 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
 })();
 
 fileCollection.set("TK_DebugCallstack.js", module.exports);
+
+"use strict";
+(function TK_DebugPerformance_file() {
+    const publicExports = module.exports = {};
+    const timeTotalName = "timeTotal(s)";
+    publicExports.createClock = function TK_DebugPerformance_createClock(...stateIDs) {
+        let base = {};
+        for (let i = 0; i < stateIDs.length; i += 1) {
+            base[stateIDs[i]] = 0;
+        }
+        const timeStamps = Object.assign({}, base);
+        const counts = Object.assign({}, base);
+        const timeTotals = Object.assign({}, base);
+        const clock = Object.freeze({
+            changeCount: function TK_DebugPerformance_changeCount(stateID, amount) {
+                counts[stateID] += amount;
+            },
+            clear: function TK_DebugPerformance_clockClear() {
+                let stateID;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    timeStamps[stateID] = 0;
+                    counts[stateID] = 0;
+                    timeTotals[stateID] = 0;
+                }
+            },
+            read: function TK_DebugPerformance_clockRead() {
+                return {
+                    counts,
+                    timeTotals
+                };
+            },
+            readNice: function TK_DebugPerformance_clockReadNice() {
+                const result = new Array(stateIDs.length);
+                let stateID;
+                let count;
+                let timeTotal;
+                let stateData;
+                for (let i = 0; i < stateIDs.length; i += 1) {
+                    stateID = stateIDs[i];
+                    count = counts[stateID];
+                    stateData = result[i] = { "timeTotal(s)": 0, count, stateID };
+                    if (count === 0) {
+                        continue;
+                    }
+                    timeTotal = timeTotals[stateID];
+                    stateData[timeTotalName] = timeTotal / 1000;
+                    if (count !== 1 && timeTotal !== 0) {
+                        stateData["timeAveragePerCall(ms)"] = Math.ceil(timeTotal * 1000 / count) / 1000;
+                    }
+                }
+                return result.sort(clockSort);
+            },
+            start: function TK_DebugPerformance_clockStart(stateID) {
+                if (timeStamps[stateID] === 0) {
+                    counts[stateID] += 1;
+                    timeStamps[stateID] = Date.now();
+                }
+            },
+            stop: function TK_DebugPerformance_clockStop(stateID) {
+                if (timeStamps[stateID] !== 0) {
+                    timeTotals[stateID] += Date.now() - timeStamps[stateID];
+                    timeStamps[stateID] = 0;
+                }
+            },
+        });
+        return clock;
+    };
+    const clockSort = function TK_DebugPerformance_cockSort(a, b) {
+        return b[timeTotalName] - a[timeTotalName];
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "debug", subSection: "performance", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DebugPerformance.js", module.exports);
 
 "use strict";
 (function TK_DebugTerminalLog_init() {
@@ -3146,18 +3419,31 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
     publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
         colorCode = publicExports.getColorCode(inputs.colorName);
         formatedText = undefined;
-        let resultIndex = 0;
         const values = inputs.values;
+        let resultIndex = 0;
+        let i = 0;
+        if (typeof inputs.prefix === "string") {
+            let prefix = colorCode + inputs.prefix;
+            if (typeof values[0] === "string") {
+                prefix += values[0];
+                i = 1;
+            }
+            if (typeof values[i] !== "string" && isClient === false) {
+                prefix += colorSignals.white;
+            }
+            formatedValues[0] = prefix;
+            resultIndex = 1;
+        }
         const length = values.length;
         let value;
-        for (let i = 0; i < length; i += 1) {
+        for (; i < length; i += 1) {
             value = values[i];
             if (typeof value === "string") {
                 if (typeof formatedText === "string") {
-                    formatedText += value;
+                    formatedText += ", " + value;
                 }
                 else {
-                    formatedText = (isClient === false || i === 0)
+                    formatedText = (isClient === false)
                         ? colorCode + value // server can color multiple strings
                         : value; // client can only color first string
                 }
@@ -3194,6 +3480,7 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
     publicExports.disableLogs = function TK_DebugTerminalLog_disableLogs(amount) {
         console.log(...publicExports.colorStrings({
             colorName: typeColors.basic,
+            prefix: getPrefix(">>  "),
             values: ["TK_DebugTerminalLog_disableLogs - " + amount]
         }));
         if (amount === false) {
@@ -3232,29 +3519,59 @@ fileCollection.set("TK_DebugCallstack.js", module.exports);
         }
         return code;
     };
-    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs) {
-        return (typeof inputs[0] === "string")
+    const getPrefix = function TK_DebugTerminalLog_getPrefix(firstValue) {
+        return (typeof firstValue === "string")
             ? ">>  " : ">>";
     };
     publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
+        if (inputs.length === 1) {
+            const data = inputs[0];
+            if (typeof data === "object"
+                && data.error instanceof Error
+                && data.logStack === false) {
+                return logErrorObject(data);
+            }
+        }
         console.error(...publicExports.colorStrings({
             colorName: typeColors.error,
-            values: [getPrefix(inputs), ...inputs]
+            prefix: getPrefix(inputs[0]),
+            values: inputs
+        }));
+    };
+    const logErrorObject = function TK_DebugTerminalLog_logErrorObject(inputs) {
+        const data = Object.assign({}, inputs.error);
+        delete data.message;
+        delete data.ERROR;
+        console.error(...publicExports.colorStrings({
+            colorName: typeColors.error,
+            prefix: getPrefix(""),
+            values: [inputs.error.message, data]
         }));
     };
     const logWithLevel = function TK_DebugTerminalLog_logWithLevel(type, ...inputs) {
         if (inputs.length === 0) {
-            console.log();
+            console.warn();
             return;
         }
         console.warn(...publicExports.colorStrings({
             colorName: typeColors[type],
-            values: [getPrefix(inputs), ...inputs]
+            prefix: getPrefix(inputs[0]),
+            values: inputs
         }));
     };
     publicExports.logWarning = logWithLevel.bind(null, "warning");
     publicExports.logImportant = logWithLevel.bind(null, "important");
-    publicExports.logBasic = logWithLevel.bind(null, "basic");
+    publicExports.logBasic = function TK_DebugTerminalLog_logWithLevel(...inputs) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
+        console.log(...publicExports.colorStrings({
+            colorName: typeColors.basic,
+            prefix: getPrefix(inputs[0]),
+            values: inputs
+        }));
+    };
     if (typeof process !== "undefined") {
         process.on("unhandledRejection", function TK_DebugTerminalLog_catchPromiseRejection(reason, promise) {
             publicExports.logError("UNHANDLED PROMISE REJECTION");
@@ -3421,17 +3738,22 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     const { createSimpleRX, createStringChecker } = ToolKid.getCoreModule("regularExpression");
     const fileRegistry = new Map();
     const publicExports = module.exports = {};
+    const { createCustomError } = ToolKid.getCoreModule("core");
     const basePathRX = /^\.{0,1}\/{0,1}/;
     const createPathRX = function (path) {
         return new RegExp("^" + path.replace(basePathRX, ""));
     };
     publicExports.getExtension = function TK_File_getExtension(path) {
-        const parts = publicExports.getName(path).split(".");
-        return (parts.length === 1)
+        const fileName = publicExports.getName(path);
+        const position = fileName.lastIndexOf(".");
+        return (position === -1)
             ? ""
-            : parts[parts.length - 1].toLocaleLowerCase();
+            : fileName.slice(position + 1).toLocaleLowerCase();
     };
     publicExports.getName = function TK_File_getName(path) {
+        if (typeof path !== "string") {
+            return createCustomError("path needs to be String but is:", path);
+        }
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };
@@ -3467,22 +3789,27 @@ fileCollection.set("TK_DOMAnimations.js", module.exports);
     publicExports.register = function TK_File_register(path) {
         const fileName = publicExports.getName(path);
         const registeredPath = fileRegistry.get(fileName);
-        if (registeredPath === path) {
+        if (registeredPath === path) { // allready known
             return;
         }
-        else if (registeredPath === undefined) {
+        if (registeredPath === undefined) { // not yet known
             fileRegistry.set(fileName, path);
+            return;
         }
-        else {
-            throw [
-                "TK_File_register - fileName allready in use: ", fileName,
-                " paths are: ", fileRegistry.get(fileName), path
-            ];
-        }
+        // diverging path informations
+        const error = new Error("TK_File_register - fileName allready in use");
+        error.details = {
+            knownPath: registeredPath,
+            newPath: path,
+        };
+        fileRegistry.set(fileName, path);
+        return error;
     };
     if (typeof ToolKid !== "undefined") {
         if (typeof Element === "undefined") {
-            publicExports.loopFiles = ToolKid.getCoreModule("files").loopFiles;
+            const LibraryFiles = ToolKid.getCoreModule("files");
+            publicExports.loopFiles = LibraryFiles.loopFiles;
+            publicExports.read = LibraryFiles.readFile;
         }
         ToolKid.register({ section: "file", entries: publicExports });
     }

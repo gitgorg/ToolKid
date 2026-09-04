@@ -4,6 +4,7 @@ interface TK_Debug_file { terminal: TK_DebugTerminalLog_file }
 interface TK_DebugTerminalLog_file {
     colorStrings(inputs: {
         colorName: TerminalColor,
+        prefix?: string,
         values: any[]
     }): any[],
     getColorCode(
@@ -25,6 +26,10 @@ interface TK_DebugTerminalLog_file {
     logWarning(
         ...inputs: any[]
     ): void,
+    logError(inputs: {
+        error: Error,
+        logStack: false,
+    }): void,
     logError(
         ...inputs: any[]
     ): void,
@@ -66,17 +71,30 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
     publicExports.colorStrings = function TK_DebugTerminalLog_colorStringsLoop(inputs) {
         colorCode = publicExports.getColorCode(<any>inputs.colorName);
         formatedText = <string | undefined>undefined;
-        let resultIndex = 0;
         const values = inputs.values;
+        let resultIndex = 0;
+        let i = 0;
+        if (typeof inputs.prefix === "string") {
+            let prefix = colorCode + inputs.prefix;
+            if (typeof values[0] === "string") {
+                prefix += values[0];
+                i = 1;
+            }
+            if (typeof values[i] !== "string" && isClient === false) {
+                prefix += colorSignals.white;
+            }
+            formatedValues[0] = prefix;
+            resultIndex = 1;
+        }
         const length = values.length;
         let value: any;
-        for (let i = 0; i < length; i += 1) {
+        for (; i < length; i += 1) {
             value = values[i];
             if (typeof value === "string") {
                 if (typeof formatedText === "string") {
-                    formatedText += value;
+                    formatedText += ", " + value;
                 } else {
-                    formatedText = (isClient === false || i === 0)
+                    formatedText = (isClient === false)
                         ? colorCode + value // server can color multiple strings
                         : value; // client can only color first string
                 }
@@ -116,6 +134,7 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         console.log(
             ...publicExports.colorStrings({
                 colorName: <"grey">typeColors.basic,
+                prefix: getPrefix(">>  "),
                 values: ["TK_DebugTerminalLog_disableLogs - " + amount]
             })
         );
@@ -160,16 +179,43 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         return code;
     };
 
-    const getPrefix = function TK_DebugTerminalLog_getPrefix(inputs: any[]) {
-        return (typeof inputs[0] === "string")
+    const getPrefix = function TK_DebugTerminalLog_getPrefix(firstValue: any) {
+        return (typeof firstValue === "string")
             ? ">>  " : ">>";
     };
 
     publicExports.logError = function TK_DebugTerminalLog_logError(...inputs) {
+        if (
+            inputs.length === 1
+        ) {
+            const data = inputs[0];
+            if (
+                typeof data === "object"
+                && data.error instanceof Error
+                && data.logStack === false
+            ) {
+                return logErrorObject(data);
+            }
+        }
+
         console.error(
             ...publicExports.colorStrings({
                 colorName: <"red">typeColors.error,
-                values: [getPrefix(inputs), ...inputs]
+                prefix: getPrefix(inputs[0]),
+                values: inputs
+            })
+        );
+    };
+
+    const logErrorObject = function TK_DebugTerminalLog_logErrorObject(inputs: Dictionary) {
+        const data = <Dictionary>Object.assign({}, inputs.error);
+        delete data.message;
+        delete data.ERROR;
+        console.error(
+            ...publicExports.colorStrings({
+                colorName: <"red">typeColors.error,
+                prefix: getPrefix(""),
+                values: [inputs.error.message, data]
             })
         );
     };
@@ -179,14 +225,15 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
         ...inputs: any[]
     ) {
         if (inputs.length === 0) {
-            console.log();
+            console.warn();
             return;
         }
 
         console.warn(
             ...publicExports.colorStrings({
                 colorName: <"orange">typeColors[type],
-                values: [getPrefix(inputs), ...inputs]
+                prefix: getPrefix(inputs[0]),
+                values: inputs
             })
         );
     };
@@ -195,7 +242,22 @@ type TerminalColor = "blue" | "cyan" | "green" | "grey" | "magenta" | "orange" |
 
     publicExports.logImportant = logWithLevel.bind(null, "important");
 
-    publicExports.logBasic = logWithLevel.bind(null, "basic");
+    publicExports.logBasic = function TK_DebugTerminalLog_logWithLevel(
+        ...inputs: any[]
+    ) {
+        if (inputs.length === 0) {
+            console.log();
+            return;
+        }
+
+        console.log(
+            ...publicExports.colorStrings({
+                colorName: <"white">typeColors.basic,
+                prefix: getPrefix(inputs[0]),
+                values: inputs
+            })
+        );
+    };
 
     if (typeof process !== "undefined") {
         process.on(

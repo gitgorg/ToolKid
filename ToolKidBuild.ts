@@ -64,15 +64,6 @@ type ToolKidConfig = {
         execute: require
     });
 
-    const runTests = function ToolKidBuild_runTests() {
-        setTimeout(ToolKid.debug.test.testFull.bind(null, {
-            title: "ToolKid",
-            path: [__dirname],
-            include: ["*.test.js"],
-            suspects: [ToolKid],
-        }), 100);
-    };
-
     const corePathCheck = createPathChecker({ includes: ["*/modules/core/*"] });
     const readBundleContent = function TooloKidBuild_readBundleContent(
         filePaths: Map<string, string>,
@@ -94,11 +85,11 @@ type ToolKidConfig = {
         let moduleName = basename(bundleID).slice(7, -3);
         moduleName = moduleName[0].toLocaleLowerCase() + moduleName.slice(1);
         if (moduleName === "core") {
-            content.push('global.ToolKid = module.exports.createInstance();'
+            content.push('\nglobal.ToolKid = module.exports.createInstance();'
             );
         } else {
             content.push('\
-fileCollection.get("LibraryCore.js").registerCoreModule({\n\
+\nfileCollection.get("LibraryCore.js").registerCoreModule({\n\
     name: "', moduleName, '", module: module.exports\n\
 });'
             );
@@ -150,7 +141,12 @@ module.exports = ToolKid;',
             ].join("")
         });
         if (config.runTests !== false) {
-            runTests();
+            setTimeout(ToolKid.debug.test.testFull.bind(null, {
+                title: "ToolKid",
+                path: [__dirname],
+                include: ["*.test.js"],
+                suspects: [ToolKid],
+            }), 100);
         }
     };
 

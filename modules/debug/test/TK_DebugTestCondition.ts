@@ -25,11 +25,12 @@ interface TK_DebugTest_file {
 type Condition = Promise<any> & {
     resolve(
         value?: any
-    ): void,
+    ): Condition,
     reject(
         reason?: any
-    ): void,
+    ): Condition,
     done: boolean,
+    origin: string,
     timePassed: number
 }
 
@@ -41,17 +42,13 @@ type Condition = Promise<any> & {
     const registeredConditions = new Map();
     const waitingConditions = <Map<string, Condition[]>>new Map();
     publicExports.condition = function TK_DebugTestCondition_condition(inputs) {
-        if (typeof inputs !== "string") {
-            return createCondition(<Parameters<TK_DebugTest_file["createCondition"]>[0]>inputs);
-        }
-
         const found = registeredConditions.get(inputs);
         if (found !== undefined) {
             return found;
         }
 
         let queue = waitingConditions.get(inputs);
-        const result = conditionCreate();
+        const result = conditionCreate(3);
         if (queue === undefined) {
             queue = [result];
             waitingConditions.set(inputs, queue);
@@ -60,21 +57,24 @@ type Condition = Promise<any> & {
         }
         setTimeout(function () {
             if (registeredConditions.get(inputs) === undefined) {
-                result.reject("waiting for unknown condition: \"" + inputs + "\"");
+                result.reject(
+                    'waiting for unknown condition: "' + inputs
+                    + '" ' + result.origin
+                );
             }
         }, 5000);
         return result;
     };
 
-    const createCondition = publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
+    publicExports.createCondition = function TK_DebugTestCondition_createCondition(inputs) {
         if (inputs === undefined) {
-            return conditionCreate();
+            return conditionCreate(3);
         }
 
         if (typeof inputs === "number") {
             inputs = { timeToResolve: inputs };
         }
-        const result = conditionCreate();
+        const result = conditionCreate(3);
         if (typeof (<any>inputs).timeToResolve === "number" || typeof (<any>inputs).timeToReject === "number") {
             watchPromiseDuration(<any>inputs, result);
         }
@@ -102,7 +102,9 @@ type Condition = Promise<any> & {
         }
     };
 
-    const conditionCreate = function TK_DebugTestCondition_conditionCreate() {
+    const conditionCreate = function TK_DebugTestCondition_conditionCreate(
+        originDepth: number,
+    ) {
         let resolve: any, reject: any;
         const result = <Condition>new Promise(
             function createPromise_setup(resolveFunction, rejectFunction) {
@@ -113,6 +115,7 @@ type Condition = Promise<any> & {
                         value = (<any>result).timePassed;
                     }
                     resolveFunction(value);
+                    return result;
                 };
                 reject = function TK_DebugTestCondition_PromiseReject(reason: any) {
                     (<any>result).timePassed = Date.now() - startTime;
@@ -121,11 +124,13 @@ type Condition = Promise<any> & {
                         reason = (<any>result).timePassed;
                     }
                     rejectFunction(reason);
+                    return result;
                 }
             }
         );
         result.resolve = resolve;
         result.reject = reject;
+        result.origin = (<Dictionary>new Error()).stack.split("\n")[originDepth];
         result.done = false;
         result.timePassed = 0;
         const startTime = Date.now();

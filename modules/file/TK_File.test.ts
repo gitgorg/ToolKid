@@ -1,7 +1,8 @@
 (function TK_File_test() {
     const { assert, assertFailure, test } = ToolKid.debug.test;
-
     const { getExtension, getName } = ToolKid.file;
+
+    const shouldBeError = ToolKid.debug.test.shouldPass("isError");
 
     test({
         subject: getExtension,
@@ -11,7 +12,7 @@
                 "CAPS": [getExtension("test.HTML"), "html"],
                 "mixed case": [getExtension("test.hTmL"), "html"],
                 "folder": [getExtension("a/b/c"), ""],
-                "folder difficlt": [getExtension("a\\.b\\c"), ""],
+                "folder difficult": [getExtension("a\\.b\\c"), ""],
             });
             assertFailure({
                 name: "missing inputs",
@@ -32,15 +33,9 @@
                 "backslash": [getName("a\\b\\c.d"), "c.d"],
                 "mixed slashes": [getName("a\\b//c.d"), "c.d"],
                 "folder": [getName("a/b/c"), "c"],
-                "folder difficlt": [getName("a\\.b\\c"), "c"],
-            });
-            assertFailure({
-                name: "missing inputs",
-                execute: getName,
-            }, {
-                name: "invalid inputs",
-                execute: getName,
-                withInputs: true,
+                "folder difficult": [getName("a\\.b\\c"), "c"],
+                "missing inputs": [(<any>getName)(), shouldBeError],
+                "invalid inputs": [(<any>getName)(true), shouldBeError],
             });
         }
     });

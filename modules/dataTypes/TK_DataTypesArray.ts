@@ -23,7 +23,6 @@ interface TK_DataTypesArray_file {
 (function TK_DataTypesArray_init() {
     type DataIterateNonBlocking = {
         batchSize: number,
-        boundIterator: { (): void },
         callback: { (lastIndex: number): void },
         data: DataType[],
         parser: { (entry: DataType, index: number): "stop" | void },
@@ -36,7 +35,7 @@ interface TK_DataTypesArray_file {
     const publicExports = module.exports = <TK_DataTypesArray_file>{};
 
     publicExports.iterateNonBlocking = function TK_DataTypesArray_iterateNonBlocking(inputs) {
-        const privateData = <DataIterateNonBlocking><any>Object.assign({
+        const internals = <DataIterateNonBlocking><any>Object.assign({
             batchSize: 10,
             callback: function () { },
             maxBlockDuration: 100,
@@ -45,31 +44,30 @@ interface TK_DataTypesArray_file {
         }, inputs, {
             dataPosition: 0,
         });
-        if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
+        if (typeof internals.startIndex !== "number" || Number.isNaN(internals.startIndex)) {
             throw ["TK_DataTypesArray_iterateNonBlocking - .startIndex should be a number:", inputs];
         }
 
-        privateData.boundIterator = iterateNonBlockingLoop.bind(null, privateData);
-        iterateNonBlockingLoop(privateData);
+        iterateNonBlockingLoop(internals);
     };
 
-    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(inputs: DataIterateNonBlocking) {
-        const { data, parser, stopSignal } = inputs;
-        const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
-        for (let i = inputs.startIndex; i < indexEnd; i += 1) {
+    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(internals: DataIterateNonBlocking) {
+        const { data, parser, stopSignal } = internals;
+        const indexEnd = Math.min(internals.startIndex + internals.batchSize, data.length);
+        for (let i = internals.startIndex; i < indexEnd; i += 1) {
             if (parser(data[i], i) === stopSignal) {
-                inputs.callback(i);
+                internals.callback(i);
                 return;
             }
         }
 
         if (indexEnd === data.length) {
-            inputs.callback(indexEnd - 1);
+            internals.callback(indexEnd - 1);
             return;
         }
 
-        inputs.startIndex = indexEnd;
-        setTimeout(inputs.boundIterator, 0);
+        internals.startIndex = indexEnd;
+        setTimeout(iterateNonBlockingLoop.bind(null, internals), 0);
     };
 
 
