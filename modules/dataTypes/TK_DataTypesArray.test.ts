@@ -1,6 +1,6 @@
 (function TK_DataTypesArray_test() {
     const { test, assertEquality } = ToolKid.debug.test;
-    const { iterateBatch } = ToolKid.dataTypes.array;
+    const { iterateNonBlocking } = ToolKid.dataTypes.array;
     const { createPromise } = ToolKid.dataTypes.promise;
 
 
@@ -10,11 +10,11 @@
     };
 
     test({
-        subject: iterateBatch,
+        subject: iterateNonBlocking,
         execute: function batchSize1() {
             const promise = createPromise();
             const inputStack = <any[]>[];
-            iterateBatch({
+            iterateNonBlocking({
                 data: ["a", "b", "c", "d"],
                 parser: register.bind(null, inputStack),
                 batchSize: 1,
@@ -45,11 +45,11 @@
             return promise.promise;
         }
     }, {
-        subject: iterateBatch,
+        subject: iterateNonBlocking,
         execute: function batchSize3() {
             const promise = createPromise();
             const inputStack = <any[]>[];
-            iterateBatch({
+            iterateNonBlocking({
                 data: ["a", "b", "c", "d"],
                 parser: register.bind(null, inputStack),
                 batchSize: 3,
@@ -78,12 +78,12 @@
             return promise.promise;
         }
     }, {
-        subject: iterateBatch,
+        subject: iterateNonBlocking,
         execute: function stopped() {
 
             const promise = createPromise();
             const inputStack = <any[]>[];
-            iterateBatch({
+            iterateNonBlocking({
                 data: ["a", "b", "c", "d"],
                 parser: function (...inputs): any {
                     register(inputStack, ...inputs);

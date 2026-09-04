@@ -355,7 +355,7 @@ fileCollection.set("LibraryFiles.js", module.exports);
 // v = to support all the new unicode stuff
 (function LibraryParsing_init() {
     const publicExports = module.exports = {};
-    publicExports.skipLayer = function LibraryParsing_skipLayer() { };
+    const skipLayer = publicExports.skipLayer = function LibraryParsing_skipLayer() { };
     publicExports.createTextParserLayers = function LibraryParsing_setupTextParserLayers(inputs) {
         const analysed = a_analyseTextParserConfig(inputs);
         if (analysed instanceof Error) {
@@ -401,7 +401,7 @@ fileCollection.set("LibraryFiles.js", module.exports);
         let layerName = "";
         for (let [parser, names] of inputs.parsers.entries()) {
             if (parser === "SKIP") {
-                parser = publicExports.skipLayer;
+                parser = skipLayer;
             }
             else if (typeof parser !== "function" && parser !== "REMOVE") {
                 return createError("invalid parser", { names, parser });
@@ -417,12 +417,12 @@ fileCollection.set("LibraryFiles.js", module.exports);
             for (layerName of names) {
                 if (layerName[0] === "<") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [parser, publicExports.skipLayer];
+                    parserSet = layerParsers[layerName] || [parser, skipLayer];
                     parserSet[0] = parser;
                 }
                 else if (layerName[0] === ">") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [publicExports.skipLayer, parser];
+                    parserSet = layerParsers[layerName] || [skipLayer, parser];
                     parserSet[1] = parser;
                 }
                 else {
@@ -621,6 +621,84 @@ fileCollection.set("LibraryFiles.js", module.exports);
         else {
             return ["pattern must be string or RegExp"];
         }
+    };
+    publicExports.createTokenGenerator = function (rootLayer) {
+        let text;
+        let layer;
+        let lastIndex = 0;
+        const layerStack = new Array(20);
+        let layerDepth = 0;
+        let internals;
+        const setText = function (newText, passedInternals) {
+            internals = passedInternals || {};
+            text = internals.text = newText;
+            layer = layerStack[0] = rootLayer;
+            lastIndex = 0;
+            layerDepth = 0;
+        };
+        let RXResult;
+        let signalIndex = 1;
+        const wantedSignalIDs = new Array(20);
+        let found;
+        const getToken = function () {
+            layer.pattern.lastIndex = lastIndex;
+            RXResult = layer.pattern.exec(text);
+            if (RXResult === null) {
+                return undefined;
+            }
+            lastIndex = layer.pattern.lastIndex;
+            signalIndex = 1;
+            while (RXResult[signalIndex] === undefined) {
+                signalIndex += 1;
+            }
+            signalIndex -= 1;
+            //opening
+            if (layer.directions[signalIndex] !== undefined) {
+                found = layer.directions[signalIndex];
+                layer = found[0];
+                layerDepth += 1;
+                layerStack[layerDepth] = layer;
+                wantedSignalIDs[layerDepth] = found[1];
+                if (RXResult[0] === "") {
+                    log(555, "???", RXResult, layer);
+                    lastIndex += 1;
+                    return getToken();
+                }
+                else {
+                    const token = layer.parseOpening(RXResult, layer.data, internals, layerDepth);
+                    return (token === undefined)
+                        ? getToken() : token;
+                    // return [RXResult, layer, layerDepth];
+                }
+            }
+            //closing
+            //    unexpected
+            if (wantedSignalIDs[layerDepth] !== signalIndex) {
+                log(666, "???", RXResult, layer);
+                if (RXResult[0] === "") {
+                    lastIndex += 1;
+                }
+                return getToken();
+            }
+            //    expected
+            if (RXResult[0] === "") {
+                // TODO: remove the check for elements without closings
+                layerDepth -= 1;
+                layer = layerStack[layerDepth];
+                return getToken();
+            }
+            // const result = [RXResult, layer, layerDepth];
+            const token = layer.parseOpening(RXResult, layer.data, internals, layerDepth);
+            layerDepth -= 1;
+            layer = layerStack[layerDepth];
+            // return result;
+            return (token === undefined)
+                ? getToken() : token;
+        };
+        return Object.freeze({
+            setText,
+            getToken,
+        });
     };
     publicExports.parseTextLayers = function LibraryParsing_parseTextLayers(layer, inputs) {
         if (typeof inputs === "string") {
@@ -1548,7 +1626,7 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
 "use strict";
 (function TK_DataTypesArray_init() {
     const publicExports = module.exports = {};
-    publicExports.iterateBatch = function TK_DataTypesArray_iterateBatch(inputs) {
+    publicExports.iterateNonBlocking = function TK_DataTypesArray_iterateNonBlocking(inputs) {
         const privateData = Object.assign({
             batchSize: 10,
             callback: function () { },
@@ -1559,12 +1637,12 @@ fileCollection.set("TK_ConnectionHTTPFormats.js", module.exports);
             dataPosition: 0,
         });
         if (typeof privateData.startIndex !== "number" || Number.isNaN(privateData.startIndex)) {
-            throw ["TK_DataTypesArray_iterateBatch - .startIndex should be a number:", inputs];
+            throw ["TK_DataTypesArray_iterateNonBlocking - .startIndex should be a number:", inputs];
         }
-        privateData.boundIterator = iterateBatchLoop.bind(null, privateData);
-        iterateBatchLoop(privateData);
+        privateData.boundIterator = iterateNonBlockingLoop.bind(null, privateData);
+        iterateNonBlockingLoop(privateData);
     };
-    const iterateBatchLoop = function db_TLSTools_iterateBatchLoop(inputs) {
+    const iterateNonBlockingLoop = function db_TLSTools_iterateNonBlockingLoop(inputs) {
         const { data, parser, stopSignal } = inputs;
         const indexEnd = Math.min(inputs.startIndex + inputs.batchSize, data.length);
         for (let i = inputs.startIndex; i < indexEnd; i += 1) {
@@ -1903,6 +1981,25 @@ fileCollection.set("TK_DataTypesChecks.js", module.exports);
 })();
 
 fileCollection.set("TK_DataTypesChecksEquality.js", module.exports);
+
+"use strict";
+(function TK_DataTypesError_init() {
+    const publicExports = module.exports = {};
+    publicExports.createCustomError = function TK_DataTypesError_createCustomError(message, details) {
+        if (typeof message !== "string") {
+            throw ["TK_DataTypesError_createCustomError - message was not a string. passed inputs were: ", Array.from(arguments)];
+        }
+        const error = new Error(message);
+        error.details = details;
+        return error;
+    };
+    Object.freeze(publicExports);
+    if (typeof ToolKid !== "undefined") {
+        ToolKid.register({ section: "dataTypes", subSection: "error", entries: publicExports });
+    }
+})();
+
+fileCollection.set("TK_DataTypesError.js", module.exports);
 
 "use strict";
 (function TK_DataTypesList_init() {

@@ -48,6 +48,20 @@ type LibraryParsing_file = {
         ): string[]
     } | Error,
 
+    createTokenGenerator(
+        rootLayer: TextLayer
+    ): {
+        setText(
+            text: string,
+            internals?: Dictionary,
+        ): void,
+        getToken(): [
+            RXResult: RegExpExecArray,
+            layer: TextLayer,
+            depth: number
+        ] | undefined,
+    },
+
     parseTextLayers(
         layer: TextLayer,
         inputs: string | { text: string },
@@ -133,7 +147,7 @@ type TextParserForOpenings = {
 
 
     const publicExports = module.exports = <LibraryParsing_file>{};
-    publicExports.skipLayer = function LibraryParsing_skipLayer() { };
+    const skipLayer = publicExports.skipLayer = function LibraryParsing_skipLayer() { };
 
     publicExports.createTextParserLayers = function LibraryParsing_setupTextParserLayers(inputs) {
         const analysed = a_analyseTextParserConfig(inputs);
@@ -204,7 +218,7 @@ type TextParserForOpenings = {
         let layerName = "";
         for (let [parser, names] of inputs.parsers.entries()) {
             if (parser === "SKIP") {
-                parser = publicExports.skipLayer;
+                parser = skipLayer;
             } else if (typeof parser !== "function" && parser !== "REMOVE") {
                 return createError("invalid parser", { names, parser });
             }
@@ -220,11 +234,11 @@ type TextParserForOpenings = {
             for (layerName of names) {
                 if (layerName[0] === "<") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [parser, publicExports.skipLayer];
+                    parserSet = layerParsers[layerName] || [parser, skipLayer];
                     parserSet[0] = <TextParserForOpenings>parser;
                 } else if (layerName[0] === ">") {
                     layerName = layerName.slice(1);
-                    parserSet = layerParsers[layerName] || [publicExports.skipLayer, parser];
+                    parserSet = layerParsers[layerName] || [skipLayer, parser];
                     parserSet[1] = <TextParserForClosings>parser;
                 } else {
                     parserSet = layerParsers[layerName] || [parser, parser];
@@ -464,6 +478,99 @@ type TextParserForOpenings = {
         } else {
             return ["pattern must be string or RegExp"];
         }
+    };
+
+    publicExports.createTokenGenerator = function (
+        rootLayer: TextLayer,
+    ) {
+        let text: string;
+        let layer: TextLayer;
+        let lastIndex = 0;
+        const layerStack = new Array(20);
+        let layerDepth = 0;
+        let internals: { text: string } & Dictionary;
+        const setText = function (
+            newText: string, passedInternals?: Dictionary
+        ) {
+            internals = <any>passedInternals || {};
+            text = internals.text = newText;
+            layer = layerStack[0] = rootLayer;
+            lastIndex = 0;
+            layerDepth = 0;
+        };
+
+        let RXResult;
+        let signalIndex = 1;
+        const wantedSignalIDs = new Array(20);
+        let found: any;
+        const getToken = <ReturnType<LibraryParsing_file["createTokenGenerator"]>["getToken"]>function () {
+            layer.pattern.lastIndex = lastIndex;
+            RXResult = layer.pattern.exec(text);
+            if (RXResult === null) {
+                return undefined;
+            }
+
+            lastIndex = layer.pattern.lastIndex;
+            signalIndex = 1;
+            while (RXResult[signalIndex] === undefined) {
+                signalIndex += 1;
+            }
+            signalIndex -= 1;
+
+            //opening
+            if (layer.directions[signalIndex] !== undefined) {
+                found = layer.directions[signalIndex]
+                layer = found[0];
+                layerDepth += 1;
+                layerStack[layerDepth] = layer;
+                wantedSignalIDs[layerDepth] = found[1];
+                if (RXResult[0] === "") {
+                    log(555, "???", RXResult, layer)
+                    lastIndex += 1;
+                    return getToken();
+                } else {
+                    const token = layer.parseOpening(
+                        RXResult, layer.data, internals, layerDepth
+                    );
+                    return (token === undefined)
+                        ? getToken() : token;
+                    // return [RXResult, layer, layerDepth];
+                }
+            }
+
+            //closing
+            //    unexpected
+            if (wantedSignalIDs[layerDepth] !== signalIndex) {
+                log(666, "???", RXResult, layer)
+                if (RXResult[0] === "") {
+                    lastIndex += 1;
+                }
+                return getToken();
+            }
+
+            //    expected
+            if (RXResult[0] === "") {
+                // TODO: remove the check for elements without closings
+                layerDepth -= 1;
+                layer = layerStack[layerDepth];
+                return getToken();
+            }
+
+            // const result = [RXResult, layer, layerDepth];
+            const token = layer.parseOpening(
+                RXResult, layer.data, internals, layerDepth
+            );
+            layerDepth -= 1;
+            layer = layerStack[layerDepth];
+            // return result;
+            return (token === undefined)
+                ? getToken() : token;
+        }
+
+        return Object.freeze({
+            setText,
+            getToken,
+        });
     };
 
     publicExports.parseTextLayers = function LibraryParsing_parseTextLayers(
