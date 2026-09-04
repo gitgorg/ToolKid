@@ -2483,6 +2483,9 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         }
     };
     const assertComparison = function TK_DebugTestAssertion_assertComparison(errors, label, config) {
+        if (config.logValue === true) {
+            ToolKid.debug.terminal.logImportant(label, config.value);
+        }
         const returned = ToolKid.dataTypes.checks.areEqual(config);
         if (returned === true) {
             return;
@@ -2535,9 +2538,6 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
         }
     };
     const assertOne = function TK_Debug_assertOne(promises, errors, label, config) {
-        if (config.logValue === true) {
-            ToolKid.debug.terminal.logImportant(label, config.value);
-        }
         if (config.shouldBe === Error) {
             // crash on execution expected
             if (typeof config.value !== "function") {

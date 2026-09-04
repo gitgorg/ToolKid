@@ -122,6 +122,9 @@ type TK_AssertConfig = {
         label: string,
         config: Dictionary
     ) {
+        if (config.logValue === true) {
+            ToolKid.debug.terminal.logImportant(label, config.value);
+        }
         const returned = ToolKid.dataTypes.checks.areEqual(<any>config);
         if (returned === true) {
             return;
@@ -190,9 +193,6 @@ type TK_AssertConfig = {
         label: string,
         config: Dictionary
     ) {
-        if (config.logValue === true) {
-            ToolKid.debug.terminal.logImportant(label, config.value);
-        }
         if (config.shouldBe === Error) {
             // crash on execution expected
             if (typeof config.value !== "function") {
