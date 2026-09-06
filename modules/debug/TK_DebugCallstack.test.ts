@@ -32,14 +32,14 @@
     test({
         subject: readFrames,
         execute: function basicReads() {
-            assertEquality({
+            const config = {
                 "no arguments": {
                     value: readFrames(),
                     shouldBe: ["TK_DebugCallstack.js"],
                 },
-                "position 3": {
-                    value: readFrames({ position: 3 }),
-                    shouldBe: ["TK_DebugTest.js"],
+                "position 2": {
+                    value: readFrames({ position: 2 }),
+                    shouldBe: ["TK_DebugCallstack.test.js"],
                 },
                 "amount 3": {
                     value: readFrames({ amount: 3 }),
@@ -49,7 +49,13 @@
                     value: readFrames({ position: 2, amount: 2 }),
                     shouldBe: ["TK_DebugCallstack.test.js", "TK_DebugTest.js"],
                 },
-            });
+            };
+            if (typeof Element !== "undefined") {
+                config["no arguments"].shouldBe = ["reqSync.js"];
+                config["amount 3"].shouldBe = ["reqSync.js", "TK_DebugCallstack.test.js", "reqSync.js"];
+                config["position 2 amount 2"].shouldBe = ["TK_DebugCallstack.test.js", "reqSync.js"];
+            };
+            assertEquality(config);
         }
     });
 })();

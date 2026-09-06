@@ -48,6 +48,7 @@ interface TK_file_file {
         if (typeof path !== "string") {
             return <any>createCustomError("path needs to be String but is:", path);
         }
+
         let parts = path.trim().split(/\/|\\/);
         return parts[parts.length - 1];
     };

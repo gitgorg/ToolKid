@@ -124,7 +124,7 @@
             return failingPromise;
         }
     })[0];
-    setTimeout(failingPromise.reject.bind(null, "asynchronous failure"), 1000);
+    setTimeout(failingPromise.reject.bind(null, "asynchronous failure"), 0);
 
     // assert not being a function
     test({

@@ -689,6 +689,7 @@ fileCollection.set("LibraryFiles.js", module.exports);
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
                 wantedSignalIDs[layerDepth] = found[1];
+                log(666, lastIndex, layerDepth, layer.data.name, RXResult[0]);
                 if (RXResult[0] === "") {
                     log(555, "???", RXResult, layer);
                     lastIndex += 1;
@@ -3302,8 +3303,10 @@ fileCollection.set("TK_DebugTestSummary.js", module.exports);
     };
     const regExpAfterLastSlash = /[^\/\\]+$/;
     const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
-        const filePart = part.slice(part.search(regExpAfterLastSlash));
-        return filePart.split(":")[0];
+        const position = part.search(regExpAfterLastSlash);
+        return (position === 0 && part.includes("anonymous"))
+            ? "<anonymous>"
+            : part.slice(position).split(":")[0];
     };
     ;
     Object.freeze(publicExports);
@@ -3462,9 +3465,10 @@ fileCollection.set("TK_DebugPerformance.js", module.exports);
             formatedValues[resultIndex] = colorStringsFinish(formatedText);
             resultIndex += 1;
         }
-        return (isClient && resultIndex > 1)
-            ? [formatedValues[0], formatedValues.slice(1, resultIndex)]
-            : formatedValues.slice(0, resultIndex);
+        return formatedValues.slice(0, resultIndex);
+        // return (isClient && resultIndex > 1)
+        //     ? [formatedValues[0], formatedValues.slice(1, resultIndex)]
+        //     : formatedValues.slice(0, resultIndex);
     };
     const colorStringsFinish = function TK_DebugTerminalLog_colorStringsFinish(unfinishedString) {
         if (isClient) {

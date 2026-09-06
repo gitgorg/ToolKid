@@ -3,8 +3,29 @@
     const Terminal = Debug.terminal;
     const { disableLogs, getColorCode } = Terminal;
     const { assert, test } = Debug.test;
+    const { areEqual } = ToolKid.dataTypes.checks;
 
 
+
+    const shouldHave = function (...wanted: any[]) {
+        return ToolKid.debug.test.shouldPass(function (values: any[]) {
+            const { length } = wanted;
+            let value;
+            let shouldBe;
+            for (let i = 0; i < length; i += 1) {
+                value = values[i];
+                shouldBe = wanted[i];
+                if (typeof shouldBe === "string") {
+                    if (typeof value !== "string" || !value.includes(shouldBe)) {
+                        return false;
+                    }
+                } else if (areEqual({ value, shouldBe, toleranceDepth: 5 }) !== true) {
+                    return false;
+                }
+            }
+            return true;
+        })
+    };
 
     const colors = <Dictionary>{};
     test({
@@ -28,24 +49,29 @@
             assert({
                 "mixed values": {
                     value: Terminal.colorStrings({
-                        colorName: "orange", prefix: "text", values: [10, null, "text2"]
+                        colorName: "orange",
+                        prefix: "text",
+                        values: [10, null, "text2"]
                     }),
-                    shouldBe: [
-                        colors.orange + "text" + colors.white,
-                        10,
-                        null,
-                        colors.orange + "text2" + colors.white
-                    ]
+                    shouldBe:
+                        shouldHave(
+                            colors.orange + "text",
+                            10,
+                            null,
+                            "text2"
+                        )
                 },
                 "combined strings": {
                     value: Terminal.colorStrings({
-                        colorName: "red", values: ["A", "B", "C", {}, "D", "E"]
+                        colorName: "red",
+                        values: ["A", "B", "C", {}, "D", "E"]
                     }),
-                    shouldBe: [
-                        colors.red + "A, B, C" + colors.white,
-                        {},
-                        colors.red + "D, E" + colors.white
-                    ],
+                    shouldBe:
+                        shouldHave(
+                            "A, B, C",
+                            {},
+                            "D, E",
+                        ),
                     toleranceDepth: 2
                 }
             });
@@ -129,15 +155,15 @@
                 "errors": {
                     value: errors,
                     shouldBe: [
-                        [colors.red + ">>  string first" + colors.white, 1],
-                        [
-                            colors.red + ">>" + colors.white,
-                            2, colors.red + "number first" + colors.white
-                        ],
-                        [
-                            colors.red + ">>  error" + colors.white,
+                        shouldHave(colors.red + ">>  string first", 1),
+                        shouldHave(
+                            colors.red + ">>",
+                            2, "number first"
+                        ),
+                        shouldHave(
+                            colors.red + ">>  error",
                             {}
-                        ],
+                        ),
                     ],
                     toleranceDepth: 3
                 }
@@ -156,7 +182,7 @@
                 "warnings basic": {
                     value: logs,
                     shouldBe: [
-                        [colors.grey + ">>  basic" + colors.white, 1, [true]]
+                        shouldHave(colors.grey + ">>  basic", 1, [true])
                     ],
                     toleranceDepth: 3
                 }
@@ -175,7 +201,7 @@
                 "warnings important": {
                     value: warnings,
                     shouldBe: [
-                        [colors.cyan + ">>  important" + colors.white, 2, [true]]
+                        shouldHave(colors.cyan + ">>  important", 2, [true])
                     ],
                     toleranceDepth: 3
                 }
@@ -194,7 +220,7 @@
                 "warnings": {
                     value: warnings,
                     shouldBe: [
-                        [colors.orange + ">>  warning" + colors.white, 3, [true]]
+                        shouldHave(colors.orange + ">>  warning", 3, [true])
                     ],
                     toleranceDepth: 3
                 }

@@ -27,8 +27,10 @@ interface TK_DebugCallstack_file {
 
     const regExpAfterLastSlash = /[^\/\\]+$/;
     const extractFileName = publicExports.extractFileName = function TK_DebugCallstack_extractFileName(part) {
-        const filePart = part.slice(part.search(regExpAfterLastSlash));
-        return filePart.split(":")[0];
+        const position = part.search(regExpAfterLastSlash);
+        return (position === 0 && part.includes("anonymous"))
+            ? "<anonymous>"
+            : part.slice(position).split(":")[0];
     };;
 
 

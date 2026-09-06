@@ -1,7 +1,7 @@
 (function LibraryParsing_test() {
     const {
-        createTextParser, createTextReplacer, readLayerContent
-    } = <LibraryParsing_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryParsing.js"));
+        createTextParser, createTextParserLayers, createTextReplacer, createTokenGenerator, readLayerContent
+    } = ToolKid.getCoreModule("parsing");
 
     const { assert, assertEquality, /*assertFailure,*/ test } = ToolKid.debug.test;
 
@@ -482,4 +482,29 @@
             });
         }
     });
+
+
+    const CDWLayers = createTextParserLayers({
+        layerDefinition: ToolKid.code.CDW.textLayerDefinition,
+        parsers: new Map([
+            [function(){}, ["cdw_number", "cdw_null", "cdw_plus"]],
+            ["REMOVE", ["*"]],
+        ]),
+        debug: true,
+    });
+    if (CDWLayers instanceof Error) {
+        throw CDWLayers;
+    }
+    
+    log(2222, "starting token tests", CDWLayers)
+    const generator = createTokenGenerator(CDWLayers.ROOT);
+    generator.setText("1 + 2");
+    let token;
+    for (let i=5; i>0; i-=1) {
+        token = generator.getToken();
+        log(888, token);
+        if (token === undefined) {
+            break;
+        }
+    }
 })();

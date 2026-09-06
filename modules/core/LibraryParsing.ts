@@ -509,7 +509,7 @@ type TextParserForOpenings = {
             if (RXResult === null) {
                 return undefined;
             }
-
+            
             lastIndex = layer.pattern.lastIndex;
             signalIndex = 1;
             while (RXResult[signalIndex] === undefined) {
@@ -524,6 +524,7 @@ type TextParserForOpenings = {
                 layerDepth += 1;
                 layerStack[layerDepth] = layer;
                 wantedSignalIDs[layerDepth] = found[1];
+                log(666, lastIndex, layerDepth, layer.data.name, RXResult[0])
                 if (RXResult[0] === "") {
                     log(555, "???", RXResult, layer)
                     lastIndex += 1;

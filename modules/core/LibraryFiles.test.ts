@@ -15,7 +15,7 @@ type LibraryFiles_test_file = {
     const { assert, assertEquality, assertFailure, test } = ToolKid.debug.test;
     const {
         loopFiles, readFile, resolvePath, writeFile,
-    } = <LibraryFiles_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.js"));
+    } = ToolKid.getCoreModule("files");
 
     const FS = require("fs");
     const { resolve } = require("path");

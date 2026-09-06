@@ -2,7 +2,7 @@
     const { assert, test } = ToolKid.debug.test;
     const {
         createSimpleRX, createStringChecker
-    } = <LibraryRegularExpression_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryRegularExpression.js"));
+    } = ToolKid.getCoreModule("regularExpression");
 
     test({
         subject: createSimpleRX,
