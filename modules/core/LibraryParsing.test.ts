@@ -36,7 +36,7 @@
     const data = require("whatever\\(2\\)");\n\
     //const data = require({a:1, b:2});\n\
     [1,2,3].forEach(function (value) {\n\
-        log(555, value)\n\
+        log("LibraryParsing.test", value)\n\
     });\n\
 })();';
 
@@ -94,13 +94,15 @@
                         [132, 'bracket', ')', 126],
                         [134, 'bracket', '{'],
                         [144, 'function', 'log('],
-                        [158, 'function', ')', 144],
-                        [164, 'bracket', '}', 134], //20
-                        [165, 'function', ')', 109],
-                        [168, 'bracket', '}', 12],
-                        [169, 'bracket', ')', 0],
-                        [170, 'bracket', '('],
-                        [171, 'bracket', ')', 170] //25
+                        [148, 'text', '"'],
+                        [168, 'text', '"', 148],
+                        [176, 'function', ')', 144],
+                        [182, 'bracket', '}', 134],
+                        [183, 'function', ')', 109],
+                        [186, 'bracket', '}', 12],
+                        [187, 'bracket', ')', 0],
+                        [188, 'bracket', '('],
+                        [189, 'bracket', ')', 188]
                     ]
                 }
             });
