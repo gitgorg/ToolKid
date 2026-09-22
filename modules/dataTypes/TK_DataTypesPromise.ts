@@ -3,7 +3,9 @@ interface TK_DataTypes_file { promise: TK_DataTypesPromise_file }
 interface TK_DataTypesPromise_file {
     combinePromises(
         ...promises: Promise<any>[]
-    ): Promise<any[]>,
+    ): Promise<any[]> & {
+        delayBy(promise: Promise<any>): void
+    },
     createPromise(
         originDepth?: number,
     ): CustomPromise
@@ -24,13 +26,11 @@ type CustomPromise = {
     const publicExports = module.exports = <TK_DataTypesPromise_file>{};
 
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
-        if (promises.length === 0) {
-            return Promise.resolve();
-        }
-
         let missing = promises.length;
         const datas = new Array(promises.length);
-        const combined = publicExports.createPromise();
+        const combined = publicExports.createPromise() as CustomPromise & {
+            promise: ReturnType<TK_DataTypesPromise_file["combinePromises"]>
+        };
         const handleSucces = function TK_DataTypesPromise_combinePromisesSuccess(
             position: number, data: any
         ) {
@@ -51,6 +51,16 @@ type CustomPromise = {
         promises.forEach(function TK_DataTypesPromise_combinePromisesWatch(promise, position) {
             promise.then(handleSucces.bind(null, position), handleFailure.bind(null, position));
         });
+        combined.promise.delayBy = function TK_DataTypesPromise_combinePromisesDelayBy(
+            promise: Promise<any>
+        ) {
+            missing += 1;
+            const position = datas.length;
+            promise.then(
+                handleSucces.bind(null, position),
+                handleFailure.bind(null, position)
+            );
+        };
         return combined.promise;
     };
 

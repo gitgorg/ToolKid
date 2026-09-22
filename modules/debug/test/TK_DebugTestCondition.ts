@@ -8,15 +8,15 @@ interface TK_DebugTest_file {
     ): Condition,
 
     createCondition(
-        timeToResolve?: number
+        timeToResolve?: number // ms
     ): Condition,
     createCondition(inputs: {
-        timeToResolve: number,
+        timeToResolve: number, // ms
         timeoutMessage?: any,
         registerWithName?: string,
     }): Condition,
     createCondition(inputs: {
-        timeToReject: number,
+        timeToReject: number, // ms
         timeoutMessage?: any,
         registerWithName?: string,
     }): Condition,
