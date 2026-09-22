@@ -59,7 +59,17 @@
                         Promise.resolve("a"), Promise.resolve("b")
                     ),
                     shouldBe: ["a", "b"]
-                }
+                },
+            });
+            const delayed = combinePromises(
+                Promise.resolve("c")
+            );
+            delayed.delayBy(Promise.resolve("d"));
+            assertEquality({
+                "delayed value": {
+                    value: await delayed,
+                    shouldBe: ["c", "d"]
+                },
             });
         }
     }, {

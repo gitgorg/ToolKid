@@ -1997,9 +1997,6 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
 (function TK_DataTypesPromise_init() {
     const publicExports = module.exports = {};
     publicExports.combinePromises = function TK_DataTypesPromise_combinePromises(...promises) {
-        if (promises.length === 0) {
-            return Promise.resolve();
-        }
         let missing = promises.length;
         const datas = new Array(promises.length);
         const combined = publicExports.createPromise();
@@ -2019,6 +2016,11 @@ fileCollection.set("TK_DataTypesNumber.js", module.exports);
         promises.forEach(function TK_DataTypesPromise_combinePromisesWatch(promise, position) {
             promise.then(handleSucces.bind(null, position), handleFailure.bind(null, position));
         });
+        combined.promise.delayBy = function TK_DataTypesPromise_combinePromisesDelayBy(promise) {
+            missing += 1;
+            const position = datas.length;
+            promise.then(handleSucces.bind(null, position), handleFailure.bind(null, position));
+        };
         return combined.promise;
     };
     publicExports.createPromise = function TK_DataTypesPromise_createPromise(originDepth = 3) {
