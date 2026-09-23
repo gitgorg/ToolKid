@@ -1129,6 +1129,64 @@ fileCollection.set("TK_CodeParsing.js", module.exports);
 "use strict";
 (function TK_DataTypesObject_init() {
     const publicExports = module.exports = {};
+    publicExports.clone = function TK_DataTypesObject_clone(data, depth) {
+        return (typeof depth !== "number" || depth < 1)
+            ? clone(data, 1)
+            : clone(data, depth);
+    };
+    const clone = function TK_DataTypesObject_cloneDeep(origin, depth) {
+        if (typeof origin !== "object" || origin === null) {
+            return origin; //origin is not clonable
+        }
+        ;
+        if (origin instanceof Array) {
+            if (depth < 2) {
+                return origin.slice(0);
+            }
+            depth -= 1;
+            const result = origin.slice(0);
+            const { length } = origin;
+            for (let i = 0; i < length; i += 1) {
+                result[i] = clone(origin[i], depth);
+            }
+            return result;
+        }
+        if (origin instanceof Map) {
+            if (depth < 2) {
+                return new Map(origin);
+            }
+            depth -= 1;
+            const result = new Map(origin);
+            result.forEach(function TK_DataTypesObject_cloneDeepMap(value, key) {
+                result.set(key, clone(value, depth));
+            });
+            return result;
+        }
+        if (origin instanceof Set) {
+            if (depth < 2) {
+                return new Set(origin);
+            }
+            depth -= 1;
+            const result = new Set();
+            origin.forEach(function TK_DataTypesObject_cloneDeepMap(value) {
+                result.add(clone(value, depth));
+            });
+            return result;
+        }
+        if (depth < 2) {
+            return Object.assign({}, origin);
+        }
+        depth -= 1;
+        const result = Object.assign({}, origin);
+        const entries = Object.entries(origin);
+        const { length } = entries;
+        let keyValue;
+        for (let i = 0; i < length; i += 1) {
+            keyValue = entries[i];
+            result[keyValue[0]] = clone(keyValue[1], depth);
+        }
+        return result;
+    };
     publicExports.filter = function TK_DataTypesObject_filter(inputs) {
         const result = {};
         const { data, byKeys } = inputs;

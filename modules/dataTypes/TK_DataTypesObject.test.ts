@@ -1,8 +1,85 @@
 (function TK_DataTypesObject_test() {
-    const { test, assert, assertFailure } = ToolKid.debug.test;
-    const { merge, filter } = ToolKid.dataTypes.object;
+    const { test, assert } = ToolKid.debug.test;
+    const { clone, merge, filter } = ToolKid.dataTypes.object;
 
 
+
+    test({
+        subject: clone,
+        execute: function basic() {
+            let origin = [1, 2, 3] as any;
+            let copy = clone(origin, 1);
+            assert({
+                "flat equality": {
+                    value: copy,
+                    shouldBe: origin,
+                    toleranceDepth: 1,
+                },
+                "flat identity": {
+                    value: copy === origin,
+                    shouldBe: false,
+                },
+            });
+            origin = [1, { b: 2, c: new Set([3]) }];
+            copy = clone(origin, 1);
+            assert({
+                "deep equality": {
+                    value: copy,
+                    shouldBe: origin,
+                    toleranceDepth: 1,
+                },
+                "deep identity": {
+                    value: copy === origin,
+                    shouldBe: false,
+                },
+                "deep property identity": {
+                    value: copy[1] === origin[1],
+                    shouldBe: true,
+                },
+            });
+            copy = clone(origin, 4);
+            assert({
+                "full equality": {
+                    value: copy,
+                    shouldBe: origin,
+                    toleranceDepth: 5,
+                },
+                "full property identity": {
+                    value: copy[1].c === origin[1].c,
+                    shouldBe: false,
+                }
+            });
+        }
+    }, {
+        subject: clone,
+        execute: function invalidDepth() {
+            let origin = [1, 2, 3];
+            let copy = clone(origin, -2);
+            assert({
+                "low equality": {
+                    value: copy,
+                    shouldBe: origin,
+                    toleranceDepth: 1,
+                },
+                "low identity": {
+                    value: copy === origin,
+                    shouldBe: false,
+                },
+            });
+            copy = clone(origin);
+            assert({
+                "missing depth equality": {
+                    value: copy,
+                    shouldBe: origin,
+                    toleranceDepth: 1,
+                },
+                "missing depth identity": {
+                    value: copy === origin,
+                    shouldBe: false,
+                },
+            });
+        }
+    });
 
     test({
         subject: merge,
@@ -49,16 +126,17 @@
 
     test({
         subject: filter,
-        execute: function objectFilter () {
-            const filtered = filter({data: {a:true, b:false, c:null}, byKeys:["b","d"]});
-            assert({
-                "filtered": [filtered, {b:false}],
-                "filtered keys": [Object.keys(filtered), ["b"]]
+        execute: function objectFilter() {
+            const filtered = filter({
+                data: { a: true, b: false, c: null, d: undefined },
+                byKeys: ["b", "d"]
             });
-            assertFailure({
-                name:"missingKeys",
-                execute: filter,
-                withInputs: [{data: {a:true, b:false}}]
+            assert({
+                "filtered": [filtered, { b: false }],
+                "filtered keys": [Object.keys(filtered), ["b"]],
+                "missingKeys": [filter.bind(null, <any>{
+                    data: { a: true, b: false }
+                }), Error],
             });
         }
     })
