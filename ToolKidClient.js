@@ -214,23 +214,21 @@ fileCollection.set("LibraryCore.js", module.exports);
     //     "\*": ".+"
     // };
     publicExports.createStringChecker = function LibraryRegularExpression_createStringChecker(inputs) {
-        const hasIncludes = isArray(inputs.includes);
-        const hasExcludes = isArray(inputs.excludes);
+        const { includes, excludes } = inputs;
+        const hasIncludes = includes instanceof Array && includes.length !== 0;
+        const hasExcludes = excludes instanceof Array && excludes.length !== 0;
         if (hasIncludes && hasExcludes) {
             return checkStringConditions.bind(null, inputs);
         }
         else if (hasIncludes) {
-            return checkStringInclusion.bind(null, inputs.includes);
+            return checkStringInclusion.bind(null, includes);
         }
         else if (hasExcludes) {
-            return checkStringExclusion.bind(null, inputs.excludes);
+            return checkStringExclusion.bind(null, excludes);
         }
         else {
             return function LibraryRegularExpression_checkNothing() { return true; };
         }
-    };
-    const isArray = function LibraryRegularExpression_isArray(value) {
-        return value instanceof Array && value.length !== 0;
     };
     Object.freeze(publicExports);
 })();
