@@ -325,7 +325,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
                 return { content: undefined };
             }
             else if (isDirectory(path)) {
-                throw createCustomError("path is a directory, not a file", path);
+                throw createCustomError("path is a directory, not a file", { inputs, path });
             }
         }
         let { encoding } = inputs;
@@ -3778,7 +3778,7 @@ fileCollection.set("TK_File.js", module.exports);
 
 "use strict";
 (function TK_NodeJSFile_init() {
-    const { appendFileSync: extendFile, existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, rmSync: deleteFolder, unlinkSync: deleteFile } = require("fs");
+    const { appendFileSync: extendFile, existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, rmSync: deleteFolder, statSync: readFileStats, unlinkSync: deleteFile } = require("fs");
     const publicExports = module.exports = {};
     publicExports.deletePath = function TK_NodeJSFile_deletePath(path) {
         if (!isUsedPath(path)) {
@@ -3809,6 +3809,14 @@ fileCollection.set("TK_File.js", module.exports);
         }
         else {
             return readDirectory(path);
+        }
+    };
+    publicExports.readFileStats = function TK_NodeJSFile_readFileStats(path) {
+        try {
+            return readFileStats(path);
+        }
+        catch (error) {
+            return {};
         }
     };
     Object.freeze(publicExports);

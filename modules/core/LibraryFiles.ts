@@ -181,7 +181,7 @@ type LibraryFiles_file = {
             if (!checkExistance(path)) {
                 return { content: undefined };
             } else if (isDirectory(path)) {
-                throw createCustomError("path is a directory, not a file", path);
+                throw createCustomError("path is a directory, not a file", { inputs, path });
             }
         }
 

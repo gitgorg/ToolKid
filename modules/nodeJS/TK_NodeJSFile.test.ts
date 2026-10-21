@@ -1,7 +1,7 @@
 (function TK_nodeJSFile_test() {
     const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "../../modules/core/LibraryFiles.test.js"));
     const { assert, assertFailure, test } = ToolKid.debug.test;
-    const { deletePath, extendFile, isDirectory, isUsedPath, readDirectory, readFile, writeFile } = ToolKid.nodeJS;
+    const { deletePath, extendFile, isDirectory, isUsedPath, readDirectory, readFile, readFileStats, writeFile } = ToolKid.nodeJS;
 
 
 
@@ -185,6 +185,20 @@
                     shouldBe: []
                 }
             });
+        }
+    });
+
+    test({
+        subject: readFileStats,
+        assert: function fileStats() {
+            return {
+                "CONFIG": {
+                    allowAdditions: true,
+                    toleranceDepth: 3,
+                },
+                "file": [readFileStats(paths.file), { size: 49 }],
+                "fileNonExisting": [readFileStats(paths.fileNonExisting), { size: undefined }]
+            }
         }
     });
 })();

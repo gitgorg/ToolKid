@@ -18,6 +18,9 @@ interface TK_nodeJS_file {
         path: string
     ): string[],
     readFile: LibraryFiles_file["readFile"],
+    readFileStats(
+        path: string
+    ): { size?: number }, // node js fs stat object
     resolvePath: LibraryFiles_file["resolvePath"],
     writeFile: LibraryFiles_file["writeFile"],
 }
@@ -31,6 +34,7 @@ interface TK_nodeJS_file {
         lstatSync: readPathStats,
         readdirSync: readDirectory,
         rmSync: deleteFolder,
+        statSync: readFileStats,
         unlinkSync: deleteFile
     } = require("fs");
 
@@ -70,7 +74,15 @@ interface TK_nodeJS_file {
         } else {
             return readDirectory(path);
         }
-    }
+    };
+
+    publicExports.readFileStats = function TK_NodeJSFile_readFileStats(path) {
+        try {
+            return readFileStats(path);
+        } catch (error: any) {
+            return {};
+        }
+    };
 
 
 
