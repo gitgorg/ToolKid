@@ -3,7 +3,7 @@
 const fileCollection = new Map();
 
 
-console.log("\u001b[96m>>  activating ToolKid");
+console.log("\u001b[96m>>  building ToolKid");
 "use strict";
 (function LibraryCore_init() {
     const coreModuleNames = {

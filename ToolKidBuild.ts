@@ -27,7 +27,7 @@ type ToolKidConfig = {
 
 
 
-    console.log("\u001b[96m>>  activating ToolKid");
+    console.log("\u001b[96m>>  building ToolKid");
     const FS = require("fs");
     const { basename, resolve } = require("path");
     const libraryCore = <LibraryCore_file><any>/*weird any for tsc...*/require(
@@ -130,7 +130,7 @@ type ToolKidConfig = {
             path: exportPath,
             content: [
                 LibraryBuilding.bundlerDefaults.header,
-                'console.log("\\u001b[96m>>  activating ToolKid");\n',
+                'console.log("\\u001b[96m>>  building ToolKid");\n',
                 ...LibraryBuilding.bundleFile({
                     readBundleContent: readBundleContent.bind(null, filePaths),
                     bundleIDs: [...filePaths.keys()]
