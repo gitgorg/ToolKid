@@ -3779,6 +3779,7 @@ fileCollection.set("TK_File.js", module.exports);
 "use strict";
 (function TK_NodeJSFile_init() {
     const { appendFileSync: extendFile, existsSync: isUsedPath, lstatSync: readPathStats, readdirSync: readDirectory, rmSync: deleteFolder, statSync: readFileStats, unlinkSync: deleteFile } = require("fs");
+    const zlib = require("zlib");
     const publicExports = module.exports = {};
     publicExports.deletePath = function TK_NodeJSFile_deletePath(path) {
         if (!isUsedPath(path)) {

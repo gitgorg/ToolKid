@@ -38,6 +38,8 @@ interface TK_nodeJS_file {
         unlinkSync: deleteFile
     } = require("fs");
 
+    // const zlib = require("zlib");
+
 
 
     const publicExports = module.exports = <TK_nodeJS_file>{};
