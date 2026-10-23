@@ -149,8 +149,9 @@ type TestSummary = {
     };
 
     const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(
-        boundData: Dictionary
+        boundData: Dictionary, testResult: TKTestResult
     ) {
+        // log(boundData.pendingCount, testResult.subject.name ||testResult.subject, testResult.name)
         boundData.pendingCount -= 1;
         if (boundData.pendingCount === 0 && boundData.pendingCallback === undefined) {
             boundData.pendingCallback = true;

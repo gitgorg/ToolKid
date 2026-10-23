@@ -3144,7 +3144,8 @@ fileCollection.set("TK_DebugTestShouldPass.js", module.exports);
         });
         return summary;
     };
-    const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(boundData) {
+    const summaryCallbackCheck = function TK_DebugTestSummary_summaryCallbackCheck(boundData, testResult) {
+        // log(boundData.pendingCount, testResult.subject.name ||testResult.subject, testResult.name)
         boundData.pendingCount -= 1;
         if (boundData.pendingCount === 0 && boundData.pendingCallback === undefined) {
             boundData.pendingCallback = true;
