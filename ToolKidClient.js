@@ -2085,7 +2085,11 @@ fileCollection.set("TK_DataTypesString.js", module.exports);
         if (inputs.length === 0) {
             throw ["TK_DebugTest_test - no config received"];
         }
-        const testResults = inputs.map(testSingle.bind(null, currentResultGroup));
+        const { length } = inputs;
+        const testResults = new Array(length);
+        for (let i = 0; i < length; i += 1) {
+            testResults[i] = testSingle(currentResultGroup, inputs[i]);
+        }
         currentResultGroup.results.push(...testResults);
         return testResults;
     };

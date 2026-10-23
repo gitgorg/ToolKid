@@ -139,7 +139,11 @@ type TKTestResultGroup = {
             throw ["TK_DebugTest_test - no config received"];
         }
 
-        const testResults = <TKTestResultGroup["results"]>inputs.map(testSingle.bind(null, currentResultGroup));
+        const { length } = inputs;
+        const testResults = new Array(length) as TKTestResultGroup["results"];
+        for (let i = 0; i < length; i += 1) {
+            testResults[i] = testSingle(currentResultGroup, inputs[i]);
+        }
         currentResultGroup.results.push(...testResults);
         return testResults;
     };
