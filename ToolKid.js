@@ -2134,12 +2134,16 @@ fileCollection.set("TK_DataTypesPromise.js", module.exports);
     const { createCustomError } = ToolKid.getCoreModule("core");
     const publicExports = module.exports = {};
     publicExports.decodeJSON = function TK_DataTypesString_decodeJSON(string) {
+        if (typeof string !== "string") {
+            return createCustomError("JSON decoding tried on invalid datatype", {
+                datatype: typeof string, value: string
+            });
+        }
         try {
             return JSON.parse(string);
         }
         catch (detail) {
             return createCustomError("JSON decoding failed", { value: string, detail });
-            ;
         }
     };
     publicExports.encodeJSON = function TK_DataTypesString_encodeJSON(value, replacer, space) {

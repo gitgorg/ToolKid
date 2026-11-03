@@ -25,10 +25,15 @@ interface TK_DataTypesString_file {
     const publicExports = module.exports = <TK_DataTypesString_file>{};
 
     publicExports.decodeJSON = function TK_DataTypesString_decodeJSON(string) {
+        if (typeof string !== "string") {
+            return createCustomError("JSON decoding tried on invalid datatype", {
+                datatype: typeof string, value: string
+            });
+        }
         try {
             return JSON.parse(string);
         } catch (detail) {
-            return createCustomError("JSON decoding failed", { value: string, detail });;
+            return createCustomError("JSON decoding failed", { value: string, detail });
         }
     };
 
