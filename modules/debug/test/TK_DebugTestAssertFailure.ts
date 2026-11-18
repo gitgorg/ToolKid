@@ -72,7 +72,7 @@ interface TK_DebugTest_file {
 
     const assertFailureSingle = function UnitTest_assertFailureSingle(inputs: {
         name: string,
-        execute(...inputs: any[]): void,
+        execute: Promise<any> | { (...inputs: any[]): void },
         withInputs?: any | any[],
         shouldThrow?: any | ErrorConstructor,
         toleranceDepth?: number
@@ -101,7 +101,7 @@ interface TK_DebugTest_file {
                 };
             }
 
-        } catch (error) {
+        } catch (error: any) {
             const failureMessage = assertFailureCheck(inputs, error);
             if (failureMessage !== undefined) {
                 throw failureMessage;
