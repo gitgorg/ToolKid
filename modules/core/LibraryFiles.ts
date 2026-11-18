@@ -20,7 +20,7 @@ type LibraryFiles_file = {
         excludes?: (string | RegExp)[],
     } | {
         pathChecker: ReturnType<LibraryFiles_file["createPathChecker"]>
-    })): void,
+    })): undefined | CustomError,
     readFile(
         path: string | {
             path: string,
@@ -53,7 +53,8 @@ type LibraryFiles_file = {
         ): boolean,
         execute(
             path: string
-        ): void
+        ): void,
+        errors: Dictionary[],
     }
 
 
@@ -122,9 +123,10 @@ type LibraryFiles_file = {
     publicExports.loopFiles = function LibraryFiles_loopFiles(
         inputs: Dictionary
     ) {
-        const privateData = {
+        const privateData = <DataForLooping>{
             isIncluded: inputs.pathChecker || publicExports.createPathChecker(inputs),
             execute: inputs.execute,
+            errors: [],
         };
         const { path } = inputs;
         if (path instanceof Array) {
@@ -132,6 +134,8 @@ type LibraryFiles_file = {
         } else {
             loopFilesFrom(privateData, path);
         }
+        return (privateData.errors.length === 0)
+            ? undefined : createCustomError("looping files failed", privateData.errors);
     };
 
     const loopFilesFrom = function LibraryFiles_loopFilesFrom(
@@ -140,7 +144,12 @@ type LibraryFiles_file = {
     ) {
         path = resolvePath(path);
         if (!checkExistance(path)) {
-            throw createCustomError("path doesn't exist", path);
+            privateData.errors.push({
+                message: "path doesn't exist",
+                origin: arguments[1],
+                resolved: path,
+            });
+            return;
         }
 
         if (isDirectory(path)) {

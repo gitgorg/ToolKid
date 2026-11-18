@@ -281,6 +281,7 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         const privateData = {
             isIncluded: inputs.pathChecker || publicExports.createPathChecker(inputs),
             execute: inputs.execute,
+            errors: [],
         };
         const { path } = inputs;
         if (path instanceof Array) {
@@ -289,11 +290,18 @@ fileCollection.set("LibraryRegularExpression.js", module.exports);
         else {
             loopFilesFrom(privateData, path);
         }
+        return (privateData.errors.length === 0)
+            ? undefined : createCustomError("looping files failed", privateData.errors);
     };
     const loopFilesFrom = function LibraryFiles_loopFilesFrom(privateData, path) {
         path = resolvePath(path);
         if (!checkExistance(path)) {
-            throw createCustomError("path doesn't exist", path);
+            privateData.errors.push({
+                message: "path doesn't exist",
+                origin: arguments[1],
+                resolved: path,
+            });
+            return;
         }
         if (isDirectory(path)) {
             loopFilesFromDirectory(privateData, path);
