@@ -110,7 +110,6 @@ type ToolKidConfig = {
 
     publicExports.write = function ToolKidBuild_write(config) {
         const exportPath = resolve(config.exportPath || (__dirname.slice(0, -5) + "ToolKid.js"));
-        console.log("\u001b[90m>>  writing bundled Toolkid to " + exportPath);
         const filePaths = new Map([
             ["LibraryCore.js", ""], ["LibraryRegularExpression.js", ""]
         ]);
