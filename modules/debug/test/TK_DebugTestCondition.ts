@@ -29,6 +29,12 @@ type Condition = Promise<any> & {
     reject(
         reason?: any
     ): Condition,
+    // assert(
+    //     inputs: {
+    //         shouldBe: any,
+    //         allowAdditions?: false,
+    //     } & Omit<TK_AssertConfig, "allowAdditions">
+    // ): Condition,
     done: boolean,
     origin: string,
     timePassed: number
