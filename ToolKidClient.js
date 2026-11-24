@@ -2391,7 +2391,7 @@ fileCollection.set("TK_DebugTestAssertFailure.js", module.exports);
             return;
         }
         if (arguments.length !== 1) {
-            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", arguments.length, "inputs:", arguments];
+            throw ["TK_DebugTestAssertion_assert - takes 1 config argument or the following 3 arguments: label, value, shouldBe. Not the ", arguments.length, " arguments: ", ...arguments];
         }
         let i = 1;
         let config = inputs[0].CONFIG;

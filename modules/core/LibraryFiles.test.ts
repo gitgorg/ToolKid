@@ -12,7 +12,7 @@ type LibraryFiles_test_file = {
 
 
 (function LibraryFiles_test() {
-    const { assert, assertEquality, assertFailure, test } = ToolKid.debug.test;
+    const { assert, assertEquality, test } = ToolKid.debug.test;
     const {
         loopFiles, readFile, resolvePath, writeFile,
     } = <LibraryFiles_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryFiles.js"));
@@ -76,7 +76,7 @@ type LibraryFiles_test_file = {
                     shouldBe: expectedFiles
                 }
             });
-            expectedFiles = expectedFiles.filter(function(value) {
+            expectedFiles = expectedFiles.filter(function (value) {
                 return value.indexOf("Parsing") === -1;
             })
             assert({
@@ -175,12 +175,13 @@ type LibraryFiles_test_file = {
         }
     }, {
         subject: readFile,
-        execute: function readDirectory() {
-            assertFailure({
-                name: "directory response",
-                execute: readFile,
-                withInputs: { path: paths.directoryMixedContents },
-            });
+        assert: function () {
+            return {
+                "directory response": [
+                    readFile.bind(null, { path: paths.directoryMixedContents }),
+                    Error
+                ],
+            };
         }
     });
 

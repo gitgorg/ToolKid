@@ -1,5 +1,5 @@
 (function TK_DataTypesChecks_test() {
-    const { assert, test, assertEquality, assertFailure } = ToolKid.debug.test;
+    const { assert, test, assertEquality } = ToolKid.debug.test;
     const { createTypeHandler, getDataType, isArray, isBoolean, isError, isFunction, isInteger, isMap, isNumber, isObject, isPromise, isString, handleDataType } = ToolKid.dataTypes.checks;
 
 
@@ -98,13 +98,9 @@
     }, {
         subject: handleDataType,
         execute: function failure() {
-            assertFailure({
-                name: "missing inputs",
-                execute: handleDataType
-            }, {
-                name: "missing typeHandlers",
-                execute: handleDataType,
-                withInputs: [true]
+            assert({
+                "missing inputs": [handleDataType, Error],
+                "missing typeHandlers": [handleDataType.bind(null, true), Error]
             });
         }
     });

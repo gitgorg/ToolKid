@@ -3,7 +3,7 @@
         createTextParser, createTextReplacer, getLayerDefinition, readLayerContent
     } = <LibraryParsing_file>require(ToolKid.nodeJS.resolvePath(__dirname, "./LibraryParsing.js"));
 
-    const { assert, assertEquality, /*assertFailure,*/ shouldPass, test } = ToolKid.debug.test;
+    const { assert, assertEquality, shouldPass, test } = ToolKid.debug.test;
     const shouldPassObject = shouldPass(ToolKid.dataTypes.checks.isObject)
 
 

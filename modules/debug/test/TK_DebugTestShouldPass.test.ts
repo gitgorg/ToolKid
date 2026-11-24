@@ -18,7 +18,7 @@
 
 
     const Debug = ToolKid.debug;
-    const { assertFailure, assertEquality, shouldBeCloseTo, shouldPass, shouldPassAny, test } = Debug.test;
+    const { assert, shouldBeCloseTo, shouldPass, shouldPassAny, test } = Debug.test;
 
     const isNumber = function (value: any) { return typeof value === "number" && !Number.isNaN(value) };
     const isString = function (value: any) { return typeof value === "string" && value.length !== 0 };
@@ -47,83 +47,61 @@
     };
     test({
         subject: shouldPass,
-        execute: function shouldPassSingle() {
-            assertEquality({
-                "shouldPassSingle": {
-                    value: {
+        assert: function shouldPassSingle() {
+            return {
+                "shouldPassSingle": [
+                    {
                         boolean: false,
                         number: 0,
                         text: "another text"
                     },
-                    shouldBe: {
+                    {
                         boolean: false,
                         number: shouldPass(isNumber),
                         text: shouldPass(isString)
                     }
-                }
-            });
-        }
-    }, {
-        subject: shouldPass,
-        execute: function shouldPassMulti() {
-            assertEquality({
-                "shouldPassMulti": {
-                    value: 10,
-                    shouldBe: shouldPass(isNumber, isBigger5)
-                }
-            });
-        }
-    }, {
-        subject: shouldPass,
-        execute: function fail_shouldPassMulti() {
-            assertFailure({
-                name: "fail_shouldPassMulti",
-                execute: assertEquality,
-                withInputs: {
-                    "fail_shouldPassMulti": {
-                        value: 2,
-                        shouldBe: shouldPass(isNumber, isBigger5)
-                    }
-                }
-            });
-        }
-    }, {
-        subject: shouldPass,
-        execute: function fail_basic() {
-            assertFailure({
-                name: "fail_shouldPassWrongValue",
-                execute: assertEquality,
-                withInputs: {
-                    "fail_shouldPassWrongValue": {
-                        value: {
-                            text: 10
-                        },
-                        shouldBe: {
-                            text: shouldPass(isString)
+                ],
+                "shouldPassMulti": [
+                    10,
+                    shouldPass(isNumber, isBigger5)
+                ],
+                "fail_shouldPassMulti": [
+                    shouldPass(isNumber, isBigger5)(2),
+                    false
+                ],
+                "fail_shouldPassWrongValue": [
+                    shouldPass(isString)(10),
+                    false,
+                ],
+                "fail_shouldPassAssertMulti": [
+                    assert.bind(null, {
+                        "fail_shouldPassAssertMulti": {
+                            value: 2,
+                            shouldBe: shouldPass(isNumber, isBigger5)
                         }
-                    },
-                }
-            }, {
-                name: "fail_shouldPassMissingValueChecker",
-                execute: assertEquality,
-                withInputs: {
-                    "fail_shouldPassMissingValueChecker": {
-                        value: {
-                            text: "text"
-                        },
-                        shouldBe: {
-                            text: isString
+                    }),
+                    Error
+                ],
+                "fail_shouldPassAssertMissingValueChecker": [
+                    assert.bind(null, {
+                        "fail_shouldPassAssertMissingValueChecker": {
+                            value: {
+                                text: "text"
+                            },
+                            shouldBe: {
+                                text: isString
+                            }
                         }
-                    },
-                }
-            });
+                    }), Error
+                ],
+            };
         }
     });
 
     test({
         subject: shouldPassAny,
         execute: function shouldPassAnyBasic() {
-            assertEquality({
+            assert({
                 "shouldPassAnyMatchFirst": {
                     value: 19,
                     shouldBe: shouldPassAny(isNumber, isString)
@@ -141,23 +119,24 @@
         }
     }, {
         subject: shouldPassAny,
-        execute: function fail_shouldPassAny() {
-            assertEquality({
-                "fail_shouldPassAnyUnwantedType": {
-                    value: shouldPassAny(isNumber, isString)(true),
-                    shouldBe: false
-                }, "fail_shouldPassAnyWrongStaticValue": {
-                    value: shouldPassAny(10, 20, 30)(0),
-                    shouldBe: false
-                }, "fail_shouldPassAnyMixedStaticValue": {
-                    value: shouldPassAny(isString, undefined, NaN)(null),
-                    shouldBe: false
-                }
-            });
-            assertFailure({
-                name: "fail_shouldPassAnyToFewChecks",
-                execute: shouldPassAny,
-                withInputs: isNumber
+        assert: function fail_shouldPassAny() {
+            return ({
+                "fail_shouldPassAnyUnwantedType": [
+                    shouldPassAny(isNumber, isString)(true),
+                    false
+                ],
+                "fail_shouldPassAnyWrongStaticValue": [
+                    shouldPassAny(10, 20, 30)(0),
+                    false
+                ],
+                "fail_shouldPassAnyMixedStaticValue": [
+                    shouldPassAny(isString, undefined, NaN)(null),
+                    false
+                ],
+                "fail_shouldPassAnyToFewChecks": [
+                    shouldPassAny.bind(null, isNumber),
+                    Error
+                ]
             });
         }
     });

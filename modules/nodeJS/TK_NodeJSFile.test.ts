@@ -1,6 +1,6 @@
 (function TK_nodeJSFile_test() {
     const paths = <LibraryFiles_test_file>require(ToolKid.nodeJS.resolvePath(__dirname, "../../modules/core/LibraryFiles.test.js"));
-    const { assert, assertFailure, test } = ToolKid.debug.test;
+    const { assert, test } = ToolKid.debug.test;
     const { deletePath, extendFile, isDirectory, isUsedPath, readDirectory, readFile, readFileStats, writeFile } = ToolKid.nodeJS;
 
 
@@ -126,13 +126,12 @@
         }
     }, {
         subject: isDirectory,
-        execute: function crashes() {
-            assertFailure({
-                name: "'nonExistant' returns",
-                execute: isDirectory,
-                withInputs: "nonExistant",
-                shouldThrow: Error
-            });
+        assert: function crashes() {
+            return {
+                "'nonExistant' returns": [
+                    isDirectory.bind(null, "nonExistant"), Error
+                ]
+            };
         }
     });
 

@@ -1,5 +1,5 @@
 (function TK_File_test() {
-    const { assert, assertFailure, test } = ToolKid.debug.test;
+    const { assert, test } = ToolKid.debug.test;
     const { getExtension, getName } = ToolKid.file;
 
     const shouldBeError = ToolKid.debug.test.shouldPass("isError");
@@ -13,14 +13,8 @@
                 "mixed case": [getExtension("test.hTmL"), "html"],
                 "folder": [getExtension("a/b/c"), ""],
                 "folder difficult": [getExtension("a\\.b\\c"), ""],
-            });
-            assertFailure({
-                name: "missing inputs",
-                execute: getExtension,
-            }, {
-                name: "invalid inputs",
-                execute: getExtension,
-                withInputs: true,
+                "missing inputs": [getExtension, Error],
+                "invalid inputs": [getExtension.bind(null, true as any), Error],
             });
         }
     });

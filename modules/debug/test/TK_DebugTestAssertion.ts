@@ -21,7 +21,7 @@ interface TK_DebugTest_file {
         [label: string]: [value: any, shouldBe: any] | ({
             value: any,
             shouldBe: any,
-        } & TK_AssertConfig),
+        }),
     }): void | Promise<void>,
     assert(inputs: {
         CONFIG?: TK_AssertConfig,
@@ -34,6 +34,7 @@ interface TK_DebugTest_file {
         | TK_AssertConfig //only allowed for CONFIG property,
         | undefined
     }): void,
+
     assertEquality(inputs: {
         [name: string]: {
             value: any,
@@ -96,7 +97,7 @@ type TK_AssertConfig = {
         }
 
         if (arguments.length !== 1) {
-            throw ["TK_DebugTestAssertion_assert - takes 3 arguments (label, value, expectedValue) or one config object, not:", arguments.length, "inputs:", arguments];
+            throw ["TK_DebugTestAssertion_assert - takes 1 config argument or the following 3 arguments: label, value, shouldBe. Not the ", arguments.length, " arguments: ", ...arguments];
         }
 
         let i = 1;
@@ -244,11 +245,11 @@ type TK_AssertConfig = {
         assertPromiseAdd(internals, label, config);
         return {
             promise: new Promise(function TK_DebugTestAssertion_assertPromiseCreate(
-            resolve, reject
-        ) {
-            internals.resolve = resolve;
-            internals.reject = reject;
-        }),
+                resolve, reject
+            ) {
+                internals.resolve = resolve;
+                internals.reject = reject;
+            }),
             add: assertPromiseAdd.bind(null, internals)
         };
     };
