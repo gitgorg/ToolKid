@@ -1,6 +1,6 @@
 (function TK_ConnectionHTTPtest() {
     const { request } = ToolKid.connection.HTTP;
-    const { assert, assertFailure, test } = ToolKid.debug.test;
+    const { assert, test, shouldPass } = ToolKid.debug.test;
 
 
 
@@ -37,33 +37,32 @@
             });
         }
     },*/ {
-        subject: request,
-        execute: function fail_GETInvalidJSON_regularCallback() {
-            request({
-                URL: requestAdresses.GETInvalidResponse,
-                callback: function (response) {
-                    throw ["request should have failed but responded fine with:", response];
-                },
-                errorHandler: function (error) {
-                    assert({
-                        "response is error": {
-                            value: error instanceof Error,
-                            shouldBe: true
-                        }
-                    });
-                }
-            });
-        }
-    },{
-        subject: request,
-        execute: async function fail_GETInvalidJSON_asyncAwait() {
-            await assertFailure({
-                name:"failing with missing error handler throws",
-                execute: request,
-                withInputs: {
+            subject: request,
+            execute: function fail_GETInvalidJSON_regularCallback() {
+                request({
                     URL: requestAdresses.GETInvalidResponse,
-                }
-            });
+                    callback: function (response) {
+                        throw ["request should have failed but responded fine with:", response];
+                    },
+                    errorHandler: function (error) {
+                        assert({
+                            "response": {
+                                value: error,
+                                shouldBe: shouldPass("isError")
+                            }
+                        });
+                    }
+                });
+            }
+        }, {
+        subject: request,
+        assert: function () {
+            return {
+                "failing with missing error handler rejects": [
+                    request({ URL: requestAdresses.GETInvalidResponse }),
+                    Error
+                ]
+            };
         }
     });
 })();

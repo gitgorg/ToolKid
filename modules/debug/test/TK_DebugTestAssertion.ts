@@ -4,14 +4,14 @@ interface TK_Debug_file { test: TK_DebugTest_file }
 interface TK_DebugTest_file {
     assert(
         label: string,
-        value: GenericFunction,
-        shouldBe: typeof Error
-    ): void,
-    assert(
-        label: string,
         value: Promise<any>,
         shouldBe: any
     ): Promise<void>,
+    assert(
+        label: string,
+        value: GenericFunction,
+        shouldBe: typeof Error
+    ): void,
     assert(
         label: string,
         value: any,
@@ -68,11 +68,11 @@ type TK_AssertConfig = {
 
 
     const defaultConfig = {};
-    const empty = function TK_DebugTestAssertion_empty() { };
+    const doNothing = function TK_DebugTestAssertion_doNothing() { };
     const promiseInternals: PromiseInternals = {
         errors: [],
-        reject: empty,
-        resolve: empty,
+        reject: doNothing,
+        resolve: doNothing,
         count: 0,
     };
 
@@ -191,36 +191,47 @@ type TK_AssertConfig = {
         promises: Dictionary[],
         errors: (string | EqualityDifference)[],
         label: string,
-        config: Dictionary
+        config: { value: any, shouldBe: any } & TK_AssertConfig
     ) {
-        if (config.shouldBe === Error) {
-            // crash on execution expected
-            if (typeof config.value !== "function") {
-                errors.push(...["~ " + label + " ~ value needs to be a function in order to test for failure but is: ", config.value]);
+        if (config.shouldBe !== Error) {
+            if (!(config.value instanceof Promise)) {
+                assertComparison(errors, label, config);
                 return;
             }
 
-            let returned;
-            try {
-                returned = config.value();
-            } catch (error) {
-                return; // crash happened - all good
+            if (promises.length === 0) {
+                promises[0] = assertPromise(errors, label, config);
+            } else {
+                promises[0].add(label, config);
             }
-
-            errors.push(...["~ " + label + " ~ value did not fail - it returned:", returned]);
             return;
         }
 
-        if (!(config.value instanceof Promise)) {
-            assertComparison(errors, label, config);
+        // crash on execution expected
+        const { value } = config;
+        if (value instanceof Promise) {
+            if (promises.length === 0) {
+                promises[0] = assertPromise(errors, label, <any>config);
+            } else {
+                promises[0].add(label, config);
+            }
             return;
         }
 
-        if (promises.length === 0) {
-            promises[0] = assertPromise(errors, label, <any>config);
-        } else {
-            promises[0].add(label, config);
+        if (typeof value !== "function") {
+            errors.push(...["~ " + label + " ~ value needs to be a function in order to test for failure but is: ", value]);
+            return;
         }
+
+        let returned;
+        try {
+            returned = value();
+        } catch (error) {
+            return; // crash happened - all good
+        }
+
+        errors.push(...["~ " + label + " ~ value did not fail - it returned:", returned]);
+        return;
     };
 
     const assertPromise = function TK_DebugTestAssertion_assertPromise(
@@ -230,61 +241,72 @@ type TK_AssertConfig = {
     ) {
         const internals = Object.assign({}, promiseInternals);
         internals.errors = errors;
-        internals.resolve = resolve.bind(null, internals);
-        internals.reject = reject.bind(null, internals);
-        const promise = new Promise(function TK_DebugTestAssertion_assertPromiseCreate(
+        assertPromiseAdd(internals, label, config);
+        return {
+            promise: new Promise(function TK_DebugTestAssertion_assertPromiseCreate(
             resolve, reject
         ) {
             internals.resolve = resolve;
             internals.reject = reject;
-        });
-        const add = function TK_DebugTestAssertion_assertPromiseAdd(
-            label: string,
-            config: { value: Promise<any>, shouldBe: any } & TK_AssertConfig,
-        ) {
-            internals.count += 1;
-            config.value.then(
-                resolve.bind(null, internals, label, config),
-                reject.bind(null, internals, label)
-            );
+        }),
+            add: assertPromiseAdd.bind(null, internals)
         };
-        add(label, config);
-        return { promise, add };
     };
 
-    const reject = function TK_DebugTestAssertion_reject(
+    const assertPromiseAdd = function TK_DebugTestAssertion_assertPromiseAdd(
         internals: PromiseInternals,
         label: string,
-        reason: any
+        config: { value: Promise<any>, shouldBe: any } & TK_AssertConfig,
     ) {
-        internals.errors.push("~ " + label + " ~ promise rejected:", reason);
-        if (internals.count === 1) {
-            internals.reject(internals.errors);
-        } else {
-            internals.count -= 1;
-        }
+        internals.count += 1;
+        config.value.then(
+            resolvePromise.bind(null, internals, label, config),
+            rejectPromise.bind(null, internals, label, config)
+        );
+    };
 
+    const rejectPromise = function TK_DebugTestAssertion_rejectPromise(
+        internals: PromiseInternals,
+        label: string,
+        config: { value: Promise<any>, shouldBe: any } & TK_AssertConfig,
+        reason: any,
+    ) {
+        config.value = reason;
+        if (config.shouldBe !== Error) {
+            internals.errors.push("~ " + label + " ~ promise rejected:", reason);
+        }
+        assertFinalize(internals, reason);
     }
 
-    const resolve = function TK_DebugTestAssertion_resolve(
+    const resolvePromise = function TK_DebugTestAssertion_resolvePromise(
         internals: PromiseInternals,
         label: string,
-        config: Dictionary,
-        data: any
+        config: { value: Promise<any>, shouldBe: any } & TK_AssertConfig,
+        value: any,
     ) {
-        config.value = data;
-        const { errors } = internals;
-        assertComparison(errors, label, config);
+        config.value = value;
+        if (config.shouldBe === Error) {
+            internals.errors.push("~ " + label + " ~ promise did not fail - it returned:", value);
+        } else {
+            assertComparison(internals.errors, label, config);
+        }
+        assertFinalize(internals, value);
+    };
+
+    const assertFinalize = function TK_DebugTestAssertFinalize(
+        internals: PromiseInternals,
+        value: any,
+    ) {
         if (internals.count === 1) {
-            if (errors.length === 0) {
-                internals.resolve(data);
+            if (internals.errors.length === 0) {
+                internals.resolve(value);
             } else {
-                internals.reject(errors);
+                internals.reject(internals.errors);
             }
         } else {
             internals.count -= 1;
         }
-    }
+    };
 
     const isNotTooDeep = function TK_DebugTestAssertion_isNotToDeep(
         difference: EqualityDifference

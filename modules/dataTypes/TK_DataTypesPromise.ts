@@ -16,7 +16,7 @@ type CustomPromise = {
     resolve(data?: any): void,
     reject(reason?: any): void,
     state: "pending" | "fulfilled" | "rejected",
-    data: any,
+    data: undefined | any,
     origin: string,
 }
 
@@ -67,6 +67,7 @@ type CustomPromise = {
     publicExports.createPromise = function TK_DataTypesPromise_createPromise(
         originDepth = 3
     ) {
+        // find origin
         let position = 0;
         let origin: string = (new Error() as Dictionary).stack;
         for (let i = 0; i < originDepth; i += 1) {
@@ -87,6 +88,7 @@ type CustomPromise = {
             state: "pending",
             origin,
         };
+        // create promise
         result.promise = new Promise(function TK_DataTypesPromise_createPromiseInternal(
             resolve, reject
         ) {
@@ -118,7 +120,7 @@ type CustomPromise = {
         }
 
         console.error([
-            "TK_DataTypesPromise_createPromiseReject - promise allready " + promiseData.state + " with:",
+            "TK_DataTypesPromise_promiseDecide - promise allready " + promiseData.state + " with:",
             promiseData.data,
             " then tried " + state + " with:",
             data
