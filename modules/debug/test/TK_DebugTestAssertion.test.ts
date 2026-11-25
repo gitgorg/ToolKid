@@ -23,7 +23,7 @@
                 "catch failure inside group": {
                     value: { a: { b: "c" }, d: true },
                     shouldBe: { a: { b: "c" } },
-                    catchFailure: function (error) {
+                    catchFailure: function (error: any[]) {
                         assert({
                             "error is aray": [Array.isArray(error), true],
                             "error length": [error.length, 3],
